@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens: space-separated RGB so Tailwind can add alpha. Dark is the default; .light flips them. */
+:root {
+  color-scheme: dark;
+  --navy-950: 7 9 13; --navy-900: 14 17 23; --navy-800: 22 26 35; --navy-700: 37 43 56;
+  --slate-100: 241 245 249; --slate-300: 203 213 225; --slate-400: 148 163 184; --slate-500: 100 116 139; --slate-600: 71 85 105;
+  --accent: 56 189 248; --accent-dark: 14 165 233;
+  --ok: 52 211 153; --warn: 251 191 36; --bad: 251 113 133;
+  --ink: 7 9 13;
+  --edge: 255 255 255; --edge-a: 0.06; --edge-a2: 0.12;
+  --glow: rgba(56, 189, 248, 0.08);
+}
+:root.light {
+  color-scheme: light;
+  --navy-950: 244 246 250; --navy-900: 255 255 255; --navy-800: 238 241 246; --navy-700: 217 222 232;
+  --slate-100: 15 23 42; --slate-300: 51 65 85; --slate-400: 71 85 105; --slate-500: 100 116 139; --slate-600: 148 163 184;
+  --accent: 2 132 199; --accent-dark: 3 105 161;
+  --ok: 5 150 105; --warn: 180 83 9; --bad: 225 29 72;
+  --edge: 15 23 42; --edge-a: 0.09; --edge-a2: 0.16;
+  --glow: rgba(14, 165, 233, 0.10);
+}
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  button, a, select, input, summary { touch-action: manipulation; }
+}
+
+body {
+  @apply bg-navy-950 text-slate-100 antialiased;
+  font-variant-numeric: tabular-nums;
+  background-image: radial-gradient(60rem 30rem at 50% -10%, var(--glow), transparent);
+  background-attachment: fixed;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-edge bg-navy-900; }
+}
+
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes sheet-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+.sheet-in { animation: sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sheet-fade { animation: fade-plain 0.18s ease both; }
+@keyframes fade-plain { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* Children of .stagger rise into place one after another. */
+.stagger > * { animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger > *:nth-child(2) { animation-delay: 50ms; }
+.stagger > *:nth-child(3) { animation-delay: 100ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 200ms; }
+.stagger > *:nth-child(6) { animation-delay: 250ms; }
+.stagger > *:nth-child(7) { animation-delay: 300ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 350ms; }
+
+/* Charts and map popups follow the theme. */
+.recharts-text { fill: rgb(var(--slate-400)); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: rgb(var(--navy-900)); color: rgb(var(--slate-100));
+  border: 1px solid rgb(var(--edge) / var(--edge-a2)); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.leaflet-popup-content { margin: 12px 14px; font: inherit; }
+.leaflet-container a.leaflet-popup-close-button { color: rgb(var(--slate-400)); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Airport markers. --z is the map's live zoom (set on the container by ZoomTracker).
+   One disc changes size continuously with zoom (FULL_ZOOM = 11 in Map.jsx is where it is full size):
+     z 11 -> 9   the full marker shrinks to dot size   (--p goes 1 -> 0)
+     z 9  -> 2   the dot keeps shrinking to 30%         (--k goes 1 -> 0.3)
+   Detail is shed on the way down: the navy badge with the visit count fades out over z 11 -> 10.25 (--n),
+   leaving a plain accent-colored dot. */
+.leaflet-container {
+  --z: 4;
+  --p: clamp(0, (var(--z) - 9) / 2, 1);
+  --k: clamp(0.3, 0.3 + 0.7 * (var(--z) - 2) / 7, 1);
+  --n: clamp(0, (var(--z) - 10.25) / 0.75, 1);
+}
+.apt-icon { background: none; border: none; }
+.apt {
+  position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none;
+  --size: calc(var(--dot) * var(--k) + (var(--full) - var(--dot)) * var(--p));
+}
+.apt span { position: absolute; }
+.apt-hit {
+  left: 0; top: 0; width: max(28px, var(--size)); height: max(28px, var(--size));
+  transform: translate(-50%, -50%); border-radius: 9999px; pointer-events: auto; cursor: pointer;
+}
+.apt-disc {
+  left: 0; top: 0; width: var(--size); height: var(--size); transform: translate(-50%, -50%);
+  border-radius: 9999px; background: var(--c); /* solid accent: the dot, and the crisp ring around the badge */
+  box-shadow: 0 calc(1px + 1px * var(--p)) calc(3px + 3px * var(--p)) rgba(0, 0, 0, 0.4); /* small, crisp drop shadow */
+  transition: width 0.3s ease, height 0.3s ease;
+}
+.apt-badge {
+  inset: 2px; display: flex; align-items: center; justify-content: center; border-radius: 9999px;
+  background: #0b1220; color: #fff; font-weight: 700; letter-spacing: -0.02em; line-height: 1;
+  font-size: calc(var(--fs) * (0.6 + 0.4 * var(--p)));
+  opacity: var(--n); transform: scale(calc(0.6 + 0.4 * var(--n)));
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.apt-pw { inset: 0; opacity: var(--p); pointer-events: none; }
+.apt-pulse { inset: 0; border-radius: 9999px; border: 1.5px solid var(--c); animation: apt-pulse 2.6s ease-out infinite; }
+@keyframes apt-pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.8); opacity: 0; } }

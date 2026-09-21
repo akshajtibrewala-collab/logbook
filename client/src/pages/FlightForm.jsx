@@ -1,0 +1,152 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { api } from '../lib/api.js';
+import { fmtHours, parseHours } from '../lib/hours.js';
+import HoursInput from '../components/HoursInput.jsx';
+import CountInput from '../components/CountInput.jsx';
+import TextField from '../components/TextField.jsx';
+import DatePicker from '../components/DatePicker.jsx';
+import AirlineBadge from '../components/AirlineBadge.jsx';
+import { AIRLINE_NAMES } from '../lib/airlines.js';
+
+const TIME_FIELDS = [
+  ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'],
+  ['solo_time', 'Solo'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
+  ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
+];
+const COUNT_FIELDS = [
+  ['day_landings', 'Day landings'], ['night_landings', 'Night landings'],
+  ['approaches', 'Approaches'], ['holds', 'Holds'],
+];
+
+const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+
+const blank = () => ({
+  date: today(), departure_airport: '', arrival_airport: '', route: '', aircraft_type: '', tail_number: '', airline: '', remarks: '',
+  ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
+  ...Object.fromEntries(COUNT_FIELDS.map(([k]) => [k, '0'])),
+});
+
+function fromFlight(f) {
+  const s = blank();
+  for (const k of Object.keys(s)) {
+    if (f[k] === null || f[k] === undefined) continue;
+    s[k] = TIME_FIELDS.some(([t]) => t === k) ? fmtHours(f[k]) : String(f[k]);
+  }
+  return s;
+}
+
+function Section({ title, children }) {
+  return (
+    <section className="card p-4">
+      <h2 className="mb-3 text-sm font-medium text-accent">{title}</h2>
+      <div className="grid grid-cols-2 gap-3">{children}</div>
+    </section>
+  );
+}
+
+export default function FlightForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [form, setForm] = useState(blank);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(Boolean(id));
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!id) return;
+    api.getFlight(id).then((f) => setForm(fromFlight(f))).catch((e) => setMessage(e.message)).finally(() => setLoading(false));
+  }, [id]);
+
+  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+
+  async function submit(e) {
+    e.preventDefault();
+    const payload = { ...form };
+    const local = {};
+    for (const [k, label] of TIME_FIELDS) {
+      const n = parseHours(form[k]);
+      if (n === null) local[k] = `${label}: use 1.5 or 1:30`;
+      payload[k] = n;
+    }
+    if (Object.keys(local).length) return setErrors(local);
+    setSaving(true);
+    setErrors({});
+    setMessage('');
+    try {
+      if (id) await api.updateFlight(id, payload);
+      else await api.createFlight(payload);
+      navigate('/logbook');
+    } catch (err) {
+      setErrors(err.fieldErrors || {});
+      setMessage(err.fieldErrors ? 'Please fix the highlighted fields.' : err.message);
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm('Delete this flight? This cannot be undone.')) return;
+    try {
+      await api.deleteFlight(id);
+      navigate('/logbook');
+    } catch (err) {
+      setMessage(err.message);
+    }
+  }
+
+  if (loading) return <p className="text-slate-400">Loading…</p>;
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <h1 className="text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
+      </div>
+
+      <Section title="Flight">
+        <div className="col-span-2"><DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} /></div>
+        <TextField label="From" upper value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
+        <TextField label="To" upper value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
+        <div className="col-span-2"><TextField label="Via (other airports, optional)" upper value={form.route} onChange={set('route')} error={errors.route} placeholder="KFYG KSQL" /></div>
+        <TextField label="Aircraft type" upper value={form.aircraft_type} onChange={set('aircraft_type')} placeholder="C172" />
+        <TextField label="Tail number" upper value={form.tail_number} onChange={set('tail_number')} placeholder="N123AB" />
+        <div className="col-span-2">
+          <TextField label="Airline (optional, for commercial flights)" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
+          <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
+          {form.airline.trim() && <div className="mt-2"><AirlineBadge airline={form.airline} /></div>}
+        </div>
+      </Section>
+
+      <Section title="Time (hours — 1.5 or 1:30)">
+        {TIME_FIELDS.map(([k, label]) => (
+          <div key={k} className={k === 'total_time' ? 'col-span-2' : ''}>
+            <HoursInput label={label} value={form[k]} onChange={set(k)} error={errors[k]} />
+          </div>
+        ))}
+      </Section>
+
+      <Section title="Landings & approaches">
+        {COUNT_FIELDS.map(([k, label]) => (
+          <CountInput key={k} label={label} value={form[k]} onChange={set(k)} error={errors[k]} />
+        ))}
+      </Section>
+
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-medium text-accent">Remarks</h2>
+        <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3}
+          className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+      </section>
+
+      {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
+
+      <button disabled={saving} className="h-14 w-full rounded-2xl bg-accent text-base font-semibold text-ink active:bg-accent-dark disabled:opacity-60">
+        {saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}
+      </button>
+      {id && (
+        <button type="button" onClick={remove} className="h-12 w-full rounded-2xl text-sm text-bad">Delete flight</button>
+      )}
+    </form>
+  );
+}

@@ -1,0 +1,36 @@
+import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import BottomNav from './components/BottomNav.jsx';
+import Placeholder from './pages/Placeholder.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import Logbook from './pages/Logbook.jsx';
+import FlightForm from './pages/FlightForm.jsx';
+import Skeleton from './components/Skeleton.jsx';
+
+// Map and Stats pull in Leaflet and Recharts, so they load on demand.
+const MapPage = lazy(() => import('./pages/Map.jsx'));
+const Stats = lazy(() => import('./pages/Stats.jsx'));
+const ImportExport = lazy(() => import('./pages/ImportExport.jsx'));
+
+export default function App() {
+  const location = useLocation();
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+      <main key={location.pathname} className="flex-1 animate-[fade_.2s_ease-out] px-4 pb-28 pt-6">
+        <Suspense fallback={<div className="space-y-4"><Skeleton className="h-8 w-40" /><Skeleton className="h-40" /></div>}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/logbook" element={<Logbook />} />
+          <Route path="/logbook/data" element={<ImportExport />} />
+          <Route path="/logbook/new" element={<FlightForm />} />
+          <Route path="/logbook/:id" element={<FlightForm />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </Suspense>
+      </main>
+      <BottomNav />
+    </div>
+  );
+}

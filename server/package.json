@@ -1,0 +1,18 @@
+{
+  "name": "server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "node --test",
+    "migrate": "node --env-file-if-exists=../.env scripts/migrate.js",
+    "seed": "node --env-file-if-exists=../.env scripts/seed-airports.js",
+    "db:setup": "npm run migrate && npm run seed",
+    "db:copy-local": "node --env-file-if-exists=../.env scripts/copy-local-to-remote.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "express": "^5.2.1"
+  }
+}
