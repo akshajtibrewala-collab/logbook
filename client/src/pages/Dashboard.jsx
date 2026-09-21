@@ -7,6 +7,7 @@ import DatePicker from '../components/DatePicker.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import { fmtHours } from '../lib/hours.js';
+import { greeting } from '../lib/greeting.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, summarize } from '../lib/currency.js';
 
 const today = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
@@ -117,7 +118,7 @@ export default function Dashboard() {
     <div className="stagger space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <h1 className="text-2xl font-semibold">{greeting()}</h1>
           <p className="text-sm text-slate-400">{fmtDate(now)}</p>
         </div>
         <ThemeToggle />

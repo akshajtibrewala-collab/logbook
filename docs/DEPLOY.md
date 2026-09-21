@@ -72,8 +72,11 @@ if a button is worded differently, look for the closest match.
 
 1. Sign up at **vercel.com** with GitHub, on the free **Hobby** plan.
 2. **Add New → Project**, pick your `logbook` repo, **Import**.
-3. Leave the build settings alone. They come from `vercel.json` (framework "Other", build `npm run build:vercel`, output
-   `client/dist`).
+3. **Root Directory must stay empty (`./`, the repo root).** Vercel may offer or auto-select `client` because it spots the
+   Vite app there. Do not accept that: the API function (`api/`), the server code and the build script all live at the
+   repo root, and with `client` as the root Vercel fails with `Missing script: "build:vercel"` and has no API. Leave the
+   other build settings alone too. They come from `vercel.json` (framework "Other", build `npm run build:vercel`, output
+   `client/dist`). If any of them show an "Override" toggle switched on, switch it off.
 4. Open **Environment Variables** and add these three (at least for **Production**):
    | Name | Value |
    | --- | --- |
@@ -101,6 +104,8 @@ Use only additive changes (new tables and columns) so a deploy can't break the r
 - **Backups:** Use **Logbook → Import & export → Export CSV** now and then. Turso also has its own backup/restore options.
 - **Changing the passcode:** change `APP_PASSCODE` in Vercel and redeploy. Each device asks for the new one.
 - **Lock screen keeps coming back:** the passcode in Vercel doesn't match what you typed. Re-enter it.
+- **`Missing script: "build:vercel"` / location `.../client`:** the project's Root Directory is set to `client`. Clear it under
+  Project Settings > General > Root Directory, save, and redeploy.
 - **Blank data or errors:** open the deployment in Vercel and read **Logs**. A build that says `TURSO_DATABASE_URL is not
   set` means the environment variable is missing for that environment.
 - **Preview deployments** run the migration too, against the same database, so only add the Turso variables to
