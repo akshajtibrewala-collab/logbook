@@ -61,3 +61,39 @@ export function computeMilestones(config, flights, aircraftById = {}) {
 
 const CERT_LABELS = { private: 'Private Pilot', instrument: 'Instrument Rating', commercial: 'Commercial Pilot', cfi: 'CFI', multi_engine: 'Multi-Engine', atp: 'ATP' };
 export const certificateLabel = (cert) => CERT_LABELS[cert] ?? cert;
+
+/**
+ * Which group a requirement belongs to for display, purely from its own data — never a hardcoded list
+ * of requirement_keys, so a new requirement (a new migration row) groups correctly with no UI change:
+ *   - manual (no computable progress) -> "Tracked manually"
+ *   - otherwise, if either the summed field(s) or the flight_filter clauses mention dual time (received
+ *     or given) -> "Training" (time logged with/as an instructor)
+ *   - otherwise -> "Flight time"
+ * Checking flight_filter as well as sum_field matters: a requirement like "instrument training" sums
+ * instrument_actual/instrument_simulated (not a "dual" field) but *gates* on dual_received > 0 in its
+ * filter, which is what actually makes it training rather than plain instrument time.
+ */
+export function requirementGroup(req) {
+  if (req.manual) return 'Tracked manually';
+  const haystack = `${req.sum_field ?? ''} ${req.flight_filter ?? ''}`;
+  return haystack.includes('dual') ? 'Training' : 'Flight time';
+}
+
+/** Groups requirements for one certificate into the three display buckets, each in the given order. */
+export function groupRequirements(requirements) {
+  const groups = { 'Flight time': [], Training: [], 'Tracked manually': [] };
+  for (const req of requirements) groups[requirementGroup(req)].push(req);
+  return groups;
+}
+
+/**
+ * A certificate's overall completion: how many of its *computable* requirements are met (manual ones
+ * have no met/not-met state, so they're excluded from both the count and the percent — they're tracked,
+ * not scored) and the resulting percent, for a summary ring/bar.
+ */
+export function certificateSummary(requirements) {
+  const computable = requirements.filter((r) => !r.manual);
+  const metCount = computable.filter((r) => r.met).length;
+  const percent = computable.length ? (metCount / computable.length) * 100 : 0;
+  return { metCount, computableCount: computable.length, percent, complete: computable.length > 0 && metCount === computable.length };
+}

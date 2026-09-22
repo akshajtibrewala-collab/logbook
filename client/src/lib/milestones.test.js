@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesFilter, computeRequirement, computeMilestones, certificateLabel } from './milestones.js';
+import { matchesFilter, computeRequirement, computeMilestones, certificateLabel, requirementGroup, groupRequirements, certificateSummary } from './milestones.js';
 
 const flight = (o) => ({ total_time: 0, pic_time: 0, dual_received: 0, solo_time: 0, cross_country_time: 0, night_time: 0, aircraft_id: null, ...o });
 
@@ -82,4 +82,49 @@ test('computeMilestones groups by certificate in config order', () => {
 test('certificateLabel gives a readable name, falling back to the raw key for anything unlisted', () => {
   assert.equal(certificateLabel('private'), 'Private Pilot');
   assert.equal(certificateLabel('seaplane'), 'seaplane');
+});
+
+test('requirementGroup: manual always wins, then dual time (received or given) in either sum_field or flight_filter means Training', () => {
+  assert.equal(requirementGroup({ manual: true }), 'Tracked manually');
+  assert.equal(requirementGroup({ manual: false, sum_field: 'total_time', flight_filter: null }), 'Flight time');
+  assert.equal(requirementGroup({ manual: false, sum_field: 'solo_time', flight_filter: JSON.stringify([{ field: 'cross_country_time', op: '>', value: 0 }]) }), 'Flight time');
+  assert.equal(requirementGroup({ manual: false, sum_field: 'dual_received', flight_filter: null }), 'Training');
+  // The real "instrument training" shape: sum_field never mentions dual, only the filter gates on it.
+  assert.equal(
+    requirementGroup({ manual: false, sum_field: 'instrument_actual,instrument_simulated', flight_filter: JSON.stringify([{ field: 'dual_received', op: '>', value: 0 }]) }),
+    'Training',
+  );
+});
+
+test('groupRequirements buckets a certificate\'s requirements and preserves Flight time / Training / Tracked manually order', () => {
+  const reqs = [
+    { requirement_key: 'a', manual: true },
+    { requirement_key: 'b', manual: false, sum_field: 'total_time' },
+    { requirement_key: 'c', manual: false, sum_field: 'dual_received' },
+  ];
+  const groups = groupRequirements(reqs);
+  assert.deepEqual(Object.keys(groups), ['Flight time', 'Training', 'Tracked manually']);
+  assert.deepEqual(groups['Flight time'].map((r) => r.requirement_key), ['b']);
+  assert.deepEqual(groups.Training.map((r) => r.requirement_key), ['c']);
+  assert.deepEqual(groups['Tracked manually'].map((r) => r.requirement_key), ['a']);
+});
+
+test('certificateSummary counts only computable requirements, excluding manual ones from the ratio', () => {
+  const reqs = [
+    { manual: false, met: true }, { manual: false, met: false }, { manual: false, met: true },
+    { manual: true, met: null },
+  ];
+  const s = certificateSummary(reqs);
+  assert.equal(s.metCount, 2);
+  assert.equal(s.computableCount, 3);
+  assert.ok(Math.abs(s.percent - 66.67) < 0.01);
+  assert.equal(s.complete, false);
+});
+
+test('certificateSummary: complete when every computable requirement is met; 0% with none computable', () => {
+  assert.equal(certificateSummary([{ manual: false, met: true }, { manual: false, met: true }]).complete, true);
+  const empty = certificateSummary([{ manual: true, met: null }]);
+  assert.equal(empty.computableCount, 0);
+  assert.equal(empty.percent, 0);
+  assert.equal(empty.complete, false);
 });
