@@ -8,6 +8,8 @@ import CountInput from '../components/CountInput.jsx';
 import TextField from '../components/TextField.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
+import Button from '../components/Button.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 
 const TIME_FIELDS = [
@@ -54,6 +56,8 @@ export default function FlightForm() {
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -87,12 +91,13 @@ export default function FlightForm() {
   }
 
   async function remove() {
-    if (!window.confirm('Delete this flight? This cannot be undone.')) return;
+    setDeleting(true);
     try {
       await api.deleteFlight(id);
       navigate('/logbook');
     } catch (err) {
       setMessage(err.message);
+      setDeleting(false);
     }
   }
 
@@ -141,12 +146,13 @@ export default function FlightForm() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <button disabled={saving} className="h-14 w-full rounded-2xl bg-accent text-base font-semibold text-ink active:bg-accent-dark disabled:opacity-60">
-        {saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}
-      </button>
+      <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}</Button>
       {id && (
-        <button type="button" onClick={remove} className="h-12 w-full rounded-2xl text-sm text-bad">Delete flight</button>
+        <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete flight</Button>
       )}
+
+      <ConfirmDialog open={confirmDelete} title="Delete flight?" description="This cannot be undone."
+        confirmLabel="Delete" busy={deleting} onConfirm={remove} onClose={() => setConfirmDelete(false)} />
     </form>
   );
 }

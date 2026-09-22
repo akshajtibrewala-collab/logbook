@@ -7,6 +7,8 @@ import AirlineBadge from '../components/AirlineBadge.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
+import Card from '../components/Card.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 const CATEGORIES = [
   ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual'], ['solo_time', 'Solo'],
@@ -104,8 +106,8 @@ export default function Logbook() {
       <ul className="stagger mt-2 space-y-2">
         {visible.map((f) => (
           <li key={f.id}>
-            <button onClick={() => navigate(`/logbook/${f.id}`)}
-              className="w-full card p-4 text-left transition duration-150 active:scale-[0.985] active:bg-navy-800">
+            <Card as="button" onClick={() => navigate(`/logbook/${f.id}`)}
+              className="w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800">
               <div className="flex items-baseline justify-between">
                 <span className="text-base font-medium">{f.departure_airport || '—'} → {f.arrival_airport || '—'}</span>
                 <span className="text-lg font-semibold text-accent">{fmtHours(f.total_time)}</span>
@@ -117,20 +119,16 @@ export default function Logbook() {
                   {[f.aircraft_type, f.tail_number].filter(Boolean).join(' · ')}
                 </span>
               </div>
-            </button>
+            </Card>
           </li>
         ))}
       </ul>
 
       {flights && flights.length === 0 && (
-        <div className="mt-16 text-center text-slate-400">
-          <Plane size={40} strokeWidth={1.5} className="mx-auto text-slate-600" />
-          <p className="mt-3">No flights logged yet.</p>
-          <p className="text-sm">Tap the + button to add your first one.</p>
-        </div>
+        <EmptyState icon={Plane} title="No flights logged yet." description="Tap the + button to add your first one." />
       )}
       {flights && flights.length > 0 && visible.length === 0 && (
-        <p className="mt-10 text-center text-slate-400">No flights match these filters.</p>
+        <EmptyState title="No flights match these filters." />
       )}
 
       <Link to="/logbook/new" aria-label="Add flight"

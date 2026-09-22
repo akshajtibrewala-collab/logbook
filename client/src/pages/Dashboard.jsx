@@ -6,6 +6,8 @@ import ThemeToggle from '../components/ThemeToggle.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
+import Button from '../components/Button.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { fmtHours } from '../lib/hours.js';
 import { greeting } from '../lib/greeting.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, summarize } from '../lib/currency.js';
@@ -67,6 +69,8 @@ export default function Dashboard() {
   const [reviewDate, setReviewDate] = useState(today);
   const [logging, setLogging] = useState(false);
   const [editingId, setEditingId] = useState(null); // id of the review being re-dated, or null when adding
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const now = today();
 
   const load = useCallback(() => {
@@ -105,12 +109,15 @@ export default function Dashboard() {
   }
 
   async function removeReview() {
-    if (!window.confirm('Remove your most recent flight review? This cannot be undone.')) return;
+    setRemoving(true);
     try {
       await api.deleteReview(reviews[0].id);
       setReviews((rs) => rs.slice(1));
+      setConfirmRemove(false);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -137,8 +144,8 @@ export default function Dashboard() {
           <h2 className="mt-3 text-lg font-semibold">Welcome to your logbook</h2>
           <p className="mt-1 text-sm text-slate-400">Log a flight or import a CSV and your currency status, hours and map fill in here.</p>
           <div className="mt-4 grid gap-2">
-            <Link to="/logbook/new" className="flex h-12 items-center justify-center rounded-xl bg-accent font-semibold text-ink active:bg-accent-dark">Add your first flight</Link>
-            <Link to="/logbook/data" className="flex h-12 items-center justify-center rounded-xl border border-edge-strong text-accent active:bg-navy-800">Import a CSV</Link>
+            <Button as={Link} to="/logbook/new" size="md">Add your first flight</Button>
+            <Button as={Link} to="/logbook/data" size="md" variant="secondary">Import a CSV</Button>
           </div>
         </section>
       )}
@@ -164,19 +171,17 @@ export default function Dashboard() {
               <form onSubmit={logReview} className="space-y-2">
                 <DatePicker label={editingId ? 'Change review date' : 'Flight review date'} value={reviewDate} onChange={setReviewDate} />
                 <div className="flex gap-2">
-                  <button className="h-12 flex-1 rounded-xl bg-accent px-4 font-semibold text-ink active:bg-accent-dark">Save</button>
-                  <button type="button" onClick={cancelReview} className="h-12 rounded-xl px-4 text-sm text-slate-400 active:bg-navy-800">Cancel</button>
+                  <Button size="md" fullWidth={false} className="flex-1">Save</Button>
+                  <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={cancelReview}>Cancel</Button>
                 </div>
               </form>
             ) : (
               <div className="space-y-1">
-                <button onClick={startAdd} className="h-12 w-full rounded-xl border border-edge-strong text-sm text-accent active:bg-navy-800">
-                  Log a flight review
-                </button>
+                <Button variant="secondary" size="md" onClick={startAdd}>Log a flight review</Button>
                 {reviews.length > 0 && (
                   <div className="flex justify-center gap-2 text-sm">
-                    <button onClick={startEdit} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Change date</button>
-                    <button onClick={removeReview} className="h-10 rounded-lg px-3 text-bad active:bg-navy-800">Remove</button>
+                    <Button variant="ghost" size="sm" fullWidth={false} onClick={startEdit}>Change date</Button>
+                    <Button variant="danger" size="sm" fullWidth={false} onClick={() => setConfirmRemove(true)}>Remove</Button>
                   </div>
                 )}
               </div>
@@ -193,6 +198,10 @@ export default function Dashboard() {
           </div>
         </>
       )}
+
+      <ConfirmDialog open={confirmRemove} title="Remove flight review?"
+        description="This removes your most recently logged flight review. This cannot be undone."
+        confirmLabel="Remove" busy={removing} onConfirm={removeReview} onClose={() => setConfirmRemove(false)} />
     </div>
   );
 }
