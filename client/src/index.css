@@ -72,12 +72,17 @@ body {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-/* Airport markers. --z is the map's live zoom (set on the container by ZoomTracker).
-   One disc changes size continuously with zoom (FULL_ZOOM = 11 in Map.jsx is where it is full size):
+/* Airport markers. --z is the map's live zoom (kept in sync with Leaflet's own zoom animation by
+   ZoomTracker in Map.jsx). --full (px) and --dot-ratio (dot size / full size, unitless) are set per
+   marker in Map.jsx; --z/--p/--k/--n are map-wide.
      z 11 -> 9   the full marker shrinks to dot size   (--p goes 1 -> 0)
      z 9  -> 2   the dot keeps shrinking to 30%         (--k goes 1 -> 0.3)
    Detail is shed on the way down: the navy badge with the visit count fades out over z 11 -> 10.25 (--n),
-   leaving a plain accent-colored dot. */
+   leaving a plain accent-colored dot.
+   Sizing is done with `transform: scale()` rather than by animating width/height: a width/height change
+   forces the browser to re-run layout, and with --z updating on every frame of a pinch-zoom gesture that
+   meant a layout pass across every marker on screen each frame — the cause of the reported stutter.
+   transform is compositor-only, so it stays smooth at the same frame rate as Leaflet's own zoom. */
 .leaflet-container {
   --z: 4;
   --p: clamp(0, (var(--z) - 9) / 2, 1);
@@ -87,26 +92,30 @@ body {
 .apt-icon { background: none; border: none; }
 .apt {
   position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none;
-  --size: calc(var(--dot) * var(--k) + (var(--full) - var(--dot)) * var(--p));
+  --scale: calc(var(--k) * var(--dot-ratio) + var(--p) * (1 - var(--dot-ratio)));
 }
 .apt span { position: absolute; }
 .apt-hit {
-  left: 0; top: 0; width: max(28px, var(--size)); height: max(28px, var(--size));
+  /* An invisible tap target, sized once for the marker's largest possible on-screen size — it doesn't
+     need to track --scale, so it needs no animation at all. */
+  left: 0; top: 0; width: max(28px, var(--full)); height: max(28px, var(--full));
   transform: translate(-50%, -50%); border-radius: 9999px; pointer-events: auto; cursor: pointer;
 }
 .apt-disc {
-  left: 0; top: 0; width: var(--size); height: var(--size); transform: translate(-50%, -50%);
+  left: 0; top: 0; width: var(--full); height: var(--full);
+  transform: translate(-50%, -50%) scale(var(--scale));
   border-radius: 9999px; background: var(--c); /* solid accent: the dot, and the crisp ring around the badge */
   box-shadow: 0 calc(1px + 1px * var(--p)) calc(3px + 3px * var(--p)) rgba(0, 0, 0, 0.4); /* small, crisp drop shadow */
-  transition: width 0.3s ease, height 0.3s ease;
+  transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1); /* matches Leaflet's own zoom-pane transition */
+  will-change: transform;
 }
 .apt-badge {
   inset: 2px; display: flex; align-items: center; justify-content: center; border-radius: 9999px;
   background: #0b1220; color: #fff; font-weight: 700; letter-spacing: -0.02em; line-height: 1;
-  font-size: calc(var(--fs) * (0.6 + 0.4 * var(--p)));
+  font-size: var(--fs);
   opacity: var(--n); transform: scale(calc(0.6 + 0.4 * var(--n)));
-  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0, 0, 0.25, 1);
 }
-.apt-pw { inset: 0; opacity: var(--p); pointer-events: none; }
+.apt-pw { inset: 0; opacity: var(--p); pointer-events: none; transition: opacity 0.25s ease; }
 .apt-pulse { inset: 0; border-radius: 9999px; border: 1.5px solid var(--c); animation: apt-pulse 2.6s ease-out infinite; }
 @keyframes apt-pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.8); opacity: 0; } }

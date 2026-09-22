@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Plane, Info, X } from 'lucide-react';
 import { api } from '../lib/api.js';
@@ -30,12 +30,13 @@ function airportIcon(visits, max) {
   const dot = Math.round(9 + 7 * Math.sqrt(visits / max));
   const digits = String(visits).length;
   const fs = Math.max(8, Math.round(full * (digits >= 3 ? 0.3 : digits === 2 ? 0.36 : 0.44)));
+  const dotRatio = (dot / full).toFixed(4); // unitless, so the CSS scale formula never divides px by px
   const pulse = max > 1 && visits === max ? '<span class="apt-pw"><span class="apt-pulse"></span></span>' : '';
   return L.divIcon({
     className: 'apt-icon',
     iconSize: [0, 0],
     popupAnchor: [0, -10],
-    html: `<div class="apt" style="--c:${color(visits, max)};--dot:${dot}px;--full:${full}px;--fs:${fs}px">
+    html: `<div class="apt" style="--c:${color(visits, max)};--full:${full}px;--dot-ratio:${dotRatio};--fs:${fs}px">
       <span class="apt-hit"></span><span class="apt-disc">${pulse}<span class="apt-badge">${visits}</span></span></div>`,
   });
 }
@@ -60,12 +61,34 @@ function AttributionToggle() {
   );
 }
 
-// Publishes the live zoom as a CSS variable on the map container so marker sizes can
-// follow it continuously (and animate via CSS transitions) without re-creating icons.
+// Publishes the live zoom as a CSS variable on the map container so marker sizes can follow it
+// continuously via CSS `transform: scale()` (see the .apt-* rules in index.css).
+//
+// This listens to Leaflet's 'zoomanim' event rather than 'zoom'. Per Leaflet's own source, a normal
+// tap/scroll-wheel zoom runs as a single ~250ms CSS transform transition on the map pane, and 'zoom'
+// only fires once that transition has *finished* — so markers sat at their old size for the whole
+// animation and then jumped, which read as a stutter. 'zoomanim' fires immediately with the *target*
+// zoom when the animation starts (and once per frame during a pinch gesture, which is the zoom
+// interaction on a phone), so setting --z from it lets the marker's own CSS transition run in step
+// with the map's zoom instead of trailing behind it. 'viewreset' covers jumps too large to animate
+// (e.g. the initial fit-to-bounds), which skip 'zoomanim' entirely.
 function ZoomTracker() {
-  const map = useMapEvents({ zoom: sync, zoomend: sync });
-  function sync() { map.getContainer().style.setProperty('--z', map.getZoom()); }
-  useEffect(sync, [map]); // eslint-disable-line react-hooks/exhaustive-deps
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    const set = (z) => container.style.setProperty('--z', z);
+    const onZoomAnim = (e) => set(e.zoom);
+    const onSettled = () => set(map.getZoom());
+    map.on('zoomanim', onZoomAnim);
+    map.on('zoomend', onSettled);
+    map.on('viewreset', onSettled);
+    set(map.getZoom());
+    return () => {
+      map.off('zoomanim', onZoomAnim);
+      map.off('zoomend', onSettled);
+      map.off('viewreset', onSettled);
+    };
+  }, [map]);
   return null;
 }
 
