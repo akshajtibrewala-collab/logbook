@@ -5,6 +5,7 @@ import reviews from './routes/reviews.js';
 import airports from './routes/airports.js';
 import aircraft from './routes/aircraft.js';
 import milestones from './routes/milestones.js';
+import expirations from './routes/expirations.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -21,6 +22,7 @@ app.use('/api/reviews', reviews);
 app.use('/api/airports', airports);
 app.use('/api/aircraft', aircraft);
 app.use('/api/milestones', milestones);
+app.use('/api/expirations', expirations);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });

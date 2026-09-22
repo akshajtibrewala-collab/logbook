@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   addDays, daysBetween, endOfMonth, dayCurrency, nightCurrency,
   instrumentCurrency, flightReviewStatus, summarize,
+  expirationStatus, medicalCurrency, customExpirations,
 } from './currency.js';
 
 const fl = (date, extra = {}) => ({ date, total_time: 1, day_landings: 0, night_landings: 0, approaches: 0, holds: 0, ...extra });
@@ -101,4 +102,39 @@ test('flight review with none logged is expired', () => {
 test('summarize totals hours for all time, this month, this year', () => {
   const flights = [fl('2026-06-02', { total_time: 1.25 }), fl('2026-06-20', { total_time: 0.5 }), fl('2026-02-01', { total_time: 2 }), fl('2025-12-31', { total_time: 3 })];
   assert.deepEqual(summarize(flights, '2026-06-25'), { total: 6.75, month: 1.75, year: 3.75 });
+});
+
+test('expirationStatus follows the same status/warn-window rules as everything else', () => {
+  const item = { label: 'Passport', expires_date: '2026-07-01' };
+  const r = expirationStatus(item, '2026-06-15');
+  assert.equal(r.status, 'expiring'); // 16 days left, inside the 30-day default warn window
+  assert.equal(r.daysRemaining, 16);
+  assert.equal(r.item, item);
+  assert.equal(expirationStatus(null, '2026-06-15').status, 'expired');
+});
+
+test('medicalCurrency picks the medical-kind item with the latest expiry, ignoring other kinds', () => {
+  const expirations = [
+    { kind: 'medical', label: 'Old 3rd class', expires_date: '2025-01-01' },
+    { kind: 'medical', label: 'Current 2nd class', expires_date: '2027-06-30' },
+    { kind: 'custom', label: 'Passport', expires_date: '2030-01-01' },
+  ];
+  const r = medicalCurrency(expirations, '2026-06-15');
+  assert.equal(r.item.label, 'Current 2nd class');
+  assert.equal(r.status, 'current');
+});
+
+test('medicalCurrency with none logged is expired, not a crash', () => {
+  assert.equal(medicalCurrency([], '2026-06-15').status, 'expired');
+  assert.equal(medicalCurrency([{ kind: 'custom', expires_date: '2030-01-01' }], '2026-06-15').status, 'expired');
+});
+
+test('customExpirations excludes medical and sorts soonest-first', () => {
+  const expirations = [
+    { kind: 'medical', label: 'Medical', expires_date: '2027-01-01' },
+    { kind: 'custom', label: 'Renter’s insurance', expires_date: '2026-09-01' },
+    { kind: 'custom', label: 'Passport', expires_date: '2030-01-01' },
+  ];
+  const list = customExpirations(expirations, '2026-06-15');
+  assert.deepEqual(list.map((e) => e.item.label), ['Renter’s insurance', 'Passport']);
 });

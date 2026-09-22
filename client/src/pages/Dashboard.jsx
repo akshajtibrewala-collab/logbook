@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, XCircle, Plane, Gauge, ClipboardCheck } from 'lucide-react';
+import { Plane, Gauge, ClipboardCheck, HeartPulse, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import DatePicker from '../components/DatePicker.jsx';
@@ -8,50 +8,17 @@ import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import CurrencyStatusCard, { TONE } from '../components/CurrencyStatusCard.jsx';
 import { fmtHours } from '../lib/hours.js';
 import { greeting } from '../lib/greeting.js';
-import { passengerCurrency, instrumentCurrency, flightReviewStatus, summarize } from '../lib/currency.js';
+import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, summarize } from '../lib/currency.js';
 
 const today = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
-
-const TONE = {
-  current: { Icon: CheckCircle2, text: 'text-ok', bar: 'bg-ok', label: 'Current' },
-  expiring: { Icon: AlertTriangle, text: 'text-warn', bar: 'bg-warn', label: 'Expiring soon' },
-  expired: { Icon: XCircle, text: 'text-bad', bar: 'bg-bad', label: 'Not current' },
-};
 
 const fmtDate = (iso) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-function daysText(r) {
-  if (r.daysRemaining === null) return { big: '—', small: 'no qualifying history' };
-  if (r.daysRemaining < 0) return { big: Math.abs(r.daysRemaining), small: `day${r.daysRemaining === -1 ? '' : 's'} overdue` };
-  return { big: r.daysRemaining, small: `day${r.daysRemaining === 1 ? '' : 's'} left` };
-}
-
-function StatusCard({ title, Icon, result, detail, children }) {
-  const tone = TONE[result.status];
-  const days = daysText(result);
-  return (
-    <section className="card relative overflow-hidden p-4">
-      <span className={`absolute inset-y-0 left-0 w-1 ${tone.bar}`} />
-      <div className="flex items-start justify-between gap-3 pl-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm text-slate-400"><Icon size={16} strokeWidth={1.75} />{title}</div>
-          <div className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${tone.text}`}>
-            <tone.Icon size={16} />{tone.label}
-          </div>
-          <p className="mt-1 text-sm text-slate-400">{detail}</p>
-        </div>
-        <div className="shrink-0 text-right">
-          <div className={`text-4xl font-semibold leading-none ${tone.text}`}>{days.big}</div>
-          <div className="mt-1 text-xs text-slate-400">{days.small}</div>
-        </div>
-      </div>
-      {children && <div className="mt-3 pl-2">{children}</div>}
-    </section>
-  );
-}
+const StatusCard = CurrencyStatusCard;
 
 function Stat({ label, value }) {
   return (
@@ -65,6 +32,7 @@ function Stat({ label, value }) {
 export default function Dashboard() {
   const [flights, setFlights] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [expirations, setExpirations] = useState([]);
   const [error, setError] = useState('');
   const [reviewDate, setReviewDate] = useState(today);
   const [logging, setLogging] = useState(false);
@@ -75,8 +43,8 @@ export default function Dashboard() {
 
   const load = useCallback(() => {
     setError('');
-    Promise.all([api.listFlights(), api.listReviews()])
-      .then(([f, r]) => { setFlights(f); setReviews(r); })
+    Promise.all([api.listFlights(), api.listReviews(), api.listExpirations()])
+      .then(([f, r, e]) => { setFlights(f); setReviews(r); setExpirations(e); })
       .catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
@@ -87,9 +55,10 @@ export default function Dashboard() {
       pax: passengerCurrency(flights, now),
       inst: instrumentCurrency(flights, now),
       review: flightReviewStatus(reviews, now),
+      medical: medicalCurrency(expirations, now),
       stats: summarize(flights, now),
     };
-  }, [flights, reviews, now]);
+  }, [flights, reviews, expirations, now]);
 
   const newestFirst = (x, y) => y.date.localeCompare(x.date) || y.id - x.id;
 
@@ -187,6 +156,13 @@ export default function Dashboard() {
               </div>
             )}
           </StatusCard>
+
+          <StatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
+            detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
+
+          <Link to="/currency" className="flex items-center justify-between rounded-xl px-1 py-1 text-sm text-accent active:opacity-70">
+            See all currency & expirations<ChevronRight size={16} />
+          </Link>
 
           <div>
             <h2 className="mb-2 text-sm font-medium text-slate-400">Hours flown</h2>

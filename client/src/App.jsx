@@ -14,6 +14,8 @@ const ImportExport = lazy(() => import('./pages/ImportExport.jsx'));
 const Aircraft = lazy(() => import('./pages/Aircraft.jsx'));
 const AircraftForm = lazy(() => import('./pages/AircraftForm.jsx'));
 const Milestones = lazy(() => import('./pages/Milestones.jsx'));
+const Currency = lazy(() => import('./pages/Currency.jsx'));
+const ExpirationForm = lazy(() => import('./pages/ExpirationForm.jsx'));
 
 export default function App() {
   const location = useLocation();
@@ -31,6 +33,9 @@ export default function App() {
           <Route path="/logbook/new" element={<FlightForm />} />
           <Route path="/logbook/:id" element={<FlightForm />} />
           <Route path="/milestones" element={<Milestones />} />
+          <Route path="/currency" element={<Currency />} />
+          <Route path="/currency/new" element={<ExpirationForm />} />
+          <Route path="/currency/:id" element={<ExpirationForm />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="*" element={<Navigate to="/" replace />} />

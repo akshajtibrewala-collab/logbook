@@ -13,7 +13,7 @@ export const startOfMonth = (iso, plusMonths = 0) =>
 export const endOfMonth = (iso, plusMonths = 0) =>
   fromUTC(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) + plusMonths, 0));
 
-export const WARN_DAYS = { passenger: 14, instrument: 30, review: 60 };
+export const WARN_DAYS = { passenger: 14, instrument: 30, review: 60, expiration: 30 };
 export const PASSENGER_DAYS = 90;
 export const INSTRUMENT = { approaches: 6, holds: 1, months: 6 };
 export const REVIEW_MONTHS = 24;
@@ -22,7 +22,7 @@ export const REVIEW_MONTHS = 24;
  * status: 'current' | 'expiring' (current, but within warnDays of lapsing) | 'expired'.
  * daysRemaining is days until the last valid day (0 = last day); negative once lapsed.
  */
-function result(expires, today, warnDays, extra = {}) {
+export function result(expires, today, warnDays, extra = {}) {
   if (!expires) return { status: 'expired', expires: null, daysRemaining: null, ...extra };
   const daysRemaining = daysBetween(today, expires);
   const status = daysRemaining < 0 ? 'expired' : daysRemaining <= warnDays ? 'expiring' : 'current';
@@ -83,6 +83,29 @@ export function flightReviewStatus(reviews, today) {
   const dates = reviews.map((r) => r.date).filter((d) => d <= today).sort();
   const last = dates[dates.length - 1] ?? null;
   return result(last ? endOfMonth(last, REVIEW_MONTHS) : null, today, WARN_DAYS.review, { lastReview: last });
+}
+
+/**
+ * Status for any dated item (medical certificate, passport, ...): { status, expires, daysRemaining, item }.
+ * Works on the `expirations` table's shape directly — { label, expires_date, ... } — so it's reused for
+ * both the medical-specific card and the generic list of custom expirations, with no per-kind logic.
+ */
+export function expirationStatus(item, today, warnDays = WARN_DAYS.expiration) {
+  return result(item?.expires_date ?? null, today, warnDays, { item: item ?? null });
+}
+
+/** Medical currency: the medical-kind expiration with the latest expiry (the most recently logged one). */
+export function medicalCurrency(expirations, today) {
+  const medicals = expirations.filter((e) => e.kind === 'medical').sort((a, b) => b.expires_date.localeCompare(a.expires_date));
+  return expirationStatus(medicals[0] ?? null, today, WARN_DAYS.expiration);
+}
+
+/** Every non-medical expiration (passport, insurance, ...), soonest-expiring first. */
+export function customExpirations(expirations, today) {
+  return expirations
+    .filter((e) => e.kind !== 'medical')
+    .map((e) => expirationStatus(e, today))
+    .sort((a, b) => a.expires.localeCompare(b.expires));
 }
 
 const round2 = (n) => Math.round(n * 100) / 100;

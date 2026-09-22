@@ -46,4 +46,8 @@ export const api = {
   unarchiveAircraft: (id) => request('POST', `/aircraft/${id}/unarchive`),
   deleteAircraft: (id) => request('DELETE', `/aircraft/${id}`),
   listMilestonesConfig: () => request('GET', '/milestones'),
+  listExpirations: () => request('GET', '/expirations'),
+  createExpiration: (e) => request('POST', '/expirations', e),
+  updateExpiration: (id, e) => request('PUT', `/expirations/${id}`, e),
+  deleteExpiration: (id) => request('DELETE', `/expirations/${id}`),
 };

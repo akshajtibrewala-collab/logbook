@@ -222,3 +222,31 @@ test('flight stops: save, reorder/replace, route text stays mirrored, cleaned up
   res = await call('GET', `/flights/${created.id}`);
   assert.equal(res.status, 404);
 });
+
+test('expirations: create, edit, delete, sorted by expiry', async () => {
+  let res = await call('POST', '/expirations', { kind: 'medical', label: '3rd Class Medical', issued_date: '2025-06-01', expires_date: '2027-06-30' });
+  assert.equal(res.status, 201);
+  const medical = await res.json();
+  assert.equal(medical.kind, 'medical');
+
+  res = await call('POST', '/expirations', { label: 'Passport', expires_date: '2030-01-01' });
+  assert.equal(res.status, 201);
+  const passport = await res.json();
+  assert.equal(passport.kind, 'custom'); // defaults when omitted
+
+  res = await call('POST', '/expirations', { label: '', expires_date: 'not-a-date' });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.ok(body.errors.label && body.errors.expires_date);
+
+  const list = await (await call('GET', '/expirations')).json();
+  assert.deepEqual(list.map((e) => e.label), ['3rd Class Medical', 'Passport']); // sorted by expires_date
+
+  res = await call('PUT', `/expirations/${medical.id}`, { kind: 'medical', label: '2nd Class Medical', expires_date: '2027-06-30' });
+  assert.equal((await res.json()).label, '2nd Class Medical');
+
+  assert.equal((await call('DELETE', `/expirations/${passport.id}`)).status, 204);
+  const afterDelete = await (await call('GET', '/expirations')).json();
+  assert.equal(afterDelete.length, 1);
+  assert.equal(afterDelete[0].label, '2nd Class Medical');
+});

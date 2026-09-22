@@ -119,3 +119,28 @@ export function parseAircraft(body) {
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
+
+export const EXPIRATION_FIELDS = ['kind', 'label', 'issued_date', 'expires_date', 'notes'];
+
+/** Validates and normalises an expiration payload (medical certificate, passport, or any custom item). */
+export function parseExpiration(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  v.kind = String(b.kind ?? '').trim() || 'custom';
+  const label = String(b.label ?? '').trim();
+  if (!label) errors.label = 'Enter a label';
+  v.label = label;
+
+  if (b.issued_date && !isIsoDate(b.issued_date)) errors.issued_date = 'Date must be YYYY-MM-DD';
+  else v.issued_date = b.issued_date || null;
+
+  if (!isIsoDate(b.expires_date)) errors.expires_date = 'Date must be YYYY-MM-DD';
+  else v.expires_date = b.expires_date;
+
+  const notes = String(b.notes ?? '').trim();
+  v.notes = notes || null;
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
