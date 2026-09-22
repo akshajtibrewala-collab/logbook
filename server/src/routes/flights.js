@@ -1,6 +1,19 @@
 import { Router } from 'express';
 import { all, batchRun, get, run } from '../db.js';
-import { parseFlight, FLIGHT_FIELDS } from '../validate.js';
+import { parseFlight, parseStops, FLIGHT_FIELDS } from '../validate.js';
+
+const STOPS_SELECT = 'SELECT airport_code, stop_type FROM flight_stops WHERE flight_id = ? ORDER BY sequence';
+
+/** Replaces a flight's stops with `stops` (an array, already validated) — full replace, not a diff. */
+async function saveStops(flightId, stops) {
+  await run('DELETE FROM flight_stops WHERE flight_id = ?', [flightId]);
+  if (stops.length) {
+    await batchRun(stops.map((s, i) => ({
+      sql: 'INSERT INTO flight_stops (flight_id, sequence, airport_code, stop_type) VALUES (?, ?, ?, ?)',
+      args: [flightId, i, s.airport_code, s.stop_type],
+    })));
+  }
+}
 
 const router = Router();
 
@@ -37,14 +50,20 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const row = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Flight not found' });
+  row.stops = await all(STOPS_SELECT, [req.params.id]);
   res.json(row);
 });
 
 router.post('/', async (req, res) => {
   const { value, errors } = parseFlight(req.body);
-  if (errors) return res.status(400).json({ errors });
+  const { value: stops, errors: stopErrors } = parseStops(req.body?.stops);
+  if (errors || stopErrors) return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }) } });
+  if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
   const { lastId } = await run(INSERT, value);
-  res.status(201).json(await get('SELECT * FROM flights WHERE id = ?', [lastId]));
+  if (stops) await saveStops(lastId, stops);
+  const created = await get('SELECT * FROM flights WHERE id = ?', [lastId]);
+  created.stops = await all(STOPS_SELECT, [lastId]);
+  res.status(201).json(created);
 });
 
 // Bulk insert for CSV import. Valid rows go in as one atomic batch; invalid ones are reported by index.
@@ -65,14 +84,22 @@ router.post('/bulk', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { value, errors } = parseFlight(req.body);
-  if (errors) return res.status(400).json({ errors });
+  const { value: stops, errors: stopErrors } = parseStops(req.body?.stops);
+  if (errors || stopErrors) return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }) } });
+  if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
   const set = FLIGHT_FIELDS.map((c) => `${c} = :${c}`).join(', ');
   const { changes } = await run(`UPDATE flights SET ${set}, updated_at = datetime('now') WHERE id = :id`, { ...value, id: req.params.id });
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
-  res.json(await get('SELECT * FROM flights WHERE id = ?', [req.params.id]));
+  if (stops) await saveStops(req.params.id, stops);
+  const updated = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
+  updated.stops = await all(STOPS_SELECT, [req.params.id]);
+  res.json(updated);
 });
 
 router.delete('/:id', async (req, res) => {
+  // Explicit cleanup rather than relying on ON DELETE CASCADE, which SQLite only enforces when
+  // "PRAGMA foreign_keys = ON" is set on the connection — not guaranteed across every environment.
+  await run('DELETE FROM flight_stops WHERE flight_id = ?', [req.params.id]);
   const { changes } = await run('DELETE FROM flights WHERE id = ?', [req.params.id]);
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
   res.status(204).end();

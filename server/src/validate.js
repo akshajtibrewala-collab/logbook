@@ -68,6 +68,23 @@ export function parseFlight(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
+/**
+ * Validates an optional structured stops list: [{ airport_code, stop_type }, ...], in the order they'll
+ * be flown. Returns { value, errors } where errors, if present, is keyed by index ("0", "1", ...).
+ * Sequence is implicit in array order, not a field the caller sends.
+ */
+export function parseStops(list) {
+  if (!Array.isArray(list)) return { value: null, errors: null }; // not provided: caller leaves stops alone
+  const errors = {};
+  const value = [];
+  list.forEach((s, i) => {
+    const code = String(s?.airport_code ?? '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,4}$/.test(code)) { errors[i] = 'Use a 3-4 character ICAO/IATA code'; return; }
+    value.push({ airport_code: code, stop_type: s?.stop_type === 'touch_and_go' ? 'touch_and_go' : 'full_stop' });
+  });
+  return { value, errors: Object.keys(errors).length ? errors : null };
+}
+
 export const AIRCRAFT_TEXT_FIELDS = [
   'tail_number', 'make', 'model', 'type_designator', 'category', 'class',
   'type_rating_designation', 'simulator_device_type', 'notes',

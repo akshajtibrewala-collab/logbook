@@ -11,6 +11,8 @@ import AirlineBadge from '../components/AirlineBadge.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import AircraftPicker from '../components/AircraftPicker.jsx';
+import StopsEditor from '../components/StopsEditor.jsx';
+import Disclosure from '../components/Disclosure.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 
 const TIME_FIELDS = [
@@ -26,7 +28,7 @@ const COUNT_FIELDS = [
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
 const blank = () => ({
-  date: today(), departure_airport: '', arrival_airport: '', route: '', aircraft_id: null, aircraft_type: '', tail_number: '', airline: '', remarks: '',
+  date: today(), departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '', airline: '', remarks: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map(([k]) => [k, '0'])),
 });
@@ -35,7 +37,7 @@ function fromFlight(f) {
   const s = blank();
   for (const k of Object.keys(s)) {
     if (f[k] === null || f[k] === undefined) continue;
-    if (k === 'aircraft_id') { s[k] = f[k]; continue; } // stays numeric — used for object lookup, not typed
+    if (k === 'aircraft_id' || k === 'stops') { s[k] = f[k]; continue; } // not text-input values
     s[k] = TIME_FIELDS.some(([t]) => t === k) ? fmtHours(f[k]) : String(f[k]);
   }
   return s;
@@ -70,7 +72,7 @@ export default function FlightForm() {
 
   async function submit(e) {
     e.preventDefault();
-    const payload = { ...form };
+    const payload = { ...form, stops: form.stops.filter((s) => s.airport_code.trim()) };
     const local = {};
     for (const [k, label] of TIME_FIELDS) {
       const n = parseHours(form[k]);
@@ -116,7 +118,13 @@ export default function FlightForm() {
         <div className="col-span-2"><DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} /></div>
         <TextField label="From" upper value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
         <TextField label="To" upper value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
-        <div className="col-span-2"><TextField label="Via (other airports, optional)" upper value={form.route} onChange={set('route')} error={errors.route} placeholder="KFYG KSQL" /></div>
+        <div className="col-span-2">
+          <StopsEditor stops={form.stops} onChange={(stops) => setForm((f) => ({ ...f, stops }))}
+            from={form.departure_airport} to={form.arrival_airport} />
+          {typeof errors.stops === 'object' && (
+            <p className="mt-1 text-xs text-bad">Check the stop airport codes above.</p>
+          )}
+        </div>
         <div className="col-span-2">
           <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
             ...f,
@@ -125,12 +133,15 @@ export default function FlightForm() {
             tail_number: a.is_simulator ? '' : (a.tail_number || f.tail_number),
           }))} />
         </div>
+      </Section>
+
+      <Disclosure title="Airline / Operator" defaultOpen={Boolean(form.airline.trim())}>
         <div className="col-span-2">
           <TextField label="Airline (optional, for commercial flights)" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
           <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
           {form.airline.trim() && <div className="mt-2"><AirlineBadge airline={form.airline} /></div>}
         </div>
-      </Section>
+      </Disclosure>
 
       <Section title="Time (hours — 1.5 or 1:30)">
         {TIME_FIELDS.map(([k, label]) => (

@@ -17,12 +17,23 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
   const [newModel, setNewModel] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [fallback, setFallback] = useState(null); // an already-selected aircraft not in the pickable (active) list, e.g. archived
 
+  // Fetched on mount, not just when the modal opens: the button itself needs the list to resolve
+  // `value` (an id) to a label, e.g. showing "N370SP" instead of "Choose aircraft" for an already-set flight.
   useEffect(() => {
-    if (open && !list) api.listAircraft().then(setList).catch((e) => setErr(e.message));
-  }, [open, list]);
+    api.listAircraft().then(setList).catch((e) => setErr(e.message));
+  }, []);
 
-  const selected = useMemo(() => list?.find((a) => a.id === value) ?? (value?.id ? value : null), [list, value]);
+  const selected = useMemo(() => list?.find((a) => a.id === value) ?? (value?.id ? value : fallback), [list, value, fallback]);
+
+  // If `value` refers to an aircraft not in the active list (archived since this flight was logged),
+  // fetch just that one so its label still shows correctly instead of a bare "Choose aircraft".
+  useEffect(() => {
+    if (typeof value === 'number' && list && !list.some((a) => a.id === value)) {
+      api.getAircraft(value).then(setFallback).catch(() => {});
+    }
+  }, [value, list]);
   const filtered = useMemo(() => {
     if (!list) return [];
     const s = q.trim().toLowerCase();
