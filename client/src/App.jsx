@@ -5,6 +5,7 @@ import Placeholder from './pages/Placeholder.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Logbook from './pages/Logbook.jsx';
 import FlightForm from './pages/FlightForm.jsx';
+import FlightDetail from './pages/FlightDetail.jsx';
 import Skeleton from './components/Skeleton.jsx';
 
 // Map, Stats and the CSV/Aircraft screens are all secondary, so they load on demand.
@@ -31,7 +32,8 @@ export default function App() {
           <Route path="/aircraft/new" element={<AircraftForm />} />
           <Route path="/aircraft/:id" element={<AircraftForm />} />
           <Route path="/logbook/new" element={<FlightForm />} />
-          <Route path="/logbook/:id" element={<FlightForm />} />
+          <Route path="/logbook/:id" element={<FlightDetail />} />
+          <Route path="/logbook/:id/edit" element={<FlightForm />} />
           <Route path="/milestones" element={<Milestones />} />
           <Route path="/currency" element={<Currency />} />
           <Route path="/currency/new" element={<ExpirationForm />} />

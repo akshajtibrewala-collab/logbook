@@ -86,7 +86,7 @@ export default function FlightForm() {
     try {
       if (id) await api.updateFlight(id, payload);
       else await api.createFlight(payload);
-      navigate('/logbook');
+      navigate(id ? `/logbook/${id}` : '/logbook');
     } catch (err) {
       setErrors(err.fieldErrors || {});
       setMessage(err.fieldErrors ? 'Please fix the highlighted fields.' : err.message);
@@ -110,7 +110,7 @@ export default function FlightForm() {
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate(id ? `/logbook/${id}` : '/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
       </div>
 
