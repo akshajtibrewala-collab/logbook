@@ -1,4 +1,4 @@
-# Hosting the logbook for free (Vercel + Turso)
+# Hosting AeroTrail for free (Vercel + Turso)
 
 The app runs as two pieces, both on free tiers:
 

@@ -1,6 +1,6 @@
 {
-  "name": "Pilot Logbook",
-  "short_name": "Logbook",
+  "name": "AeroTrail",
+  "short_name": "AeroTrail",
   "description": "Personal pilot logbook with currency tracking, flight map and stats.",
   "id": "/",
   "start_url": "/",

@@ -8,7 +8,7 @@ function LockScreen({ onUnlock, error, busy }) {
     <form onSubmit={(e) => { e.preventDefault(); onUnlock(value); }} className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 px-6">
       <div className="text-center">
         <Lock size={36} strokeWidth={1.5} className="mx-auto text-accent" />
-        <h1 className="mt-3 text-2xl font-semibold">Logbook</h1>
+        <h1 className="mt-3 text-2xl font-semibold">AeroTrail</h1>
         <p className="mt-1 text-sm text-slate-400">Enter your passcode to continue.</p>
       </div>
       <input type="password" autoFocus autoComplete="current-password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Passcode"
