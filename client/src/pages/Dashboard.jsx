@@ -10,8 +10,13 @@ import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import CurrencyStatusCard, { TONE } from '../components/CurrencyStatusCard.jsx';
 import { fmtHours } from '../lib/hours.js';
-import { greeting } from '../lib/greeting.js';
-import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, summarize } from '../lib/currency.js';
+import { pickHeadline, pickSubline } from '../lib/greeting.js';
+import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations, daysBetween, summarize } from '../lib/currency.js';
+import { computeMilestones, certificateLabel } from '../lib/milestones.js';
+
+const LAST_GREETING_KEY = 'aerotrail-last-greeting';
+const getLastGreeting = () => { try { return localStorage.getItem(LAST_GREETING_KEY); } catch { return null; } };
+const setLastGreeting = (template) => { try { localStorage.setItem(LAST_GREETING_KEY, template); } catch { /* private mode */ } };
 
 const today = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
 
@@ -33,6 +38,8 @@ export default function Dashboard() {
   const [flights, setFlights] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [expirations, setExpirations] = useState([]);
+  const [milestonesConfig, setMilestonesConfig] = useState([]);
+  const [aircraft, setAircraft] = useState([]);
   const [error, setError] = useState('');
   const [reviewDate, setReviewDate] = useState(today);
   const [logging, setLogging] = useState(false);
@@ -41,10 +48,18 @@ export default function Dashboard() {
   const [removing, setRemoving] = useState(false);
   const now = today();
 
+  // Picked once per mount (a fresh visit to the Dashboard), not on every re-render, and never repeats
+  // whatever was shown last time.
+  const [headline] = useState(() => {
+    const picked = pickHeadline({ previous: getLastGreeting() });
+    setLastGreeting(picked.template);
+    return picked.text;
+  });
+
   const load = useCallback(() => {
     setError('');
-    Promise.all([api.listFlights(), api.listReviews(), api.listExpirations()])
-      .then(([f, r, e]) => { setFlights(f); setReviews(r); setExpirations(e); })
+    Promise.all([api.listFlights(), api.listReviews(), api.listExpirations(), api.listMilestonesConfig(), api.listAircraft(true)])
+      .then(([f, r, e, m, a]) => { setFlights(f); setReviews(r); setExpirations(e); setMilestonesConfig(m); setAircraft(a); })
       .catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
@@ -59,6 +74,42 @@ export default function Dashboard() {
       stats: summarize(flights, now),
     };
   }, [flights, reviews, expirations, now]);
+
+  const closestMilestone = useMemo(() => {
+    if (!flights || !milestonesConfig.length) return null;
+    const aircraftById = Object.fromEntries(aircraft.map((a) => [a.id, a]));
+    let best = null;
+    for (const [cert, reqs] of computeMilestones(milestonesConfig, flights, aircraftById)) {
+      for (const r of reqs) {
+        if (r.percent == null || r.met) continue;
+        if (!best || r.percent > best.percent) best = { label: r.label, certificateLabel: certificateLabel(cert), percent: r.percent };
+      }
+    }
+    return best;
+  }, [flights, milestonesConfig, aircraft]);
+
+  const subline = useMemo(() => {
+    if (!data || !flights) return null;
+    const currencyItems = [
+      { label: 'Day passenger currency', result: data.pax.day },
+      { label: 'Night passenger currency', result: data.pax.night },
+      { label: 'Instrument currency', result: data.inst },
+      { label: 'Flight review', result: data.review },
+      { label: 'Medical certificate', result: data.medical },
+      ...customExpirations(expirations, now).map((r) => ({ label: r.item.label, result: r })),
+    ];
+    const dates = flights.map((f) => f.date).sort();
+    const lastDate = dates[dates.length - 1] ?? null;
+    const reviewCount = flights.filter((f) => f.aircraft_id == null && daysBetween(f.date, now) >= 0 && daysBetween(f.date, now) <= 14).length;
+    return pickSubline({
+      currencyItems,
+      hasFlights: flights.length > 0,
+      daysSinceLastFlight: lastDate ? daysBetween(lastDate, now) : null,
+      reviewCount,
+      closestMilestone,
+      totalHoursThisYear: data.stats.year,
+    });
+  }, [data, flights, expirations, closestMilestone, now]);
 
   const newestFirst = (x, y) => y.date.localeCompare(x.date) || y.id - x.id;
 
@@ -93,9 +144,17 @@ export default function Dashboard() {
   return (
     <div className="stagger space-y-4">
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{greeting()}</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold">{headline}</h1>
           <p className="text-sm text-slate-400">{fmtDate(now)}</p>
+          {subline && (
+            <p className="mt-2 text-sm text-slate-300">
+              {subline.text}
+              {subline.action && (
+                <Link to={subline.action.to} className="ml-2 font-medium text-accent">{subline.action.label}</Link>
+              )}
+            </p>
+          )}
         </div>
         <ThemeToggle />
       </div>
@@ -110,7 +169,7 @@ export default function Dashboard() {
       {data && flights.length === 0 && (
         <section className="card p-5 text-center">
           <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-600" />
-          <h2 className="mt-3 text-lg font-semibold">Welcome to your logbook</h2>
+          <h2 className="mt-3 text-lg font-semibold">Welcome to AeroTrail</h2>
           <p className="mt-1 text-sm text-slate-400">Log a flight or import a CSV and your currency status, hours and map fill in here.</p>
           <div className="mt-4 grid gap-2">
             <Button as={Link} to="/logbook/new" size="md">Add your first flight</Button>
