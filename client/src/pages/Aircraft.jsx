@@ -11,7 +11,7 @@ import EmptyState from '../components/EmptyState.jsx';
 function FlagBadges({ a }) {
   const flags = [
     a.is_complex && 'Complex', a.is_high_performance && 'High-perf', a.is_tailwheel && 'Tailwheel',
-    a.is_turbine && 'Turbine', a.type_rating_required && (a.type_rating_designation || 'Type rating'),
+    a.is_turbine && 'Turbine', a.is_taa && 'TAA', a.type_rating_required && (a.type_rating_designation || 'Type rating'),
   ].filter(Boolean);
   if (!flags.length) return null;
   return (

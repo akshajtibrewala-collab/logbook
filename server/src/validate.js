@@ -90,7 +90,7 @@ export const AIRCRAFT_TEXT_FIELDS = [
   'type_rating_designation', 'simulator_device_type', 'notes',
 ];
 export const AIRCRAFT_FLAG_FIELDS = [
-  'is_complex', 'is_high_performance', 'is_tailwheel', 'is_turbine', 'type_rating_required', 'is_simulator',
+  'is_complex', 'is_high_performance', 'is_tailwheel', 'is_turbine', 'is_taa', 'type_rating_required', 'is_simulator',
 ];
 export const AIRCRAFT_FIELDS = [...AIRCRAFT_TEXT_FIELDS, ...AIRCRAFT_FLAG_FIELDS];
 

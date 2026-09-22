@@ -11,7 +11,7 @@ import { AIRCRAFT_CATEGORIES, AIRCRAFT_CLASSES, SIMULATOR_DEVICE_TYPES } from '.
 
 const blank = () => ({
   tail_number: '', make: '', model: '', type_designator: '', category: '', class: '',
-  is_complex: false, is_high_performance: false, is_tailwheel: false, is_turbine: false,
+  is_complex: false, is_high_performance: false, is_tailwheel: false, is_turbine: false, is_taa: false,
   type_rating_required: false, type_rating_designation: '', is_simulator: false, simulator_device_type: '', notes: '',
 });
 
@@ -124,6 +124,7 @@ export default function AircraftForm() {
         <Toggle label="High performance" description="Over 200 horsepower" checked={form.is_high_performance} onChange={set('is_high_performance')} />
         <Toggle label="Tailwheel" checked={form.is_tailwheel} onChange={set('is_tailwheel')} />
         <Toggle label="Turbine" checked={form.is_turbine} onChange={set('is_turbine')} />
+        <Toggle label="Technically advanced (TAA)" description="Installed GPS with a moving map, plus an autopilot" checked={form.is_taa} onChange={set('is_taa')} />
         <Toggle label="Type rating required" checked={form.type_rating_required} onChange={set('type_rating_required')} />
         {form.type_rating_required && (
           <TextField label="Type rating" upper value={form.type_rating_designation} onChange={set('type_rating_designation')}
