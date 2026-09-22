@@ -1,8 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Upload, FileText, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, Upload, FileText, CheckCircle2, AlertTriangle, XCircle, DatabaseBackup, RotateCcw } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flightsToCsv, parseImport, TEMPLATE_CSV } from '../lib/csv.js';
+import { fmtHours } from '../lib/hours.js';
+import Button from '../components/Button.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 
 function download(filename, text) {
   const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }); // BOM so Excel reads UTF-8
@@ -13,6 +16,19 @@ function download(filename, text) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+function downloadJson(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+const stamp = () => new Date().toISOString().replace(/[:.]/g, '-');
+const TABLE_LABELS = { aircraft: 'aircraft', flights: 'flights', flight_stops: 'stops', flight_approaches: 'approaches', flight_reviews: 'flight reviews', expirations: 'expirations' };
 
 const STATUS = {
   ready: { Icon: CheckCircle2, cls: 'text-ok', label: 'Ready' },
@@ -28,6 +44,9 @@ export default function ImportExport() {
   const [includeDupes, setIncludeDupes] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { kind: 'ok' | 'error', text }
+  const backupFileRef = useRef(null);
+  const [restorePreview, setRestorePreview] = useState(null); // { name, data }
+  const [confirmReplace, setConfirmReplace] = useState(false);
 
   async function exportCsv() {
     setBusy(true);
@@ -95,8 +114,70 @@ export default function ImportExport() {
     }
   }
 
+  async function exportBackup() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const backup = await api.exportBackup();
+      downloadJson(`aerotrail-backup-${stamp()}.json`, backup);
+      const total = Object.values(backup.tables).reduce((s, rows) => s + rows.length, 0);
+      setMessage({ kind: 'ok', text: `Exported everything: ${total} row${total === 1 ? '' : 's'} across ${Object.keys(backup.tables).length} tables.` });
+    } catch (e) {
+      setMessage({ kind: 'error', text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onBackupFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setMessage(null);
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data.tables || typeof data.tables !== 'object') throw new Error('missing tables');
+      const flights = existing ?? (await api.listFlights());
+      setExisting(flights);
+      setRestorePreview({ name: file.name, data });
+    } catch {
+      setMessage({ kind: 'error', text: 'That doesn’t look like an AeroTrail backup file.' });
+    }
+  }
+
+  async function doRestore() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const hasExisting = (existing?.length ?? 0) > 0;
+      if (hasExisting) {
+        // Safety backup of what's about to be overwritten, downloaded before anything is touched.
+        const safety = await api.exportBackup();
+        downloadJson(`aerotrail-pre-restore-backup-${stamp()}.json`, safety);
+      }
+      const { restored } = await api.restoreBackup(restorePreview.data, hasExisting ? 'replace' : undefined);
+      const total = Object.values(restored).reduce((s, n) => s + n, 0);
+      setRestorePreview(null);
+      setConfirmReplace(false);
+      setExisting(null);
+      setPreview(null);
+      setMessage({ kind: 'ok', text: `Restored ${total} row${total === 1 ? '' : 's'}${hasExisting ? ' — your previous data was downloaded first' : ''}.` });
+    } catch (err) {
+      setMessage({ kind: 'error', text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startRestore() {
+    if ((existing?.length ?? 0) > 0) setConfirmReplace(true);
+    else doRestore();
+  }
+
   const btn = 'flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold disabled:opacity-60';
   const result = preview?.result;
+  const restoreCounts = restorePreview ? Object.entries(restorePreview.data.tables ?? {}) : [];
+  const sampleFlights = [...(restorePreview?.data.tables.flights ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
 
   return (
     <div className="space-y-4">
@@ -126,6 +207,54 @@ export default function ImportExport() {
           <FileText size={16} />Download the template
         </button>
       </section>
+
+      <section className="card space-y-3 p-4">
+        <h2 className="text-sm font-medium text-slate-300">Full backup</h2>
+        <p className="text-sm text-slate-400">
+          Everything in one file — flights, stops, approaches, aircraft, flight reviews and expirations —
+          for your own lifetime backup. Marked with a format version so a future version of the app can always read it back.
+        </p>
+        <button onClick={exportBackup} disabled={busy} className={`${btn} bg-accent text-ink active:bg-accent-dark`}>
+          <DatabaseBackup size={20} />Export everything
+        </button>
+        <input ref={backupFileRef} type="file" accept="application/json,.json" onChange={onBackupFile} className="hidden" />
+        <button onClick={() => backupFileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent active:bg-navy-800`}>
+          <RotateCcw size={20} />Restore from backup
+        </button>
+      </section>
+
+      {restorePreview && (
+        <section className="card space-y-3 p-4">
+          <h2 className="text-sm font-medium text-slate-300">Restore preview — {restorePreview.name}</h2>
+          <p className="text-xs text-slate-500">
+            Exported {restorePreview.data.exported_at ? new Date(restorePreview.data.exported_at).toLocaleString() : 'unknown date'}
+            {' · '}format v{restorePreview.data.format_version ?? '?'}
+          </p>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {restoreCounts.map(([t, rows]) => (
+              <div key={t} className="rounded-xl bg-navy-800 p-2">
+                <div className="text-xl font-semibold text-accent">{rows.length}</div>
+                <div className="text-xs text-slate-400">{TABLE_LABELS[t] ?? t}</div>
+              </div>
+            ))}
+          </div>
+          {sampleFlights.length > 0 && (
+            <ul className="space-y-1 border-t border-edge pt-2 text-sm text-slate-300">
+              {sampleFlights.map((f) => (
+                <li key={f.id}>{f.date} · {f.departure_airport || '—'} → {f.arrival_airport || '—'} · {fmtHours(f.total_time)} h</li>
+              ))}
+            </ul>
+          )}
+          {(existing?.length ?? 0) > 0 && (
+            <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">
+              You have {existing.length} existing flight{existing.length === 1 ? '' : 's'}. Restoring replaces everything —
+              your current data is downloaded as a safety backup first.
+            </p>
+          )}
+          <Button onClick={startRestore} disabled={busy}>{busy ? 'Restoring…' : 'Restore'}</Button>
+          <Button variant="ghost" size="md" onClick={() => setRestorePreview(null)}>Cancel</Button>
+        </section>
+      )}
 
       {result?.error && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{result.error}</p>}
 
@@ -175,6 +304,10 @@ export default function ImportExport() {
           <button onClick={() => setPreview(null)} className="h-10 w-full text-sm text-slate-400">Cancel</button>
         </section>
       )}
+
+      <ConfirmDialog open={confirmReplace} title="Replace everything?"
+        description={`This deletes all ${existing?.length ?? 0} existing flights and everything linked to them, then restores from the backup file. Your current data downloads as a safety backup first.`}
+        confirmLabel="Replace everything" busy={busy} onConfirm={doRestore} onClose={() => setConfirmReplace(false)} />
     </div>
   );
 }

@@ -50,4 +50,6 @@ export const api = {
   createExpiration: (e) => request('POST', '/expirations', e),
   updateExpiration: (id, e) => request('PUT', `/expirations/${id}`, e),
   deleteExpiration: (id) => request('DELETE', `/expirations/${id}`),
+  exportBackup: () => request('GET', '/backup/export'),
+  restoreBackup: (backup, mode) => request('POST', '/backup/restore', mode ? { ...backup, mode } : backup),
 };
