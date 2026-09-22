@@ -12,7 +12,8 @@
     "build:vercel": "npm run migrate -w server && npm run build -w client",
     "db:setup": "npm run db:setup -w server",
     "db:copy-local": "npm run db:copy-local -w server",
-    "deploy": "npx vercel --prod"
+    "deploy": "npx vercel --prod",
+    "db:backup": "npm run db:backup -w server"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

@@ -9,7 +9,8 @@
     "migrate": "node --env-file-if-exists=../.env scripts/migrate.js",
     "seed": "node --env-file-if-exists=../.env scripts/seed-airports.js",
     "db:setup": "npm run migrate && npm run seed",
-    "db:copy-local": "node --env-file-if-exists=../.env scripts/copy-local-to-remote.js"
+    "db:copy-local": "node --env-file-if-exists=../.env scripts/copy-local-to-remote.js",
+    "db:backup": "node --env-file-if-exists=../.env scripts/backup.js"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

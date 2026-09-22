@@ -6,3 +6,6 @@ dist
 .env.*
 !.env.example
 .vercel
+
+# Local backup snapshots (server/backups/*.json)
+server/backups/
