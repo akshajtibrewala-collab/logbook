@@ -140,3 +140,37 @@ test('with no APP_PASSCODE configured the API is open (local development)', asyn
     process.env.APP_PASSCODE = saved;
   }
 });
+
+test('aircraft: create, dedupe-safe uppercasing, archive/unarchive, delete guard', async () => {
+  let res = await call('POST', '/aircraft', { tail_number: ' n123ab ', model: 'C172', category: 'airplane', class: 'ASEL' });
+  assert.equal(res.status, 201);
+  const created = await res.json();
+  assert.equal(created.tail_number, 'N123AB');
+  assert.equal(created.is_complex, 0);
+
+  res = await call('PUT', `/aircraft/${created.id}`, { tail_number: 'N123AB', model: 'C172', is_complex: true, is_tailwheel: true });
+  assert.equal((await res.json()).is_complex, 1);
+
+  // Type rating requires a designation; simulator requires a device type.
+  res = await call('POST', '/aircraft', { tail_number: 'N1', model: 'X', type_rating_required: true });
+  assert.equal(res.status, 400);
+  res = await call('POST', '/aircraft', { model: 'FTD-1', is_simulator: true });
+  assert.equal(res.status, 400);
+  res = await call('POST', '/aircraft', { model: 'FTD-1', is_simulator: true, simulator_device_type: 'FTD' });
+  assert.equal(res.status, 201);
+
+  // Archive/unarchive, and the default list hides archived aircraft.
+  res = await call('POST', `/aircraft/${created.id}/archive`);
+  assert.ok((await res.json()).archived_at);
+  let list = await (await call('GET', '/aircraft')).json();
+  assert.ok(!list.some((a) => a.id === created.id));
+  list = await (await call('GET', '/aircraft?archived=1')).json();
+  assert.ok(list.some((a) => a.id === created.id));
+  await call('POST', `/aircraft/${created.id}/unarchive`);
+
+  // A flight referencing an aircraft blocks hard delete.
+  const flight = await (await call('POST', '/flights', { date: '2026-01-01', total_time: 1, aircraft_id: created.id })).json();
+  assert.equal(flight.aircraft_id, created.id);
+  res = await call('DELETE', `/aircraft/${created.id}`);
+  assert.equal(res.status, 409);
+});

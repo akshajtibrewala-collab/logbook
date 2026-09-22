@@ -3,6 +3,7 @@ import { passcodeOk, passcodeRequired, requirePasscode } from './auth.js';
 import flights from './routes/flights.js';
 import reviews from './routes/reviews.js';
 import airports from './routes/airports.js';
+import aircraft from './routes/aircraft.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -17,6 +18,7 @@ app.use('/api', requirePasscode);
 app.use('/api/flights', flights);
 app.use('/api/reviews', reviews);
 app.use('/api/airports', airports);
+app.use('/api/aircraft', aircraft);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });

@@ -16,6 +16,8 @@ already-applied one again.
   after it completes without throwing, so a failed one is retried on the next `migrate()` run.
 
 **File naming:** `NNN_short_description.sql` or `.js`, zero-padded to 3 digits (`002_aircraft.sql`).
+A migration's own tests live alongside it in this directory as `NNN_short_description.test.js` — the
+runner explicitly excludes `*.test.js` when it scans this directory, so that naming is safe to use.
 
 **`.sql` files** are run verbatim — use these for plain DDL (`CREATE TABLE`, `ALTER TABLE ... ADD COLUMN`).
 

@@ -10,6 +10,7 @@ import DatePicker from '../components/DatePicker.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import AircraftPicker from '../components/AircraftPicker.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 
 const TIME_FIELDS = [
@@ -25,7 +26,7 @@ const COUNT_FIELDS = [
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
 const blank = () => ({
-  date: today(), departure_airport: '', arrival_airport: '', route: '', aircraft_type: '', tail_number: '', airline: '', remarks: '',
+  date: today(), departure_airport: '', arrival_airport: '', route: '', aircraft_id: null, aircraft_type: '', tail_number: '', airline: '', remarks: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map(([k]) => [k, '0'])),
 });
@@ -34,6 +35,7 @@ function fromFlight(f) {
   const s = blank();
   for (const k of Object.keys(s)) {
     if (f[k] === null || f[k] === undefined) continue;
+    if (k === 'aircraft_id') { s[k] = f[k]; continue; } // stays numeric — used for object lookup, not typed
     s[k] = TIME_FIELDS.some(([t]) => t === k) ? fmtHours(f[k]) : String(f[k]);
   }
   return s;
@@ -115,8 +117,14 @@ export default function FlightForm() {
         <TextField label="From" upper value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
         <TextField label="To" upper value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
         <div className="col-span-2"><TextField label="Via (other airports, optional)" upper value={form.route} onChange={set('route')} error={errors.route} placeholder="KFYG KSQL" /></div>
-        <TextField label="Aircraft type" upper value={form.aircraft_type} onChange={set('aircraft_type')} placeholder="C172" />
-        <TextField label="Tail number" upper value={form.tail_number} onChange={set('tail_number')} placeholder="N123AB" />
+        <div className="col-span-2">
+          <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
+            ...f,
+            aircraft_id: a.id,
+            aircraft_type: a.is_simulator ? (a.model || '') : (a.type_designator || a.model || f.aircraft_type),
+            tail_number: a.is_simulator ? '' : (a.tail_number || f.tail_number),
+          }))} />
+        </div>
         <div className="col-span-2">
           <TextField label="Airline (optional, for commercial flights)" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
           <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>

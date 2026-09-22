@@ -7,10 +7,12 @@ import Logbook from './pages/Logbook.jsx';
 import FlightForm from './pages/FlightForm.jsx';
 import Skeleton from './components/Skeleton.jsx';
 
-// Map and Stats pull in Leaflet and Recharts, so they load on demand.
+// Map, Stats and the CSV/Aircraft screens are all secondary, so they load on demand.
 const MapPage = lazy(() => import('./pages/Map.jsx'));
 const Stats = lazy(() => import('./pages/Stats.jsx'));
 const ImportExport = lazy(() => import('./pages/ImportExport.jsx'));
+const Aircraft = lazy(() => import('./pages/Aircraft.jsx'));
+const AircraftForm = lazy(() => import('./pages/AircraftForm.jsx'));
 
 export default function App() {
   const location = useLocation();
@@ -22,6 +24,9 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/logbook" element={<Logbook />} />
           <Route path="/logbook/data" element={<ImportExport />} />
+          <Route path="/aircraft" element={<Aircraft />} />
+          <Route path="/aircraft/new" element={<AircraftForm />} />
+          <Route path="/aircraft/:id" element={<AircraftForm />} />
           <Route path="/logbook/new" element={<FlightForm />} />
           <Route path="/logbook/:id" element={<FlightForm />} />
           <Route path="/map" element={<MapPage />} />

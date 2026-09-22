@@ -38,4 +38,11 @@ export const api = {
   updateReview: (id, date) => request('PUT', `/reviews/${id}`, { date }),
   deleteReview: (id) => request('DELETE', `/reviews/${id}`),
   resolveAirports: (codes) => request('GET', `/airports/resolve?codes=${encodeURIComponent(codes.join(','))}`),
+  listAircraft: (includeArchived) => request('GET', `/aircraft${includeArchived ? '?archived=1' : ''}`),
+  getAircraft: (id) => request('GET', `/aircraft/${id}`),
+  createAircraft: (a) => request('POST', '/aircraft', a),
+  updateAircraft: (id, a) => request('PUT', `/aircraft/${id}`, a),
+  archiveAircraft: (id) => request('POST', `/aircraft/${id}/archive`),
+  unarchiveAircraft: (id) => request('POST', `/aircraft/${id}/unarchive`),
+  deleteAircraft: (id) => request('DELETE', `/aircraft/${id}`),
 };

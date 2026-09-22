@@ -17,7 +17,8 @@ export async function migrate() {
     "CREATE TABLE IF NOT EXISTS _migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL DEFAULT (datetime('now')));",
   );
   const applied = new Set((await all('SELECT name FROM _migrations')).map((r) => r.name));
-  const files = readdirSync(migrationsDir).filter((f) => /^\d+_.+\.(sql|js)$/.test(f)).sort();
+  // Excludes *.test.js — migration tests live alongside their migrations, in the same directory.
+  const files = readdirSync(migrationsDir).filter((f) => /^\d+_.+\.(sql|js)$/.test(f) && !f.endsWith('.test.js')).sort();
 
   for (const file of files) {
     if (applied.has(file)) continue;

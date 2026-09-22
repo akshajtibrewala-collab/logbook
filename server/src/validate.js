@@ -5,7 +5,7 @@ export const TIME_FIELDS = [
 export const COUNT_FIELDS = ['day_landings', 'night_landings', 'approaches', 'holds'];
 export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'remarks'];
 export const AIRPORT_FIELDS = ['departure_airport', 'arrival_airport'];
-export const FLIGHT_FIELDS = ['date', ...AIRPORT_FIELDS, 'route', ...TEXT_FIELDS, ...TIME_FIELDS, ...COUNT_FIELDS];
+export const FLIGHT_FIELDS = ['date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', ...TEXT_FIELDS, ...TIME_FIELDS, ...COUNT_FIELDS];
 
 export function isIsoDate(s) {
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -36,6 +36,12 @@ export function parseFlight(body) {
   // Airports flown via: keep only plausible 3-4 character codes, space separated.
   const via = String(b.route ?? '').toUpperCase().split(/[\s,;>/-]+/).filter((t) => /^[A-Z0-9]{3,4}$/.test(t));
   v.route = via.length ? via.join(' ') : null;
+
+  // Optional link to an aircraft row; aircraft_type/tail_number stay as free text regardless, so a
+  // flight without a linked aircraft (e.g. from an older CSV import) still displays and exports fine.
+  const aircraftId = isBlank(b.aircraft_id) ? null : Number(b.aircraft_id);
+  if (aircraftId !== null && (!Number.isInteger(aircraftId) || aircraftId <= 0)) errors.aircraft_id = 'Invalid aircraft';
+  else v.aircraft_id = aircraftId;
   for (const f of TEXT_FIELDS) {
     const s = String(b[f] ?? '').trim();
     if (f === 'airline' && s.length > 40) errors.airline = 'Keep the airline name under 40 characters';
@@ -59,5 +65,40 @@ export function parseFlight(body) {
       if (f !== 'total_time' && !errors[f] && v[f] > v.total_time) errors[f] = 'Cannot exceed total time';
     }
   }
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+export const AIRCRAFT_TEXT_FIELDS = [
+  'tail_number', 'make', 'model', 'type_designator', 'category', 'class',
+  'type_rating_designation', 'simulator_device_type', 'notes',
+];
+export const AIRCRAFT_FLAG_FIELDS = [
+  'is_complex', 'is_high_performance', 'is_tailwheel', 'is_turbine', 'type_rating_required', 'is_simulator',
+];
+export const AIRCRAFT_FIELDS = [...AIRCRAFT_TEXT_FIELDS, ...AIRCRAFT_FLAG_FIELDS];
+
+/** Validates and normalises an aircraft payload (also used for simulators/training devices). */
+export function parseAircraft(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  for (const f of AIRCRAFT_TEXT_FIELDS) {
+    const s = String(b[f] ?? '').trim();
+    v[f] = s || null;
+  }
+  if (v.tail_number) v.tail_number = v.tail_number.toUpperCase();
+  if (!v.tail_number && !v.model && !v.type_designator) {
+    errors.tail_number = 'Enter a tail number, or at least a make/model';
+  }
+
+  for (const f of AIRCRAFT_FLAG_FIELDS) v[f] = b[f] ? 1 : 0;
+  if (v.type_rating_required && !v.type_rating_designation) {
+    errors.type_rating_designation = 'Enter the type rating (e.g. B737)';
+  }
+  if (v.is_simulator && !v.simulator_device_type) {
+    errors.simulator_device_type = 'Choose a device type';
+  }
+
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
