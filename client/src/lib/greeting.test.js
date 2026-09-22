@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { timeBucket, candidateHeadlines, pickHeadline, pickSubline } from './greeting.js';
-import { HEADLINES } from './greetings.js';
+import { HEADLINES, PILOT_NAME, MAX_HEADLINE_LENGTH } from './greetings.js';
 
 const at = (h, m = 0) => new Date(2026, 8, 21, h, m);
 
@@ -15,6 +15,17 @@ test('timeBucket switches at 5:00, 12:00, 17:00 and 22:00 local time', () => {
   assert.equal(timeBucket(at(21, 59)), 'evening');
   assert.equal(timeBucket(at(22, 0)), 'lateNight');
   assert.equal(timeBucket(at(23, 59)), 'lateNight');
+});
+
+test(`every headline is ${MAX_HEADLINE_LENGTH} characters or fewer once {name} is filled in, so it fits on one line on a small phone`, () => {
+  const tooLong = [];
+  for (const [bucket, templates] of Object.entries(HEADLINES)) {
+    for (const template of templates) {
+      const text = template.replace('{name}', PILOT_NAME);
+      if (text.length > MAX_HEADLINE_LENGTH) tooLong.push(`${bucket}: "${text}" (${text.length} chars)`);
+    }
+  }
+  assert.deepEqual(tooLong, []);
 });
 
 test('candidateHeadlines is the matching time-of-day pool plus anytime, and nothing else', () => {

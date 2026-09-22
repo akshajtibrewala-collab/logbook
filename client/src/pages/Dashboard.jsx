@@ -145,7 +145,10 @@ export default function Dashboard() {
     <div className="stagger space-y-4">
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">{headline}</h1>
+          {/* Headlines are kept to one line's worth of characters (see greetings.js), but this is a
+              safety net for narrow phones or a future long addition: shrink instead of wrapping or
+              truncating with an ellipsis. */}
+          <h1 className="whitespace-nowrap text-[clamp(1.125rem,6vw,1.5rem)] font-semibold">{headline}</h1>
           <p className="text-sm text-slate-400">{fmtDate(now)}</p>
           {subline && (
             <p className="mt-2 text-sm text-slate-300">
