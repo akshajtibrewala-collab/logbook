@@ -1,3 +1,7 @@
+-- This file is the baseline schema, applied once by migrations/001_init.js. It is not re-run after
+-- that, so it is no longer edited for new changes — every schema change after this one is a new
+-- numbered file in server/src/migrations/. Kept here as a readable snapshot of where the schema started.
+
 CREATE TABLE IF NOT EXISTS flights (
   id                   INTEGER PRIMARY KEY AUTOINCREMENT,
   date                 TEXT NOT NULL,

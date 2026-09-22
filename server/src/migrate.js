@@ -1,25 +1,38 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { all, client, run } from './db.js';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { all, client, get, run } from './db.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
 /**
- * Brings the database up to date. Safe to run any number of times.
- * Run at build/deploy time (npm run migrate) and on local startup; the hosted API never runs it.
+ * Brings the database up to date by running any migrations in ./migrations that haven't been applied
+ * yet, in numeric order, recording each one in `_migrations` as it completes. Safe to run any number of
+ * times — already-applied migrations are skipped. Run at build/deploy time (npm run migrate) and on
+ * local server startup; the hosted API itself never migrates. See migrations/README.md for the rules
+ * migration files follow.
  */
 export async function migrate() {
-  // The airports table was reshaped (ident primary key + local codes). It is reference data that
-  // gets re-seeded, so an old-shaped table is dropped rather than migrated.
-  const airportCols = await all("SELECT name FROM pragma_table_info('airports')");
-  if (airportCols.length && !airportCols.some((c) => c.name === 'ident')) await run('DROP TABLE airports');
+  await client.executeMultiple(
+    "CREATE TABLE IF NOT EXISTS _migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL DEFAULT (datetime('now')));",
+  );
+  const applied = new Set((await all('SELECT name FROM _migrations')).map((r) => r.name));
+  const files = readdirSync(migrationsDir).filter((f) => /^\d+_.+\.(sql|js)$/.test(f)).sort();
 
-  await client.executeMultiple(readFileSync(path.join(here, 'schema.sql'), 'utf8'));
-
-  // Older databases predate these flights columns.
-  const flightCols = await all("SELECT name FROM pragma_table_info('flights')");
-  for (const col of ['route', 'airline']) {
-    if (!flightCols.some((c) => c.name === col)) await run(`ALTER TABLE flights ADD COLUMN ${col} TEXT`);
+  for (const file of files) {
+    if (applied.has(file)) continue;
+    const full = path.join(migrationsDir, file);
+    if (file.endsWith('.sql')) {
+      await client.executeMultiple(readFileSync(full, 'utf8'));
+    } else {
+      const mod = await import(pathToFileURL(full).href);
+      await mod.default({ all, get, run, client });
+    }
+    await run('INSERT INTO _migrations (name) VALUES (?)', [file]);
   }
+}
+
+/** Names of every migration that has been applied to this database, oldest first — mainly for tests. */
+export async function appliedMigrations() {
+  return (await all('SELECT name FROM _migrations ORDER BY id')).map((r) => r.name);
 }
