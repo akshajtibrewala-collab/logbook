@@ -22,7 +22,7 @@ export default function App() {
   const location = useLocation();
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-      <main key={location.pathname} className="flex-1 animate-[fade_.2s_ease-out] px-4 pb-28 pt-6">
+      <main key={location.pathname} className="flex-1 animate-[fade_.2s_ease-out] px-4 pt-6 pb-[calc(var(--bottom-nav-h)+2rem)]">
         <Suspense fallback={<div className="space-y-4"><Skeleton className="h-8 w-40" /><Skeleton className="h-40" /></div>}>
         <Routes>
           <Route path="/" element={<Dashboard />} />

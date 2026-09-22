@@ -75,7 +75,8 @@ export default function Aircraft() {
       )}
 
       <button onClick={() => navigate('/aircraft/new')} aria-label="Add aircraft"
-        className="fixed bottom-24 right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink shadow-lg shadow-accent/30 active:scale-95 active:bg-accent-dark">
+        style={{ bottom: 'calc(var(--bottom-nav-h) + 1rem)' }}
+        className="fixed right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink shadow-lg shadow-accent/30 active:scale-95 active:bg-accent-dark">
         <Plus size={28} strokeWidth={2.25} />
       </button>
     </div>

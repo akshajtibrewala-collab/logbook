@@ -42,6 +42,17 @@ body {
 }
 
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Height of the fixed BottomNav (see BottomNav.jsx: icon + label + vertical padding), plus the device's
+   safe-area inset — BottomNav pads its own bottom with that inset via .safe-bottom, so anything that
+   must float above the bar (not inside it) should clear this much from the true viewport bottom, not a
+   guessed pixel value. Every fixed/floating bottom element in the app (the add-flight/add-aircraft FABs,
+   the map's attribution toggle) is positioned with this instead of a hardcoded offset, so they all move
+   together if the nav's own height ever changes, and so they clear a tall home-indicator inset that a
+   static value can't account for. There is currently no breakpoint that hides BottomNav on desktop; if
+   one is added later, reset this to a plain edge gap (e.g. 1rem) inside that same media query.
+*/
+:root { --bottom-nav-h: calc(4.25rem + env(safe-area-inset-bottom)); }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes sheet-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
 .sheet-in { animation: sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
