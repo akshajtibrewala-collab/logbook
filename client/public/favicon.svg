@@ -1,11 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2a4a"/><stop offset="1" stop-color="#07090d"/></linearGradient>
-    <radialGradient id="glow" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#38bdf8" stop-opacity="0.24"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></radialGradient>
-    <linearGradient id="plane" gradientUnits="userSpaceOnUse" x1="0" y1="-110" x2="0" y2="110"><stop offset="0" stop-color="#bae6fd"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
-  </defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24365c"/><stop offset="1" stop-color="#0a0f1c"/></linearGradient>
+  <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bae6fd"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+</defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
-  
-  <g transform="translate(256 256) rotate(45) scale(1.6)"><path d="M0,-104 C10,-104 14,-90 14,-70 L14,80 C14,92 8,104 0,110 C-8,104 -14,92 -14,80 L-14,-70 C-14,-90 -10,-104 0,-104 Z" fill="url(#plane)"/><path d="M12,-20 L108,52 L108,72 L12,34 Z" fill="url(#plane)"/><path d="M-12,-20 L-108,52 L-108,72 L-12,34 Z" fill="url(#plane)"/><path d="M10,72 L48,100 L48,116 L10,100 Z" fill="url(#plane)"/><path d="M-10,72 L-48,100 L-48,116 L-10,100 Z" fill="url(#plane)"/></g>
+  <g transform="translate(256 256) scale(1.28) translate(-256 -256)"><path d="M256,88 L300,168 L446,320 L278,268 L256,300 L234,268 L66,320 L212,168 Z" fill="url(#fg)"/></g>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="111" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="3"/>
 </svg>
