@@ -1,9 +1,9 @@
 export const TIME_FIELDS = [
-  'total_time', 'pic_time', 'sic_time', 'dual_received', 'solo_time',
+  'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time',
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
 ];
-export const COUNT_FIELDS = ['day_landings', 'night_landings', 'approaches', 'holds'];
-export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'remarks'];
+export const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
+export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on'];
 export const AIRPORT_FIELDS = ['departure_airport', 'arrival_airport'];
 export const FLIGHT_FIELDS = ['date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', ...TEXT_FIELDS, ...TIME_FIELDS, ...COUNT_FIELDS];
 
@@ -45,9 +45,11 @@ export function parseFlight(body) {
   for (const f of TEXT_FIELDS) {
     const s = String(b[f] ?? '').trim();
     if (f === 'airline' && s.length > 40) errors.airline = 'Keep the airline name under 40 characters';
+    if (f === 'flight_number' && s.length > 20) errors.flight_number = 'Keep it under 20 characters';
     v[f] = s || null;
   }
   if (v.tail_number) v.tail_number = v.tail_number.toUpperCase();
+  if (v.flight_number) v.flight_number = v.flight_number.toUpperCase();
 
   for (const f of TIME_FIELDS) {
     const n = isBlank(b[f]) ? 0 : Number(b[f]);
@@ -65,7 +67,33 @@ export function parseFlight(body) {
       if (f !== 'total_time' && !errors[f] && v[f] > v.total_time) errors[f] = 'Cannot exceed total time';
     }
   }
+  if (!errors.day_landings && !errors.day_landings_full_stop && v.day_landings_full_stop > v.day_landings) {
+    errors.day_landings_full_stop = 'Cannot exceed day landings';
+  }
+  if (!errors.night_landings && !errors.night_landings_full_stop && v.night_landings_full_stop > v.night_landings) {
+    errors.night_landings_full_stop = 'Cannot exceed night landings';
+  }
   return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+/**
+ * Validates an optional typed-approach breakdown: [{ approach_type, count }, ...]. Returns
+ * { value, errors } where errors, if present, is keyed by index ("0", "1", ...) — same shape as
+ * parseStops. The flight's plain `approaches` total is independent of this and not derived here; the
+ * client computes and sends whichever total it wants stored.
+ */
+export function parseApproaches(list) {
+  if (!Array.isArray(list)) return { value: null, errors: null }; // not provided: caller leaves it alone
+  const errors = {};
+  const value = [];
+  list.forEach((a, i) => {
+    const type = String(a?.approach_type ?? '').trim();
+    if (!type) { errors[i] = 'Choose an approach type'; return; }
+    const count = Number(a?.count);
+    if (!Number.isInteger(count) || count < 1 || count > 99) { errors[i] = 'Count must be a whole number, 1 or more'; return; }
+    value.push({ approach_type: type, count });
+  });
+  return { value, errors: Object.keys(errors).length ? errors : null };
 }
 
 /**

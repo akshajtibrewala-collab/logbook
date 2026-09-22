@@ -30,4 +30,17 @@ export const SIMULATOR_DEVICE_TYPES = [
   { value: 'BATD', label: 'Basic Aviation Training Device (BATD)' },
 ];
 
+export const APPROACH_TYPES = [
+  { value: 'ILS', label: 'ILS' },
+  { value: 'RNAV (GPS)', label: 'RNAV (GPS)' },
+  { value: 'VOR', label: 'VOR' },
+  { value: 'NDB', label: 'NDB' },
+  { value: 'LOC', label: 'LOC' },
+  { value: 'LOC-BC', label: 'LOC-BC' },
+  { value: 'ASR', label: 'ASR' },
+  { value: 'PAR', label: 'PAR' },
+  { value: 'Visual', label: 'Visual' },
+  { value: 'Circling', label: 'Circling' },
+];
+
 export const labelFor = (list, value) => list.find((o) => o.value === value)?.label ?? value;

@@ -46,6 +46,31 @@ test('create, read, update, delete a flight', async () => {
   assert.equal((await call('GET', `/flights/${created.id}`)).status, 404);
 });
 
+test('flight details: flight number, dual given, simulator time, debrief, full-stop landings, typed approaches', async () => {
+  let res = await call('POST', '/flights', {
+    ...flight, flight_number: 'dl123', dual_given: 0.5, simulator_time: 1, pic_time: 1,
+    debrief_went_well: 'Smooth landing', debrief_work_on: 'Radio calls',
+    day_landings: 3, day_landings_full_stop: 2,
+    approach_types: [{ approach_type: 'ILS', count: 2 }, { approach_type: 'VOR', count: 1 }],
+  });
+  assert.equal(res.status, 201);
+  const created = await res.json();
+  assert.equal(created.flight_number, 'DL123');
+  assert.equal(created.dual_given, 0.5);
+  assert.equal(created.simulator_time, 1);
+  assert.equal(created.debrief_went_well, 'Smooth landing');
+  assert.equal(created.day_landings_full_stop, 2);
+  assert.deepEqual(created.approach_types.map((a) => [a.approach_type, a.count]), [['ILS', 2], ['VOR', 1]]);
+
+  res = await call('PUT', `/flights/${created.id}`, { ...flight, day_landings: 3, approach_types: [{ approach_type: 'RNAV (GPS)', count: 1 }] });
+  const updated = await res.json();
+  assert.deepEqual(updated.approach_types.map((a) => a.approach_type), ['RNAV (GPS)']); // full replace, not merged
+
+  res = await call('POST', '/flights', { ...flight, day_landings: 1, day_landings_full_stop: 3 });
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).errors.day_landings_full_stop);
+});
+
 test('rejects invalid flights', async () => {
   const res = await call('POST', '/flights', { date: '2026-02-30', total_time: 1, pic_time: 2, day_landings: 1.5 });
   assert.equal(res.status, 400);

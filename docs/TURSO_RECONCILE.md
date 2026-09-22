@@ -28,11 +28,17 @@ run against this database — the tables above were created some other way.
 
 | Turso has | Current code expects | Status |
 | --- | --- | --- |
-| `flights`, `aircraft`, `flight_stops`, `flight_reviews`, `airports` | same | matches |
-| `certificates`, `certificate_requirements`, `requirement_completions` (6 / 39 / 0 rows) | `milestones_config` | **different design, different name** |
-| `custom_expirations` (0 rows) | `expirations` | **different design, different name** |
-| `flight_approaches` (0 rows) | — (no counterpart) | orphaned, no current code reads it |
-| `pilot_profile` (1 row) | — (no counterpart) | orphaned, no current code reads it — **has 1 row, don't drop it before checking** |
+| `flights`, `flight_stops`, `flight_reviews`, `airports` | same | matches |
+| `flights.flight_number/dual_given/simulator_time/debrief_went_well/debrief_work_on/day_landings_full_stop/night_landings_full_stop`, `flight_approaches` (flight_id/approach_type/count) | now also in current code | **matches, as of `008_flight_details.js`** — see below |
+| `aircraft` (tail_number/make/model/**icao_type**/category/class/flags/**type_designation**/is_simulator/simulator_device_type/notes) | `aircraft` (tail_number/make/model/**type_designator**/category/class/flags/**type_rating_designation**/is_taa/archived_at/is_simulator/simulator_device_type/notes) | **close but not identical** — Turso's `aircraft` predates `is_taa` and `archived_at`, and uses `icao_type`/`type_designation` where current code uses `type_designator`/`type_rating_designation`. Still unreconciled; not touched by `008_flight_details.js`. |
+| `certificates`, `certificate_requirements`, `requirement_completions` (6 / 39 / 0 rows) | `milestones_config` | **different design, different name** — still unreconciled |
+| `custom_expirations` (0 rows) | `expirations` | **different design, different name** — still unreconciled |
+| `pilot_profile` (1 row: `medical_class`, `medical_expires`) | `expirations` (kind='medical') | **different design, different name** — still unreconciled, **has 1 row, don't drop it before checking** |
+
+`008_flight_details.js` deliberately reused Turso's exact `flights` column names and the `flight_approaches`
+table/column names (confirmed via a read-only `pragma_table_info` check on 2026-09-22) for every field it
+added, so those specific pieces are no longer a naming problem here — only a "has `_migrations` run"
+problem, same as everything else in this file.
 
 ### Flight data itself looks intact
 
@@ -53,24 +59,29 @@ This makes the situation loud instead of silent. It does not fix the schema mism
 
 ## Reconciliation plan (not yet done)
 
-1. **Decide what to do with `pilot_profile`'s one row and anything in `flight_stops`/`custom_expirations`
+1. **Decide what to do with `pilot_profile`'s one row and anything in `custom_expirations`/`aircraft`
    worth keeping.** Pull them out with a read-only `SELECT` (same pattern as the report above) and look
    at the actual values before touching anything.
-2. **Write a new numbered migration** (the next one after `007_expirations.js`) that, against Turso
+2. **Write a new numbered migration** (the next one after `008_flight_details.js`) that, against Turso
    specifically:
-   - Creates `_migrations` and backfills it with `001_init.js` through `007_expirations.js` as applied
-     (their target tables already exist and match, except for milestones/expirations — see next steps),
-     so future `migrate()` runs treat this database as caught up rather than re-running everything.
+   - Creates `_migrations` and backfills it with `001_init.js` through `008_flight_details.js` as
+     applied for every table/column that already matches current code (`flights` including its
+     `008_flight_details.js` columns, `flight_approaches`, `flight_stops`, `flight_reviews`, `airports`),
+     so future `migrate()` runs treat those as caught up rather than re-running them.
    - Creates `milestones_config` and `expirations` (idempotent `CREATE TABLE IF NOT EXISTS`, same as
      005/007 already do).
-   - If anything from step 1 is worth keeping, copies it into the new tables' shape.
+   - Reconciles `aircraft`: add `is_taa` and `archived_at`, and decide whether to rename
+     `icao_type`→`type_designator` and `type_designation`→`type_rating_designation` in place or add the
+     current-code columns alongside and backfill from the old ones.
+   - If anything from step 1 is worth keeping (`pilot_profile`'s medical row, any real `custom_expirations`
+     rows), copies it into `expirations`.
    - Leaves `certificates`, `certificate_requirements`, `requirement_completions`, `custom_expirations`,
-     `flight_approaches` in place rather than dropping them — they're unused by current code but dropping
+     `pilot_profile` in place rather than dropping them — they're unused by current code but dropping
      data should be its own deliberate, reviewed step, not folded into a schema-reconciliation migration.
 3. **Run the new migration against a copy of the Turso data first** (export via `db:backup`, restore to
    a scratch/dev Turso database or a local file), not against production directly.
 4. Once verified, run it against production Turso deliberately (not via an automatic Preview/Production
    build) and confirm with a read-only report afterward.
 5. Only after that, decide separately whether the orphaned tables (`certificates`,
-   `certificate_requirements`, `requirement_completions`, `custom_expirations`, `flight_approaches`) are
+   `certificate_requirements`, `requirement_completions`, `custom_expirations`, `pilot_profile`) are
    safe to drop.

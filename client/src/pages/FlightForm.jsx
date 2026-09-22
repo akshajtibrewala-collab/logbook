@@ -12,32 +12,32 @@ import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import AircraftPicker from '../components/AircraftPicker.jsx';
 import StopsEditor from '../components/StopsEditor.jsx';
+import ApproachesEditor from '../components/ApproachesEditor.jsx';
 import Disclosure from '../components/Disclosure.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 
 const TIME_FIELDS = [
-  ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'],
-  ['solo_time', 'Solo'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
+  ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'],
+  ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
+  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
   ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
-const COUNT_FIELDS = [
-  ['day_landings', 'Day landings'], ['night_landings', 'Night landings'],
-  ['approaches', 'Approaches'], ['holds', 'Holds'],
-];
+const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
 
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
 const blank = () => ({
-  date: today(), departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '', airline: '', remarks: '',
+  date: today(), departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
+  airline: '', flight_number: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [],
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
-  ...Object.fromEntries(COUNT_FIELDS.map(([k]) => [k, '0'])),
+  ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
 });
 
 function fromFlight(f) {
   const s = blank();
   for (const k of Object.keys(s)) {
     if (f[k] === null || f[k] === undefined) continue;
-    if (k === 'aircraft_id' || k === 'stops') { s[k] = f[k]; continue; } // not text-input values
+    if (k === 'aircraft_id' || k === 'stops' || k === 'approach_types') { s[k] = f[k]; continue; } // not text-input values
     s[k] = TIME_FIELDS.some(([t]) => t === k) ? fmtHours(f[k]) : String(f[k]);
   }
   return s;
@@ -72,7 +72,9 @@ export default function FlightForm() {
 
   async function submit(e) {
     e.preventDefault();
-    const payload = { ...form, stops: form.stops.filter((s) => s.airport_code.trim()) };
+    const approachTypes = form.approach_types.filter((a) => a.approach_type);
+    const payload = { ...form, stops: form.stops.filter((s) => s.airport_code.trim()), approach_types: approachTypes };
+    if (approachTypes.length) payload.approaches = String(approachTypes.reduce((s, a) => s + (Number(a.count) || 0), 0));
     const local = {};
     for (const [k, label] of TIME_FIELDS) {
       const n = parseHours(form[k]);
@@ -135,11 +137,14 @@ export default function FlightForm() {
         </div>
       </Section>
 
-      <Disclosure title="Airline / Operator" defaultOpen={Boolean(form.airline.trim())}>
+      <Disclosure title="Airline / Operator" defaultOpen={Boolean(form.airline.trim() || form.flight_number.trim())}>
         <div className="col-span-2">
           <TextField label="Airline (optional, for commercial flights)" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
           <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
           {form.airline.trim() && <div className="mt-2"><AirlineBadge airline={form.airline} /></div>}
+        </div>
+        <div className="col-span-2">
+          <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
         </div>
       </Disclosure>
 
@@ -151,16 +156,55 @@ export default function FlightForm() {
         ))}
       </Section>
 
-      <Section title="Landings & approaches">
-        {COUNT_FIELDS.map(([k, label]) => (
-          <CountInput key={k} label={label} value={form[k]} onChange={set(k)} error={errors[k]} />
-        ))}
+      <Section title="Landings">
+        <CountInput label="Day landings" value={form.day_landings} onChange={set('day_landings')} error={errors.day_landings} />
+        <CountInput label="Day, full stop" value={form.day_landings_full_stop} onChange={set('day_landings_full_stop')} error={errors.day_landings_full_stop} />
+        <CountInput label="Night landings" value={form.night_landings} onChange={set('night_landings')} error={errors.night_landings} />
+        <CountInput label="Night, full stop" value={form.night_landings_full_stop} onChange={set('night_landings_full_stop')} error={errors.night_landings_full_stop} />
       </Section>
+
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-medium text-accent">Approaches</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {form.approach_types.length > 0 ? (
+            <div>
+              <span className="mb-1 block text-xs text-slate-400">Total approaches</span>
+              <div className="flex h-12 items-center justify-center rounded-xl border border-edge bg-navy-800 text-base">
+                {form.approach_types.reduce((s, a) => s + (Number(a.count) || 0), 0)}
+              </div>
+            </div>
+          ) : (
+            <CountInput label="Total approaches" value={form.approaches} onChange={set('approaches')} error={errors.approaches} />
+          )}
+          <CountInput label="Holds" value={form.holds} onChange={set('holds')} error={errors.holds} />
+        </div>
+        <div className="mt-3">
+          <ApproachesEditor approaches={form.approach_types} onChange={(v) => setForm((f) => ({ ...f, approach_types: v }))} />
+          {form.approach_types.length > 0 && <p className="mt-1 text-xs text-slate-500">Total approaches above is the sum of these.</p>}
+          {typeof errors.approach_types === 'object' && <p className="mt-1 text-xs text-bad">Check the approach rows above.</p>}
+        </div>
+      </section>
 
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-medium text-accent">Remarks</h2>
         <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3}
           className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+      </section>
+
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-medium text-accent">Debrief</h2>
+        <div className="space-y-3">
+          <div>
+            <span className="mb-1 block text-xs text-slate-400">What went well</span>
+            <textarea value={form.debrief_went_well} onChange={(e) => set('debrief_went_well')(e.target.value)} rows={2}
+              className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs text-slate-400">What to work on</span>
+            <textarea value={form.debrief_work_on} onChange={(e) => set('debrief_work_on')(e.target.value)} rows={2}
+              className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+          </div>
+        </div>
       </section>
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}

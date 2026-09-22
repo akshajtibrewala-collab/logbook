@@ -9,8 +9,8 @@ import AirlineBadge from '../components/AirlineBadge.jsx';
 import Badge from '../components/Badge.jsx';
 
 const TIME_FIELDS = [
-  ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'],
-  ['solo_time', 'Solo'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
+  ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
+  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
   ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
 const COUNT_FIELDS = [
@@ -85,6 +85,7 @@ export default function FlightDetail() {
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {flight.airline && <AirlineBadge airline={flight.airline} />}
+              {flight.flight_number && <Badge tone="neutral">{flight.flight_number}</Badge>}
               {(flight.aircraft_type || flight.tail_number) && (
                 <Badge tone="neutral" icon={Plane}>{[flight.aircraft_type, flight.tail_number].filter(Boolean).join(' · ')}</Badge>
               )}
@@ -115,16 +116,49 @@ export default function FlightDetail() {
                 {counts.map(([k, label]) => (
                   <div key={k}>
                     <div className="text-lg font-semibold">{flight[k]}</div>
-                    <div className="text-xs text-slate-400">{label}</div>
+                    <div className="text-xs text-slate-400">
+                      {label}
+                      {k === 'day_landings' && flight.day_landings_full_stop > 0 && ` (${flight.day_landings_full_stop} full stop)`}
+                      {k === 'night_landings' && flight.night_landings_full_stop > 0 && ` (${flight.night_landings_full_stop} full stop)`}
+                    </div>
                   </div>
                 ))}
               </div>
+              {flight.approach_types?.length > 0 && (
+                <ul className="mt-3 space-y-1 border-t border-edge pt-3 text-sm">
+                  {flight.approach_types.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between text-slate-300">
+                      <span>{a.approach_type}</span>
+                      <span className="text-slate-400">×{a.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Section>
           )}
 
           {flight.remarks && (
             <Section title="Remarks">
               <p className="whitespace-pre-wrap text-sm text-slate-300">{flight.remarks}</p>
+            </Section>
+          )}
+
+          {(flight.debrief_went_well || flight.debrief_work_on) && (
+            <Section title="Debrief">
+              <div className="space-y-3">
+                {flight.debrief_went_well && (
+                  <div>
+                    <div className="text-xs text-slate-400">What went well</div>
+                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-300">{flight.debrief_went_well}</p>
+                  </div>
+                )}
+                {flight.debrief_work_on && (
+                  <div>
+                    <div className="text-xs text-slate-400">What to work on</div>
+                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-300">{flight.debrief_work_on}</p>
+                  </div>
+                )}
+              </div>
             </Section>
           )}
         </>

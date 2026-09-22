@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { all, batchRun, get, run } from '../db.js';
-import { parseFlight, parseStops, FLIGHT_FIELDS } from '../validate.js';
+import { parseFlight, parseStops, parseApproaches, FLIGHT_FIELDS } from '../validate.js';
 
 const STOPS_SELECT = 'SELECT airport_code, stop_type FROM flight_stops WHERE flight_id = ? ORDER BY sequence';
+const APPROACHES_SELECT = 'SELECT id, approach_type, count FROM flight_approaches WHERE flight_id = ? ORDER BY id';
 
 /** Replaces a flight's stops with `stops` (an array, already validated) — full replace, not a diff. */
 async function saveStops(flightId, stops) {
@@ -11,6 +12,17 @@ async function saveStops(flightId, stops) {
     await batchRun(stops.map((s, i) => ({
       sql: 'INSERT INTO flight_stops (flight_id, sequence, airport_code, stop_type) VALUES (?, ?, ?, ?)',
       args: [flightId, i, s.airport_code, s.stop_type],
+    })));
+  }
+}
+
+/** Replaces a flight's typed-approach breakdown with `approaches` (already validated) — full replace. */
+async function saveApproaches(flightId, approaches) {
+  await run('DELETE FROM flight_approaches WHERE flight_id = ?', [flightId]);
+  if (approaches.length) {
+    await batchRun(approaches.map((a) => ({
+      sql: 'INSERT INTO flight_approaches (flight_id, approach_type, count) VALUES (?, ?, ?)',
+      args: [flightId, a.approach_type, a.count],
     })));
   }
 }
@@ -51,18 +63,24 @@ router.get('/:id', async (req, res) => {
   const row = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Flight not found' });
   row.stops = await all(STOPS_SELECT, [req.params.id]);
+  row.approach_types = await all(APPROACHES_SELECT, [req.params.id]);
   res.json(row);
 });
 
 router.post('/', async (req, res) => {
   const { value, errors } = parseFlight(req.body);
   const { value: stops, errors: stopErrors } = parseStops(req.body?.stops);
-  if (errors || stopErrors) return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }) } });
+  const { value: approachTypes, errors: approachErrors } = parseApproaches(req.body?.approach_types);
+  if (errors || stopErrors || approachErrors) {
+    return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }), ...(approachErrors && { approach_types: approachErrors }) } });
+  }
   if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
   const { lastId } = await run(INSERT, value);
   if (stops) await saveStops(lastId, stops);
+  if (approachTypes) await saveApproaches(lastId, approachTypes);
   const created = await get('SELECT * FROM flights WHERE id = ?', [lastId]);
   created.stops = await all(STOPS_SELECT, [lastId]);
+  created.approach_types = await all(APPROACHES_SELECT, [lastId]);
   res.status(201).json(created);
 });
 
@@ -85,14 +103,19 @@ router.post('/bulk', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { value, errors } = parseFlight(req.body);
   const { value: stops, errors: stopErrors } = parseStops(req.body?.stops);
-  if (errors || stopErrors) return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }) } });
+  const { value: approachTypes, errors: approachErrors } = parseApproaches(req.body?.approach_types);
+  if (errors || stopErrors || approachErrors) {
+    return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }), ...(approachErrors && { approach_types: approachErrors }) } });
+  }
   if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
   const set = FLIGHT_FIELDS.map((c) => `${c} = :${c}`).join(', ');
   const { changes } = await run(`UPDATE flights SET ${set}, updated_at = datetime('now') WHERE id = :id`, { ...value, id: req.params.id });
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
   if (stops) await saveStops(req.params.id, stops);
+  if (approachTypes) await saveApproaches(req.params.id, approachTypes);
   const updated = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
   updated.stops = await all(STOPS_SELECT, [req.params.id]);
+  updated.approach_types = await all(APPROACHES_SELECT, [req.params.id]);
   res.json(updated);
 });
 
@@ -100,6 +123,7 @@ router.delete('/:id', async (req, res) => {
   // Explicit cleanup rather than relying on ON DELETE CASCADE, which SQLite only enforces when
   // "PRAGMA foreign_keys = ON" is set on the connection — not guaranteed across every environment.
   await run('DELETE FROM flight_stops WHERE flight_id = ?', [req.params.id]);
+  await run('DELETE FROM flight_approaches WHERE flight_id = ?', [req.params.id]);
   const { changes } = await run('DELETE FROM flights WHERE id = ?', [req.params.id]);
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
   res.status(204).end();
