@@ -3,7 +3,7 @@ export const TIME_FIELDS = [
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
 ];
 export const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
-export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on'];
+export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'invoice_ref'];
 export const AIRPORT_FIELDS = ['departure_airport', 'arrival_airport'];
 // ground_time is hours like TIME_FIELDS but kept separate from it: ground instruction isn't flight time,
 // so (unlike TIME_FIELDS) it's never checked against total_time. cost_override is a nullable dollar
@@ -300,7 +300,7 @@ export function parseAircraftRate(body) {
 
 export const EXPENSE_CATEGORIES = ['books', 'headset', 'medical', 'written_test', 'checkride_fee', 'other'];
 
-/** Validates a one-off training expense: {category, date, amount, note}. */
+/** Validates a one-off training expense: {category, date, amount, note, invoice_ref}. */
 export function parseExpense(body) {
   const b = body && typeof body === 'object' ? body : {};
   const errors = {};
@@ -317,11 +317,13 @@ export function parseExpense(body) {
 
   const note = String(b.note ?? '').trim();
   v.note = note || null;
+  const invoiceRef = String(b.invoice_ref ?? '').trim();
+  v.invoice_ref = invoiceRef || null;
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
-/** Validates a ground-only training session (no flight logged): {date, hours, instructor, topics, notes}. */
+/** Validates a ground-only training session (no flight logged): {date, hours, instructor, topics, notes, cost_override, invoice_ref}. */
 export function parseGroundSession(body) {
   const b = body && typeof body === 'object' ? body : {};
   const errors = {};
@@ -340,6 +342,16 @@ export function parseGroundSession(body) {
   v.topics = topics || null;
   const notes = String(b.notes ?? '').trim();
   v.notes = notes || null;
+  const invoiceRef = String(b.invoice_ref ?? '').trim();
+  v.invoice_ref = invoiceRef || null;
+
+  if (isBlank(b.cost_override)) {
+    v.cost_override = null;
+  } else {
+    const override = Number(b.cost_override);
+    if (!Number.isFinite(override) || override < 0 || override > 999999) errors.cost_override = 'Must be a number, 0 or more';
+    else v.cost_override = round2(override);
+  }
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }

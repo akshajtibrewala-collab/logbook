@@ -63,11 +63,19 @@ export function computeFlightCost(flight, rates) {
   };
 }
 
-/** A ground-only session's cost: its hours at whichever ground rate was in effect on its date. */
+/**
+ * A ground-only session's cost: its hours at whichever ground rate was in effect on its date, or
+ * `cost_override` outright when set (same override contract as a flight's cost_override).
+ */
 export function computeGroundSessionCost(session, groundRates) {
   const rate = pickRate(groundRates ?? [], session.date);
   const hours = Number(session.hours) || 0;
-  return { total: hours > 0 && rate ? round2(hours * rate.hourly_rate) : 0, missingRate: hours > 0 && !rate };
+  const computedTotal = hours > 0 && rate ? round2(hours * rate.hourly_rate) : 0;
+  const hasOverride = session.cost_override !== null && session.cost_override !== undefined && session.cost_override !== '';
+  return {
+    total: hasOverride ? round2(Number(session.cost_override)) : computedTotal,
+    computedTotal, override: hasOverride, missingRate: hours > 0 && !rate,
+  };
 }
 
 const inRange = (date, from, to) => (!from || date >= from) && (!to || date <= to);

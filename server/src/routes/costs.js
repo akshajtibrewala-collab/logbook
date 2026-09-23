@@ -76,7 +76,7 @@ router.post('/expenses', async (req, res) => {
   const { value, errors } = parseExpense(req.body);
   if (errors) return res.status(400).json({ errors });
   const { lastId } = await run(
-    'INSERT INTO other_expenses (category, date, amount, note) VALUES (:category, :date, :amount, :note)', value,
+    'INSERT INTO other_expenses (category, date, amount, note, invoice_ref) VALUES (:category, :date, :amount, :note, :invoice_ref)', value,
   );
   res.status(201).json(await get('SELECT * FROM other_expenses WHERE id = ?', [lastId]));
 });
@@ -84,7 +84,7 @@ router.put('/expenses/:id', async (req, res) => {
   const { value, errors } = parseExpense(req.body);
   if (errors) return res.status(400).json({ errors });
   const { changes } = await run(
-    'UPDATE other_expenses SET category = :category, date = :date, amount = :amount, note = :note WHERE id = :id',
+    'UPDATE other_expenses SET category = :category, date = :date, amount = :amount, note = :note, invoice_ref = :invoice_ref WHERE id = :id',
     { ...value, id: req.params.id },
   );
   if (!changes) return res.status(404).json({ error: 'Expense not found' });
@@ -103,7 +103,8 @@ router.post('/ground-sessions', async (req, res) => {
   const { value, errors } = parseGroundSession(req.body);
   if (errors) return res.status(400).json({ errors });
   const { lastId } = await run(
-    'INSERT INTO ground_sessions (date, hours, instructor, topics, notes) VALUES (:date, :hours, :instructor, :topics, :notes)', value,
+    'INSERT INTO ground_sessions (date, hours, instructor, topics, notes, cost_override, invoice_ref) VALUES (:date, :hours, :instructor, :topics, :notes, :cost_override, :invoice_ref)',
+    value,
   );
   res.status(201).json(await get('SELECT * FROM ground_sessions WHERE id = ?', [lastId]));
 });
@@ -111,7 +112,7 @@ router.put('/ground-sessions/:id', async (req, res) => {
   const { value, errors } = parseGroundSession(req.body);
   if (errors) return res.status(400).json({ errors });
   const { changes } = await run(
-    'UPDATE ground_sessions SET date = :date, hours = :hours, instructor = :instructor, topics = :topics, notes = :notes WHERE id = :id',
+    'UPDATE ground_sessions SET date = :date, hours = :hours, instructor = :instructor, topics = :topics, notes = :notes, cost_override = :cost_override, invoice_ref = :invoice_ref WHERE id = :id',
     { ...value, id: req.params.id },
   );
   if (!changes) return res.status(404).json({ error: 'Ground session not found' });
