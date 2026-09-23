@@ -1,4 +1,5 @@
 import { Moon, Sun, TriangleAlert } from 'lucide-react';
+import { observedAgeLabel } from '../lib/timezone.js';
 import Badge from './Badge.jsx';
 
 const STATUS_TONE = { outside: 'bad', near: 'warn', unavailable: 'neutral', within: 'ok' };
@@ -30,6 +31,7 @@ export default function WeatherConditions({ data, label }) {
   }
 
   const checks = (data.checks || []).filter((c) => c.status);
+  const observed = data.obsTime ? observedAgeLabel(new Date(data.obsTime)) : null;
 
   return (
     <div className="card space-y-3 p-4">
@@ -40,6 +42,13 @@ export default function WeatherConditions({ data, label }) {
         </div>
         {data.overall && <Badge tone={STATUS_TONE[data.overall]}>{STATUS_LABEL[data.overall]}</Badge>}
       </div>
+
+      {observed && (
+        <p className={`flex items-center gap-1 text-xs ${observed.stale ? 'text-warn' : 'text-slate-500'}`}>
+          {observed.stale && <TriangleAlert size={13} className="shrink-0" />}
+          {observed.label}{observed.stale ? ' — stale' : ''}
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-2 text-center text-sm">
         <div><div className="text-slate-500">Ceiling</div><div className="font-medium">{data.ceilingFt == null ? 'Unlimited' : `${data.ceilingFt} ft`}</div></div>

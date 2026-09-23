@@ -22,6 +22,7 @@
     "@libsql/client": "^0.18.0",
     "express": "^5.2.1",
     "geomagnetism": "^0.2.0",
-    "suncalc": "^2.0.2"
+    "suncalc": "^2.0.2",
+    "tz-lookup": "^6.1.25"
   }
 }
