@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, GraduationCap, Map, PieChart } from 'lucide-react';
+import { LayoutDashboard, BookOpen, GraduationCap, Map, PieChart, CloudSun } from 'lucide-react';
 
 const tabs = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
   { to: '/logbook', label: 'Logbook', Icon: BookOpen },
   { to: '/milestones', label: 'Milestones', Icon: GraduationCap },
+  { to: '/weather', label: 'Weather', Icon: CloudSun },
   { to: '/map', label: 'Map', Icon: Map },
   { to: '/stats', label: 'Stats', Icon: PieChart },
 ];

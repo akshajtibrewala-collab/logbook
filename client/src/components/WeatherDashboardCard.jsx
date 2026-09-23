@@ -7,22 +7,43 @@ import Badge from './Badge.jsx';
 const STATUS_TONE = { outside: 'bad', near: 'warn', unavailable: 'neutral', within: 'ok' };
 const STATUS_LABEL = { outside: 'Outside minimums', near: 'Near a limit', unavailable: 'Data unavailable', within: 'Within minimums' };
 
-/** Dashboard's compact home-airport weather summary — only renders once a home airport is set. */
+/**
+ * Dashboard's home-airport weather summary. Always renders a tappable card once settings have loaded —
+ * even with no home airport set yet — so the weather checker has a permanent entry point from the
+ * Dashboard regardless of setup state (previously this returned null until a home airport was set,
+ * which meant a first-time user had no way to discover the feature at all).
+ */
 export default function WeatherDashboardCard() {
-  const [state, setState] = useState(null); // undefined until settings load; null if no home airport set
+  const [state, setState] = useState('loading'); // 'loading' | 'unset' | the /api/weather/:ident response
 
   useEffect(() => {
     let cancelled = false;
     api.getSettings()
       .then((s) => {
-        if (!s.home_airport_ident) { if (!cancelled) setState(null); return; }
+        if (!s.home_airport_ident) { if (!cancelled) setState('unset'); return; }
         return api.checkWeather(s.home_airport_ident).then((data) => { if (!cancelled) setState(data); });
       })
-      .catch(() => { if (!cancelled) setState(null); });
+      .catch(() => { if (!cancelled) setState('unset'); });
     return () => { cancelled = true; };
   }, []);
 
-  if (!state) return null;
+  if (state === 'loading') return null; // avoid a flash of the "set up" prompt while settings are loading
+
+  if (state === 'unset') {
+    return (
+      <Link to="/weather/settings" className="card flex items-center justify-between gap-3 p-4 active:bg-navy-800">
+        <div className="flex min-w-0 items-center gap-3">
+          <CloudSun size={22} className="shrink-0 text-accent" />
+          <div className="min-w-0">
+            <div className="text-sm font-medium">Weather checker</div>
+            <div className="truncate text-xs text-slate-400">Set a home airport and your minimums to see conditions here</div>
+          </div>
+        </div>
+        <ChevronRight size={16} className="shrink-0 text-slate-500" />
+      </Link>
+    );
+  }
+
   const { current, airport } = state;
 
   return (
