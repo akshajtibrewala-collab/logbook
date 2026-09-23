@@ -56,7 +56,20 @@ router.get('/', async (req, res) => {
   const direction = String(dir).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
   const sql = `SELECT * FROM flights ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
                ORDER BY ${col} ${direction}, id ${direction}`;
-  res.json(await all(sql, params));
+  const rows = await all(sql, params);
+
+  // Batched, not per-row: one extra query for the whole (personal-scale) approaches table, grouped in
+  // JS, rather than an N+1 query per flight. `route` already carries the via-airports text for the list
+  // view, so `stops` (with each one's full-stop/touch-and-go type) stays a detail-view/export-only fetch.
+  const approaches = await all('SELECT flight_id, approach_type, count FROM flight_approaches ORDER BY id');
+  const approachesByFlight = new Map();
+  for (const a of approaches) {
+    if (!approachesByFlight.has(a.flight_id)) approachesByFlight.set(a.flight_id, []);
+    approachesByFlight.get(a.flight_id).push({ approach_type: a.approach_type, count: a.count });
+  }
+  for (const f of rows) f.approach_types = approachesByFlight.get(f.id) ?? [];
+
+  res.json(rows);
 });
 
 router.get('/:id', async (req, res) => {
@@ -84,20 +97,32 @@ router.post('/', async (req, res) => {
   res.status(201).json(created);
 });
 
-// Bulk insert for CSV import. Valid rows go in as one atomic batch; invalid ones are reported by index.
+// Bulk insert for CSV import. Each valid row is inserted individually (not one atomic batch) because
+// linking its stops/approaches needs that row's own new id back — a batch's statements don't hand those
+// back per-statement. Invalid rows (any of the flight, stops or approaches shape) are reported by index
+// and simply skipped, same partial-success contract as before; valid rows ahead of a bad one still land.
 router.post('/bulk', async (req, res) => {
   const list = req.body?.flights;
   if (!Array.isArray(list) || list.length === 0) return res.status(400).json({ error: 'Send { flights: [...] } with at least one flight' });
   if (list.length > 5000) return res.status(400).json({ error: 'Too many flights in one import (max 5000)' });
   const failed = [];
-  const statements = [];
-  list.forEach((item, index) => {
+  let inserted = 0;
+  for (let index = 0; index < list.length; index++) {
+    const item = list[index];
     const { value, errors } = parseFlight(item);
-    if (errors) failed.push({ index, errors });
-    else statements.push({ sql: INSERT, args: value });
-  });
-  if (statements.length) await batchRun(statements);
-  res.status(201).json({ inserted: statements.length, failed });
+    const { value: stops, errors: stopErrors } = parseStops(item?.stops);
+    const { value: approachTypes, errors: approachErrors } = parseApproaches(item?.approach_types);
+    if (errors || stopErrors || approachErrors) {
+      failed.push({ index, errors: { ...errors, ...(stopErrors && { stops: stopErrors }), ...(approachErrors && { approach_types: approachErrors }) } });
+      continue;
+    }
+    if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : value.route;
+    const { lastId } = await run(INSERT, value);
+    if (stops) await saveStops(lastId, stops);
+    if (approachTypes) await saveApproaches(lastId, approachTypes);
+    inserted++;
+  }
+  res.status(201).json({ inserted, failed });
 });
 
 router.put('/:id', async (req, res) => {

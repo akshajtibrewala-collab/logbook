@@ -111,6 +111,27 @@ test('bulk import inserts valid rows and reports invalid ones', async () => {
   assert.equal((await call('POST', '/flights/bulk', { flights: [] })).status, 400);
 });
 
+test('bulk import persists stops and typed approaches, and the flights list includes approach types', async () => {
+  const res = await call('POST', '/flights/bulk', { flights: [
+    {
+      date: '2026-06-01', departure_airport: 'KSUS', arrival_airport: 'KSUS', total_time: 2, flight_number: 'n1',
+      stops: [{ airport_code: 'KCOU', stop_type: 'full_stop' }, { airport_code: 'KJEF', stop_type: 'full_stop' }],
+      approach_types: [{ approach_type: 'ILS', count: 2 }], approaches: 2,
+    },
+    { date: '2026-06-02', total_time: 1, approach_types: [{ approach_type: '', count: 1 }] }, // bad approach row
+  ] });
+  const body = await res.json();
+  assert.equal(body.inserted, 1);
+  assert.deepEqual(body.failed.map((x) => x.index), [1]);
+
+  const listed = (await (await call('GET', '/flights')).json()).find((f) => f.date === '2026-06-01');
+  assert.equal(listed.route, 'KCOU KJEF');
+  assert.deepEqual(listed.approach_types, [{ approach_type: 'ILS', count: 2 }]);
+  const detail = await (await call('GET', `/flights/${listed.id}`)).json();
+  assert.deepEqual(detail.stops.map((s) => s.airport_code), ['KCOU', 'KJEF']);
+  assert.equal(detail.flight_number, 'N1');
+});
+
 test('route (via airports) is normalised and saved', async () => {
   const res = await call('POST', '/flights', { date: '2026-05-01', departure_airport: 'KSUS', arrival_airport: 'KSUS', route: 'kfyg, ??, ksql', total_time: 1 });
   assert.equal(res.status, 201);

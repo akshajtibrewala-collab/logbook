@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDelimited, flightsToCsv, parseImport, normalizeDate, TEMPLATE_CSV } from './csv.js';
+import { parseDelimited, flightsToCsv, parseImport, normalizeDate, TEMPLATE_CSV, formatApproachTypes, parseApproachTypesCell } from './csv.js';
 
 test('parses quoted fields, escaped quotes, embedded newlines, BOM and CRLF', () => {
   const rows = parseDelimited('﻿a,b\r\n"x, y","say ""hi"""\r\n"line1\nline2",z\r\n');
@@ -16,20 +16,47 @@ test('normalizes dates', () => {
   assert.equal(normalizeDate('soon'), null);
 });
 
-test('export then import round-trips, including tricky text', () => {
+test('export then import round-trips every field, including tricky text', () => {
   const flight = {
-    date: '2026-03-14', departure_airport: 'KPAO', arrival_airport: 'KSQL', route: 'KHAF', aircraft_type: 'C172', tail_number: 'N123AB', airline: 'Delta',
-    total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, solo_time: 0, night_time: 0.25,
-    instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0, day_landings: 3, night_landings: 1,
-    approaches: 2, holds: 1, remarks: '=cmd|"x", with comma\nand newline',
+    date: '2026-03-14', departure_airport: 'KPAO', arrival_airport: 'KSQL', route: 'KCOU KJEF',
+    stops: [{ airport_code: 'KCOU', stop_type: 'full_stop' }, { airport_code: 'KJEF', stop_type: 'full_stop' }],
+    tail_number: 'N123AB', aircraft_type: 'C172', airline: 'Delta', flight_number: 'DL123',
+    remarks: '=cmd|"x", with comma\nand newline', debrief_went_well: 'Smooth, stable approach', debrief_work_on: 'Crosswind landings',
+    total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, dual_given: 0.5, solo_time: 0, simulator_time: 0.2,
+    night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
+    day_landings: 3, night_landings: 1, day_landings_full_stop: 2, night_landings_full_stop: 1,
+    approaches: 3, holds: 1, approach_types: [{ approach_type: 'ILS', count: 2 }, { approach_type: 'RNAV (GPS)', count: 1 }],
   };
   const csv = flightsToCsv([flight]);
   assert.match(csv, /"'=cmd/); // formula guard on export
+  assert.match(csv, /,KCOU KJEF,/); // stops readable as plain codes
+  assert.match(csv, /ILS:2; RNAV \(GPS\):1/); // approaches readable in a spreadsheet
   const { rows, error } = parseImport(csv);
   assert.equal(error, undefined);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].status, 'ready');
   assert.deepEqual(rows[0].flight, flight);
+});
+
+test('approach type cells parse leniently: missing counts default to 1, junk parts are dropped', () => {
+  assert.deepEqual(parseApproachTypesCell('ILS:2; VOR'), [{ approach_type: 'ILS', count: 2 }, { approach_type: 'VOR', count: 1 }]);
+  assert.deepEqual(parseApproachTypesCell(' ; ;'), []);
+  assert.equal(formatApproachTypes([]), '');
+});
+
+test('an older CSV without any of the new columns still imports, with the new fields defaulted', () => {
+  const csv = 'date,total_time,day_landings\n2026-01-01,1.0,2\n';
+  const { rows } = parseImport(csv);
+  assert.equal(rows[0].status, 'ready');
+  assert.equal(rows[0].flight.day_landings_full_stop, 0);
+  assert.equal(rows[0].flight.dual_given, 0);
+  assert.deepEqual(rows[0].flight.approach_types, []);
+  assert.deepEqual(rows[0].flight.stops, []);
+});
+
+test('full-stop landings above the total are flagged before import', () => {
+  const csv = 'date,total_time,day_landings,full_stop_day_landings\n2026-01-01,1.0,1,3\n';
+  assert.equal(parseImport(csv).rows[0].status, 'error');
 });
 
 test('the documented template imports cleanly', () => {

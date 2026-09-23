@@ -26,12 +26,17 @@ missing is treated as 0 or blank.
 | --- | --- |
 | `date` | `YYYY-MM-DD` (also `M/D/YYYY`; `D/M/YYYY` when the first number is over 12) |
 | `departure_airport`, `arrival_airport` | 3–4 character ICAO/IATA codes |
-| `route` | optional airports flown via, space separated (e.g. `KFYG`); they appear on the Map and Stats |
+| `route` | the flight's stops, space separated (e.g. `KCOU KJEF`). Each becomes a structured stop, imported as a **full stop** — CSV can't express touch-and-go, so change any that were touch-and-gos in the flight's edit form |
 | `aircraft_type`, `tail_number` | free text (e.g. `C172`, `N123AB`) |
-| `airline` | optional, for commercial flights (e.g. `Delta`, `UA`); shown as a badge |
-| `total_time`, `pic_time`, `sic_time`, `dual_received`, `solo_time`, `night_time`, `instrument_actual`, `instrument_simulated`, `cross_country_time` | hours as `1.5` or `1:30`; none may exceed `total_time` |
-| `day_landings`, `night_landings`, `approaches`, `holds` | whole numbers |
-| `remarks` | free text |
+| `airline`, `flight_number` | optional, for commercial flights (e.g. `Delta`, `DL123`) |
+| `total_time`, `pic_time`, `sic_time`, `dual_received`, `dual_given`, `solo_time`, `simulator_time`, `night_time`, `instrument_actual`, `instrument_simulated`, `cross_country_time` | hours as `1.5` or `1:30`; none may exceed `total_time` |
+| `day_landings`, `night_landings` | total landings, whole numbers |
+| `full_stop_day_landings`, `full_stop_night_landings` | how many of those totals were full stops; can't exceed the total. Missing = 0 |
+| `approaches`, `holds` | whole numbers |
+| `approach_types` | optional breakdown, e.g. `ILS:2; RNAV (GPS):1`. When present, `approaches` is set to its sum |
+| `remarks`, `debrief_went_well`, `debrief_work_on` | free text |
+
+Older files without the newer columns still import; the missing fields just default to 0 or blank.
 
 A ready-made example is available from the **Download the template** link on the import screen.
 
