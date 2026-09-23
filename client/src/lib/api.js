@@ -38,6 +38,7 @@ export const api = {
   updateReview: (id, date) => request('PUT', `/reviews/${id}`, { date }),
   deleteReview: (id) => request('DELETE', `/reviews/${id}`),
   resolveAirports: (codes) => request('GET', `/airports/resolve?codes=${encodeURIComponent(codes.join(','))}`),
+  searchAirports: (q) => request('GET', `/airports/search?q=${encodeURIComponent(q)}`),
   listAircraft: (includeArchived) => request('GET', `/aircraft${includeArchived ? '?archived=1' : ''}`),
   getAircraft: (id) => request('GET', `/aircraft/${id}`),
   createAircraft: (a) => request('POST', '/aircraft', a),
@@ -56,6 +57,8 @@ export const api = {
   deleteExpiration: (id) => request('DELETE', `/expirations/${id}`),
   getSettings: () => request('GET', '/settings'),
   updateSettings: (s) => request('PUT', '/settings', s),
+  checkWeather: (ident) => request('GET', `/weather/${encodeURIComponent(ident)}`),
+  planWeather: (legs) => request('POST', '/weather/plan', { legs }),
   exportBackup: () => request('GET', '/backup/export'),
   restoreBackup: (backup, mode) => request('POST', '/backup/restore', mode ? { ...backup, mode } : backup),
 };
