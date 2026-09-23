@@ -1,15 +1,15 @@
 # AeroTrail
 
-A pilot's flight logbook and career-tracking app: flights, aircraft, currency/expirations, milestone
-progress toward certificates, a map and stats. React + Vite frontend, Express API, SQLite locally /
-Turso (libSQL) in production.
+A personal pilot flight logbook and career-tracking app: flights (with structured stops and typed
+approaches), aircraft, currency/expirations, milestone progress toward certificates, a map and stats.
+Phase 1 is complete — see `docs/ROADMAP.md` for what's next.
 
 ## Stack
 
 - `client/` — React + Vite + Tailwind, react-router-dom, lucide-react icons. Dark by default, `.light`
   class for light mode.
-- `server/` — Express + `@libsql/client`. SQLite file locally (`server/logbook.db`), Turso when
-  `TURSO_DATABASE_URL` is set (never set locally — see below).
+- `server/` — Express + `@libsql/client`. SQLite file locally (`server/logbook.db`), Turso (hosted
+  libSQL) when `TURSO_DATABASE_URL` is set — **never set locally**, only in Vercel/`.env`.
 - `api/` — the Vercel serverless function wrapping the Express app for production.
 - Root `package.json` orchestrates both workspaces (`npm run dev`, `npm test`).
 - Tests: `node:test` + `node:assert/strict` only. No DOM testing — JSX components aren't unit tested,
@@ -21,8 +21,8 @@ Turso (libSQL) in production.
   Modal, DatePicker, etc.). `client/src/lib/` — pure logic: currency, milestones, CSV, greeting, hours.
 - `server/src/routes/` — one router per resource. `server/src/migrations/NNN_name.js` — versioned,
   numbered, never edited after merge; each ships its own `.test.js`.
-- `docs/` — `DEPLOY.md` (Vercel + Turso setup), `CSV.md`, `TURSO_RECONCILE.md` (an open incident — see
-  below).
+- `docs/` — `DEPLOY.md` (Vercel + Turso setup), `CSV.md` (every CSV column), `ROADMAP.md` (what's done,
+  known follow-ups, Phase 2 ideas), `TURSO_RECONCILE.md` (a past incident's record).
 
 ## Running and testing locally
 
@@ -31,39 +31,36 @@ npm run dev     # both workspaces; server on :3001, client on :5173 (proxies /ap
 npm test         # server tests, then client tests
 ```
 
-Local dev **never touches Turso** — `server/.env` (repo-root `.env`) is only read by `db:*`/`migrate`
-npm scripts, not by `npm run dev`. To poke at a real data copy without risk, copy `server/logbook.db` to
-a scratch file and set `DB_FILE=<path>` when starting the server.
+Local dev **never touches Turso** — `.env` (repo root) is only read by `db:*`/`migrate` npm scripts, not
+by `npm run dev`. To poke at a real data copy without risk, copy `server/logbook.db` to a scratch file
+and set `DB_FILE=<path>` when starting the server.
+
+## Backing up data
+
+- In the app: Logbook → the swap icon → **Export everything** — a full JSON dump (every table, format-
+  versioned) via `GET /api/backup/export`, restorable via `POST /api/backup/restore`.
+- From the command line: `npm run db:backup` dumps whatever database you're currently pointed at (local
+  file by default) to a timestamped JSON file under `server/backups/`. **Always run this before any
+  migration or schema change touches Turso** — see `docs/DEPLOY.md` for pointing it at Turso.
 
 ## Branch and deploy safety
 
-- Never work directly on `main`. Create/use a feature branch, push that.
+- **Never work directly on `main`.** Create a feature branch, do the work there, merge to `main` only
+  when told to. Merging to `main` and pushing **triggers the Vercel production deploy** — treat that
+  push as the deploy step itself, not a routine git action.
 - Vercel builds (`npm run build:vercel`) run the schema migration on **every** build, preview or
   production — and Preview can hit the same real Turso database as Production if
-  `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` are scoped to Preview in Vercel project settings. Check that
-  scoping before assuming a preview build is safe.
+  `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` are scoped to Preview in Vercel project settings. `TURSO_*`
+  should stay **Production-only**; check that scoping before assuming a preview build is safe, and never
+  change it yourself without being asked.
+- Before merging a branch that adds new migrations: back up production Turso (`npm run db:backup`),
+  verify the backup file, and say so explicitly — don't just merge silently.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
   recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
-  was reconciled (migrations 001–009 applied, verified before/after) and is current as of this writing;
-  the doc stays as the record of what happened and the one remaining follow-up (the orphaned
-  `certificates`/`custom_expirations`/`pilot_profile`/etc. tables from that incident, left in place,
-  unused by current code — a separate, later decision on whether to drop them).
+  was reconciled (migrations 001–009 applied, verified before/after) and is current as of this writing.
 - Only commit when asked. Run the full test suite once before each commit; otherwise run just the tests
   for what changed.
 
-## Phase 1 status
+## Status
 
-**Done, as of the `phase1-finish` branch:** aircraft table/picker/management, structured stops, typed
-approach breakdowns, `flight_number`/`dual_given`/`simulator_time`/full-stop landing counts, a two-field
-debrief (wired into the Dashboard greeting subline), milestones (config-driven), currency + expirations
-+ medical, AeroTrail rebrand + icon, rotating Dashboard greeting, full JSON export/restore (lifetime
-backup, round-trip tested), CSV export/import covering every new field, a tap-target/loading-state polish
-pass.
-
-**Deliberately not built:** a `/logbook/review` screen (dropped — full-stop counts default to 0, fixed
-up through the normal edit form instead); manual-milestone-completion tracking and a settings table
-(mentioned once in a request but nothing else in the app has ever needed them — no UI, no data model —
-so the JSON backup doesn't export tables that don't exist).
-
-Phase 1 is functionally complete. What's left is ordinary maintenance: the orphaned Turso tables noted
-above, and whatever the user finds while actually using it day to day.
+Phase 1 is complete. See `docs/ROADMAP.md` for what was delivered, known follow-ups, and Phase 2 ideas.

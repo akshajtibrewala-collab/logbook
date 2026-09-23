@@ -73,5 +73,6 @@ once it's set up once: `git push` to `main` builds and deploys automatically.
 - [CLAUDE.md](CLAUDE.md) — stack, folder structure, branch/deploy safety rules, current status.
 - [docs/DEPLOY.md](docs/DEPLOY.md) — hosting on Vercel + Turso.
 - [docs/CSV.md](docs/CSV.md) — every CSV column, and what ForeFlight/LogTen imports map to.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — what Phase 1 delivered, known follow-ups, Phase 2 ideas.
 - [docs/TURSO_RECONCILE.md](docs/TURSO_RECONCILE.md) — a past incident's record; only relevant if you're
   touching the production database's schema directly.
