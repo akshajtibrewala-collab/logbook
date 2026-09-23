@@ -54,7 +54,7 @@ function AttributionToggle() {
       )}
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-credits"
         aria-label={open ? 'Hide map credits' : 'Show map credits'}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent">
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent">
         {open ? <X size={16} /> : <Info size={16} />}
       </button>
     </div>
@@ -183,6 +183,15 @@ export default function MapPage() {
       <AttributionToggle />
 
       {error && <p className="absolute left-4 right-4 top-4 z-[1000] rounded-xl bg-bad/90 p-3 text-sm text-white">{error}</p>}
+
+      {!data && !error && (
+        <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
+          <div className="rounded-2xl border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+            <Plane size={36} strokeWidth={1.5} className="mx-auto animate-pulse text-slate-500" />
+            <p className="mt-3 font-medium">Loading your flights…</p>
+          </div>
+        </div>
+      )}
 
       {data && data.unresolved.length > 0 && (
         <p className="absolute left-4 right-4 top-4 z-[1000] rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">

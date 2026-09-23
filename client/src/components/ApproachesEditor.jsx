@@ -29,7 +29,7 @@ export default function ApproachesEditor({ approaches, onChange }) {
                 onChange={(e) => set(i, { count: e.target.value })}
                 className="h-11 w-16 min-w-0 rounded-lg border border-edge bg-navy-900 px-2 text-center text-base outline-none focus:border-accent" />
               <button type="button" onClick={() => remove(i)} aria-label="Remove approach"
-                className="flex h-9 w-9 shrink-0 items-center justify-center text-bad"><X size={18} /></button>
+                className="flex h-11 w-11 shrink-0 items-center justify-center text-bad"><X size={18} /></button>
             </div>
           ))}
         </div>

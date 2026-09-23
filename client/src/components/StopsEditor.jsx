@@ -30,9 +30,9 @@ export default function StopsEditor({ stops, onChange, from, to }) {
             <div key={i} className="flex items-center gap-2 rounded-xl border border-edge bg-navy-800 p-2">
               <div className="flex flex-col">
                 <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up"
-                  className="flex h-6 w-6 items-center justify-center text-slate-400 disabled:opacity-30"><ArrowUp size={14} /></button>
+                  className="flex h-9 w-9 items-center justify-center text-slate-400 disabled:opacity-30"><ArrowUp size={14} /></button>
                 <button type="button" disabled={i === stops.length - 1} onClick={() => move(i, 1)} aria-label="Move down"
-                  className="flex h-6 w-6 items-center justify-center text-slate-400 disabled:opacity-30"><ArrowDown size={14} /></button>
+                  className="flex h-9 w-9 items-center justify-center text-slate-400 disabled:opacity-30"><ArrowDown size={14} /></button>
               </div>
               <input value={s.airport_code} placeholder="KFYG" maxLength={4}
                 onChange={(e) => set(i, { airport_code: e.target.value.toUpperCase() })}
@@ -46,7 +46,7 @@ export default function StopsEditor({ stops, onChange, from, to }) {
                 ))}
               </div>
               <button type="button" onClick={() => remove(i)} aria-label="Remove stop"
-                className="flex h-9 w-9 shrink-0 items-center justify-center text-bad"><X size={18} /></button>
+                className="flex h-11 w-11 shrink-0 items-center justify-center text-bad"><X size={18} /></button>
             </div>
           ))}
         </div>

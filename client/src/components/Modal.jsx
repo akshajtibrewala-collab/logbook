@@ -31,7 +31,7 @@ export default function Modal({ open, onClose, title, children, footer }) {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold">{title}</h2>
             <button type="button" onClick={onClose} aria-label="Close"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 active:bg-navy-800">
+              className="flex h-11 w-11 items-center justify-center rounded-full text-slate-400 active:bg-navy-800">
               <X size={18} />
             </button>
           </div>

@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav.jsx';
-import Placeholder from './pages/Placeholder.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Logbook from './pages/Logbook.jsx';
 import FlightForm from './pages/FlightForm.jsx';
