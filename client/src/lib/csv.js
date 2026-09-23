@@ -39,13 +39,13 @@ export function detectDelimiter(text) {
 
 export const EXPORT_COLUMNS = [
   'date', 'departure_airport', 'arrival_airport', 'route', 'aircraft_type', 'tail_number', 'airline', 'flight_number',
-  'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time',
+  'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time', 'ground_time',
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
   'day_landings', 'full_stop_day_landings', 'night_landings', 'full_stop_night_landings',
   'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on',
 ];
 const TIME_COLUMNS = new Set(['total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time',
-  'simulator_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
+  'simulator_time', 'ground_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
 const TEXT_COLUMNS = new Set(['aircraft_type', 'tail_number', 'remarks', 'departure_airport', 'arrival_airport', 'route',
   'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on']);
 // full_stop_day_landings/full_stop_night_landings deliberately don't reuse the app's own
@@ -91,7 +91,7 @@ export function flightsToCsv(flights) {
 export const TEMPLATE_CSV = flightsToCsv([{
   date: '2026-03-14', departure_airport: 'KPAO', arrival_airport: 'KSQL', aircraft_type: 'C172', tail_number: 'N123AB',
   airline: '', flight_number: '', total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, dual_given: 0,
-  solo_time: 0, simulator_time: 0, night_time: 0, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
+  solo_time: 0, simulator_time: 0, ground_time: 0, night_time: 0, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
   day_landings: 3, day_landings_full_stop: 3, night_landings: 0, night_landings_full_stop: 0,
   approaches: 1, approach_types: [{ approach_type: 'ILS', count: 1 }], holds: 0,
   remarks: 'Pattern work and one approach', debrief_went_well: '', debrief_work_on: '',
@@ -119,6 +119,7 @@ const ALIASES = {
   dual_given: ['dualgiven', 'flightdualgiven'],
   solo_time: ['solotime', 'solo', 'flightsolo'],
   simulator_time: ['simulatortime', 'simtime', 'flightsimulatortime'],
+  ground_time: ['groundtime', 'groundinstructiontime', 'groundinstruction'],
   night_time: ['nighttime', 'night', 'flightnight'],
   instrument_actual: ['instrumentactual', 'actualinstrument', 'actual', 'flightactualinstrument'],
   instrument_simulated: ['instrumentsimulated', 'simulatedinstrument', 'simulated', 'hood', 'flightsimulatedinstrument'],
@@ -280,7 +281,9 @@ export function parseImport(text, existing = []) {
     if (f.night_landings_full_stop > f.night_landings) errors.push('full-stop night landings exceeds night landings');
 
     for (const field of TIME_FIELDS) {
-      if (field !== 'total_time' && f[field] > f.total_time) errors.push(`${field.replace(/_/g, ' ')} exceeds total time`);
+      // ground_time isn't flight time (a briefing can run longer than the flight itself), so it's exempt
+      // from this check the same way it's exempt from the equivalent server-side check in validate.js.
+      if (field !== 'total_time' && field !== 'ground_time' && f[field] > f.total_time) errors.push(`${field.replace(/_/g, ' ')} exceeds total time`);
     }
 
     let status = 'ready';

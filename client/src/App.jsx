@@ -19,6 +19,8 @@ const Currency = lazy(() => import('./pages/Currency.jsx'));
 const ExpirationForm = lazy(() => import('./pages/ExpirationForm.jsx'));
 const Weather = lazy(() => import('./pages/Weather.jsx'));
 const WeatherSettings = lazy(() => import('./pages/WeatherSettings.jsx'));
+const Costs = lazy(() => import('./pages/Costs.jsx'));
+const CostSettings = lazy(() => import('./pages/CostSettings.jsx'));
 
 export default function App() {
   const location = useLocation();
@@ -45,6 +47,8 @@ export default function App() {
             <Route path="/currency/:id" element={<ExpirationForm />} />
             <Route path="/weather" element={<Weather />} />
             <Route path="/weather/settings" element={<WeatherSettings />} />
+            <Route path="/costs" element={<Costs />} />
+            <Route path="/costs/settings" element={<CostSettings />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="*" element={<Navigate to="/" replace />} />

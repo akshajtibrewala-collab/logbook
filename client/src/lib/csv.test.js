@@ -23,7 +23,7 @@ test('export then import round-trips every field, including tricky text', () => 
     tail_number: 'N123AB', aircraft_type: 'C172', airline: 'Delta', flight_number: 'DL123',
     remarks: '=cmd|"x", with comma\nand newline', debrief_went_well: 'Smooth, stable approach', debrief_work_on: 'Crosswind landings',
     total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, dual_given: 0.5, solo_time: 0, simulator_time: 0.2,
-    night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
+    ground_time: 0.5, night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
     day_landings: 3, night_landings: 1, day_landings_full_stop: 2, night_landings_full_stop: 1,
     approaches: 3, holds: 1, approach_types: [{ approach_type: 'ILS', count: 2 }, { approach_type: 'RNAV (GPS)', count: 1 }],
   };

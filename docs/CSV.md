@@ -30,6 +30,7 @@ missing is treated as 0 or blank.
 | `aircraft_type`, `tail_number` | free text (e.g. `C172`, `N123AB`) |
 | `airline`, `flight_number` | optional, for commercial flights (e.g. `Delta`, `DL123`) |
 | `total_time`, `pic_time`, `sic_time`, `dual_received`, `dual_given`, `solo_time`, `simulator_time`, `night_time`, `instrument_actual`, `instrument_simulated`, `cross_country_time` | hours as `1.5` or `1:30`; none may exceed `total_time` |
+| `ground_time` | hours of ground instruction billed at the ground rate (Costs); not flight time, so it's exempt from the "can't exceed `total_time`" rule above |
 | `day_landings`, `night_landings` | total landings, whole numbers |
 | `full_stop_day_landings`, `full_stop_night_landings` | how many of those totals were full stops; can't exceed the total. Missing = 0 |
 | `approaches`, `holds` | whole numbers |

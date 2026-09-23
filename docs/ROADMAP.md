@@ -65,6 +65,23 @@ Merged to `main` (2026-09-23). No migrations — nothing to back up before this 
   since it's the same `md`/`lg` breakpoints, not separate device logic. ("Costs" two-column treatment from
   the original request doesn't apply — there's no Costs page yet, see the Phase 2 idea below.)
 
+## Phase 2b — training cost tracker — delivered, not yet merged
+
+On branch `phase2b`. Migration 013 adds effective-dated rate tables (aircraft rental+fuel surcharge per
+aircraft, instructor, ground instruction, simulator — each a history, not a single current value, so an
+old flight keeps the cost it actually had), `other_expenses`, `ground_sessions` (ground-only training with
+no flight logged), `training_phases` (a certificate's own date range, for splitting spend per certificate
+without relying on which milestones a flight's hours happen to satisfy), and `ground_time`/`cost_override`
+on `flights`. Seeded starting rates ($195/hr rental + $15/hr fuel, $85/hr instructor, $85/hr ground),
+effective from the pilot's first logged flight. All calculation (cost breakdown, spend totals, spend per
+certificate, average cost per flight hour, and a two-estimate remaining-cost projection — FAA minimum vs.
+a settable "realistic" total-hours target) lives in `client/src/lib/cost.js`, pure and unit-tested against
+the plan's own worked examples ($442.50 for a 1.5hr dual lesson, $315 solo, $485 with 0.5hr ground). New
+`Costs.jsx` (summary, spending chart, expenses, ground sessions) and `CostSettings.jsx` (rate history
+editors, training phases, default ground-briefing-time and realistic-hours-target settings), reached from
+Logbook's header icon row. `FlightForm`/`FlightDetail` show a computed cost with an optional manual
+override. CSV, JSON backup/restore, and their tests cover every new field/table.
+
 ## Known follow-ups
 
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,
@@ -93,10 +110,9 @@ Merged to `main` (2026-09-23). No migrations — nothing to back up before this 
   still only style `active:` (touch), not `hover:`/`focus-visible:`, so trackpad users get little visual
   feedback pointing at a control before clicking it.
 
-## Phase 2 ideas
+## Phase 2b ideas (remaining)
 
 - **Oral exam study mode** with spaced repetition, tied to certificate/rating progress.
-- **Training cost tracker**: money spent per certificate/rating, cost per hour trends.
 - **Document vault**: medical certificate, pilot certificate, endorsements — scanned/photographed and
   stored alongside the expirations they relate to.
 - **Later**: CFI tools (student tracking, endorsement templates) and airline-career features (application

@@ -5,7 +5,15 @@ export const TIME_FIELDS = [
 export const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
 export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on'];
 export const AIRPORT_FIELDS = ['departure_airport', 'arrival_airport'];
-export const FLIGHT_FIELDS = ['date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', ...TEXT_FIELDS, ...TIME_FIELDS, ...COUNT_FIELDS];
+// ground_time is hours like TIME_FIELDS but kept separate from it: ground instruction isn't flight time,
+// so (unlike TIME_FIELDS) it's never checked against total_time. cost_override is a nullable dollar
+// amount, not hours, validated on its own.
+export const GROUND_TIME_FIELD = 'ground_time';
+export const COST_OVERRIDE_FIELD = 'cost_override';
+export const FLIGHT_FIELDS = [
+  'date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', ...TEXT_FIELDS, ...TIME_FIELDS,
+  GROUND_TIME_FIELD, COST_OVERRIDE_FIELD, ...COUNT_FIELDS,
+];
 
 export function isIsoDate(s) {
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -60,6 +68,19 @@ export function parseFlight(body) {
     const n = isBlank(b[f]) ? 0 : Number(b[f]);
     if (!Number.isInteger(n) || n < 0 || n > 999) errors[f] = 'Must be a whole number, 0 or more';
     else v[f] = n;
+  }
+
+  {
+    const n = isBlank(b[GROUND_TIME_FIELD]) ? 0 : Number(b[GROUND_TIME_FIELD]);
+    if (!Number.isFinite(n) || n < 0 || n > 99) errors[GROUND_TIME_FIELD] = 'Must be a number between 0 and 99';
+    else v[GROUND_TIME_FIELD] = round2(n);
+  }
+  if (isBlank(b[COST_OVERRIDE_FIELD])) {
+    v[COST_OVERRIDE_FIELD] = null;
+  } else {
+    const n = Number(b[COST_OVERRIDE_FIELD]);
+    if (!Number.isFinite(n) || n < 0 || n > 999999) errors[COST_OVERRIDE_FIELD] = 'Must be a number, 0 or more';
+    else v[COST_OVERRIDE_FIELD] = round2(n);
   }
 
   if (!errors.total_time) {
@@ -165,8 +186,14 @@ export function parseMilestoneCompletion(body) {
 
 export const PILOT_SETTINGS_CEILING_FIELDS = ['min_ceiling_ft', 'night_min_ceiling_ft'];
 export const PILOT_SETTINGS_WIND_FIELDS = ['max_wind_kt', 'max_gust_kt', 'max_crosswind_kt', 'night_max_wind_kt', 'night_max_gust_kt', 'night_max_crosswind_kt'];
-export const PILOT_SETTINGS_REAL_FIELDS = ['min_visibility_sm', 'night_min_visibility_sm'];
-export const PILOT_SETTINGS_FIELDS = ['home_airport_ident', ...PILOT_SETTINGS_CEILING_FIELDS, ...PILOT_SETTINGS_WIND_FIELDS, ...PILOT_SETTINGS_REAL_FIELDS];
+export const PILOT_SETTINGS_REAL_FIELDS = ['min_visibility_sm', 'night_min_visibility_sm', 'default_ground_time'];
+// Validated separately from PILOT_SETTINGS_REAL_FIELDS: those all share a 0-99 cap sized for weather
+// minimums and a briefing length, but a realistic total-hours target can reasonably run into the hundreds.
+export const PILOT_SETTINGS_HOURS_TARGET_FIELDS = ['private_realistic_total_hours'];
+export const PILOT_SETTINGS_FIELDS = [
+  'home_airport_ident', ...PILOT_SETTINGS_CEILING_FIELDS, ...PILOT_SETTINGS_WIND_FIELDS,
+  ...PILOT_SETTINGS_REAL_FIELDS, ...PILOT_SETTINGS_HOURS_TARGET_FIELDS,
+];
 
 /**
  * Validates a pilot_settings payload. Every minimum is optional — a blank field means "don't check this
@@ -196,6 +223,12 @@ export function parsePilotSettings(body) {
     if (!Number.isFinite(n) || n < 0 || n > 99) errors[f] = 'Must be a number, 0 or more';
     else v[f] = round2(n);
   }
+  for (const f of PILOT_SETTINGS_HOURS_TARGET_FIELDS) {
+    if (isBlank(b[f])) { v[f] = null; continue; }
+    const n = Number(b[f]);
+    if (!Number.isFinite(n) || n < 1 || n > 500) errors[f] = 'Must be a number from 1 to 500';
+    else v[f] = round2(n);
+  }
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
@@ -221,6 +254,113 @@ export function parseExpiration(body) {
 
   const notes = String(b.notes ?? '').trim();
   v.notes = notes || null;
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+/** Validates a simple {effective_date, hourly_rate} rate row (instructor, ground, or simulator rate). */
+export function parseHourlyRate(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  if (!isIsoDate(b.effective_date)) errors.effective_date = 'Date must be YYYY-MM-DD';
+  else v.effective_date = b.effective_date;
+
+  const rate = Number(b.hourly_rate);
+  if (!Number.isFinite(rate) || rate < 0 || rate > 99999) errors.hourly_rate = 'Must be a number, 0 or more';
+  else v.hourly_rate = round2(rate);
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+/** Validates a per-aircraft rate row: {aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr}. */
+export function parseAircraftRate(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  const aircraftId = Number(b.aircraft_id);
+  if (!Number.isInteger(aircraftId) || aircraftId <= 0) errors.aircraft_id = 'Choose an aircraft';
+  else v.aircraft_id = aircraftId;
+
+  if (!isIsoDate(b.effective_date)) errors.effective_date = 'Date must be YYYY-MM-DD';
+  else v.effective_date = b.effective_date;
+
+  const rental = Number(b.rental_rate_per_hr);
+  if (!Number.isFinite(rental) || rental < 0 || rental > 99999) errors.rental_rate_per_hr = 'Must be a number, 0 or more';
+  else v.rental_rate_per_hr = round2(rental);
+
+  const fuel = isBlank(b.fuel_surcharge_per_hr) ? 0 : Number(b.fuel_surcharge_per_hr);
+  if (!Number.isFinite(fuel) || fuel < 0 || fuel > 99999) errors.fuel_surcharge_per_hr = 'Must be a number, 0 or more';
+  else v.fuel_surcharge_per_hr = round2(fuel);
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+export const EXPENSE_CATEGORIES = ['books', 'headset', 'medical', 'written_test', 'checkride_fee', 'other'];
+
+/** Validates a one-off training expense: {category, date, amount, note}. */
+export function parseExpense(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  v.category = EXPENSE_CATEGORIES.includes(b.category) ? b.category : 'other';
+
+  if (!isIsoDate(b.date)) errors.date = 'Date must be YYYY-MM-DD';
+  else v.date = b.date;
+
+  const amount = Number(b.amount);
+  if (!Number.isFinite(amount) || amount < 0 || amount > 999999) errors.amount = 'Must be a number, 0 or more';
+  else v.amount = round2(amount);
+
+  const note = String(b.note ?? '').trim();
+  v.note = note || null;
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+/** Validates a ground-only training session (no flight logged): {date, hours, instructor, topics, notes}. */
+export function parseGroundSession(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  if (!isIsoDate(b.date)) errors.date = 'Date must be YYYY-MM-DD';
+  else v.date = b.date;
+
+  const hours = Number(b.hours);
+  if (!Number.isFinite(hours) || hours <= 0 || hours > 24) errors.hours = 'Must be a number greater than 0, up to 24';
+  else v.hours = round2(hours);
+
+  const instructor = String(b.instructor ?? '').trim();
+  v.instructor = instructor || null;
+  const topics = String(b.topics ?? '').trim();
+  v.topics = topics || null;
+  const notes = String(b.notes ?? '').trim();
+  v.notes = notes || null;
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+/** Validates a certificate's training-phase date range: {certificate, start_date, end_date}. */
+export function parseTrainingPhase(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  const certificate = String(b.certificate ?? '').trim();
+  if (!certificate) errors.certificate = 'Choose a certificate';
+  else v.certificate = certificate;
+
+  if (!isIsoDate(b.start_date)) errors.start_date = 'Date must be YYYY-MM-DD';
+  else v.start_date = b.start_date;
+
+  if (b.end_date && !isIsoDate(b.end_date)) errors.end_date = 'Date must be YYYY-MM-DD';
+  else v.end_date = b.end_date || null;
+
+  if (v.start_date && v.end_date && v.end_date < v.start_date) errors.end_date = 'Cannot be before the start date';
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }

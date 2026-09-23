@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { api } from '../lib/api.js';
+import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours, parseHours } from '../lib/hours.js';
+import { computeFlightCost, fmtMoney } from '../lib/cost.js';
 import HoursInput from '../components/HoursInput.jsx';
 import CountInput from '../components/CountInput.jsx';
 import TextField from '../components/TextField.jsx';
@@ -19,7 +20,8 @@ import { AIRLINE_NAMES } from '../lib/airlines.js';
 const TIME_FIELDS = [
   ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'],
   ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
-  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
+  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['ground_time', 'Ground instruction'],
+  ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
   ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
 const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
@@ -28,7 +30,7 @@ const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in loc
 
 const blank = () => ({
   date: today(), departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
-  airline: '', flight_number: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [],
+  airline: '', flight_number: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
 });
@@ -36,6 +38,7 @@ const blank = () => ({
 function fromFlight(f) {
   const s = blank();
   for (const k of Object.keys(s)) {
+    if (k === 'cost_override') { s[k] = f[k] == null ? '' : String(f[k]); continue; }
     if (f[k] === null || f[k] === undefined) continue;
     if (k === 'aircraft_id' || k === 'stops' || k === 'approach_types') { s[k] = f[k]; continue; } // not text-input values
     s[k] = TIME_FIELDS.some(([t]) => t === k) ? fmtHours(f[k]) : String(f[k]);
@@ -62,19 +65,45 @@ export default function FlightForm() {
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [rates, setRates] = useState(null);
+  const [defaultGroundTime, setDefaultGroundTime] = useState(null);
+  const [groundTouched, setGroundTouched] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     api.getFlight(id).then((f) => setForm(fromFlight(f))).catch((e) => setMessage(e.message)).finally(() => setLoading(false));
   }, [id]);
+  useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
+  useEffect(() => { api.getSettings().then((s) => setDefaultGroundTime(s.default_ground_time)).catch(() => {}); }, []);
 
-  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+  // Auto-fills the default ground briefing time once dual is logged on a *new* flight, only while the
+  // pilot hasn't touched ground_time themselves — never overwrites a value they already set or edited.
+  useEffect(() => {
+    if (id || groundTouched || defaultGroundTime == null) return;
+    const dual = parseHours(form.dual_received) || 0;
+    const ground = parseHours(form.ground_time) || 0;
+    if (dual > 0 && ground === 0) setForm((f) => ({ ...f, ground_time: fmtHours(defaultGroundTime) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.dual_received, id, groundTouched, defaultGroundTime]);
+
+  const set = (k) => (v) => {
+    if (k === 'ground_time') setGroundTouched(true);
+    setForm((f) => ({ ...f, [k]: v }));
+  };
+
+  const previewCost = rates ? computeFlightCost({
+    date: form.date, aircraft_id: form.aircraft_id,
+    total_time: parseHours(form.total_time) || 0, simulator_time: parseHours(form.simulator_time) || 0,
+    dual_received: parseHours(form.dual_received) || 0, ground_time: parseHours(form.ground_time) || 0,
+    cost_override: form.cost_override.trim() === '' ? null : form.cost_override,
+  }, rates) : null;
 
   async function submit(e) {
     e.preventDefault();
     const approachTypes = form.approach_types.filter((a) => a.approach_type);
     const payload = { ...form, stops: form.stops.filter((s) => s.airport_code.trim()), approach_types: approachTypes };
     if (approachTypes.length) payload.approaches = String(approachTypes.reduce((s, a) => s + (Number(a.count) || 0), 0));
+    payload.cost_override = form.cost_override.trim() === '' ? null : form.cost_override;
     const local = {};
     for (const [k, label] of TIME_FIELDS) {
       const n = parseHours(form[k]);
@@ -162,6 +191,21 @@ export default function FlightForm() {
         <CountInput label="Night landings" value={form.night_landings} onChange={set('night_landings')} error={errors.night_landings} />
         <CountInput label="Night, full stop" value={form.night_landings_full_stop} onChange={set('night_landings_full_stop')} error={errors.night_landings_full_stop} />
       </Section>
+
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-medium text-accent">Cost</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <span className="mb-1 block text-xs text-slate-400">Estimated</span>
+            <div className="flex h-12 items-center rounded-xl border border-edge bg-navy-800 px-3 text-base">
+              {previewCost ? fmtMoney(previewCost.computedTotal) : '—'}
+            </div>
+          </div>
+          <TextField label="Override (optional, e.g. from an invoice)" type="number" value={form.cost_override}
+            onChange={set('cost_override')} error={errors.cost_override} placeholder="Use estimated" />
+        </div>
+        {previewCost?.missingRate && <p className="mt-2 text-xs text-slate-500">A rate isn't set for part of this flight yet — set it on the Costs screen.</p>}
+      </section>
 
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-medium text-accent">Approaches</h2>

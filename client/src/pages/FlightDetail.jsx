@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Pencil, Plane } from 'lucide-react';
-import { api } from '../lib/api.js';
+import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
+import { computeFlightCost, fmtMoney } from '../lib/cost.js';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
@@ -10,8 +11,8 @@ import Badge from '../components/Badge.jsx';
 
 const TIME_FIELDS = [
   ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
-  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
-  ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
+  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['ground_time', 'Ground instruction'], ['night_time', 'Night'],
+  ['cross_country_time', 'Cross-country'], ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
 const COUNT_FIELDS = [
   ['day_landings', 'Day landings'], ['night_landings', 'Night landings'],
@@ -44,6 +45,7 @@ export default function FlightDetail() {
   const navigate = useNavigate();
   const [flight, setFlight] = useState(null);
   const [error, setError] = useState('');
+  const [rates, setRates] = useState(null);
 
   const load = useCallback(() => {
     setError('');
@@ -51,6 +53,9 @@ export default function FlightDetail() {
     api.getFlight(id).then(setFlight).catch((e) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
+  useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
+
+  const cost = flight && rates ? computeFlightCost(flight, rates) : null;
 
   const route = flight ? [flight.departure_airport, ...flight.stops.map((s) => s.airport_code), flight.arrival_airport].filter(Boolean) : [];
   const times = flight ? TIME_FIELDS.filter(([k]) => Number(flight[k]) > 0) : [];
@@ -107,6 +112,16 @@ export default function FlightDetail() {
               <div className="grid grid-cols-2 gap-3">
                 {times.map(([k, label]) => <Stat key={k} label={label} value={flight[k]} />)}
               </div>
+            </Section>
+          )}
+
+          {cost && (cost.total > 0 || cost.override) && (
+            <Section title="Cost">
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-semibold">{fmtMoney(cost.total)}</span>
+                {cost.override && <span className="text-xs text-slate-400">Manual override · calculated was {fmtMoney(cost.computedTotal)}</span>}
+              </div>
+              {cost.missingRate && <p className="mt-1 text-xs text-bad">A rate wasn't set for part of this flight — see Costs settings.</p>}
             </Section>
           )}
 

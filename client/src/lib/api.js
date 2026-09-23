@@ -61,4 +61,40 @@ export const api = {
   planWeather: (legs) => request('POST', '/weather/plan', { legs }),
   exportBackup: () => request('GET', '/backup/export'),
   restoreBackup: (backup, mode) => request('POST', '/backup/restore', mode ? { ...backup, mode } : backup),
+
+  listAircraftRates: () => request('GET', '/costs/rates/aircraft'),
+  createAircraftRate: (r) => request('POST', '/costs/rates/aircraft', r),
+  updateAircraftRate: (id, r) => request('PUT', `/costs/rates/aircraft/${id}`, r),
+  deleteAircraftRate: (id) => request('DELETE', `/costs/rates/aircraft/${id}`),
+  listInstructorRates: () => request('GET', '/costs/rates/instructor'),
+  createInstructorRate: (r) => request('POST', '/costs/rates/instructor', r),
+  updateInstructorRate: (id, r) => request('PUT', `/costs/rates/instructor/${id}`, r),
+  deleteInstructorRate: (id) => request('DELETE', `/costs/rates/instructor/${id}`),
+  listGroundRates: () => request('GET', '/costs/rates/ground'),
+  createGroundRate: (r) => request('POST', '/costs/rates/ground', r),
+  updateGroundRate: (id, r) => request('PUT', `/costs/rates/ground/${id}`, r),
+  deleteGroundRate: (id) => request('DELETE', `/costs/rates/ground/${id}`),
+  listSimulatorRates: () => request('GET', '/costs/rates/simulator'),
+  createSimulatorRate: (r) => request('POST', '/costs/rates/simulator', r),
+  updateSimulatorRate: (id, r) => request('PUT', `/costs/rates/simulator/${id}`, r),
+  deleteSimulatorRate: (id) => request('DELETE', `/costs/rates/simulator/${id}`),
+  listExpenses: () => request('GET', '/costs/expenses'),
+  createExpense: (e) => request('POST', '/costs/expenses', e),
+  updateExpense: (id, e) => request('PUT', `/costs/expenses/${id}`, e),
+  deleteExpense: (id) => request('DELETE', `/costs/expenses/${id}`),
+  listGroundSessions: () => request('GET', '/costs/ground-sessions'),
+  createGroundSession: (s) => request('POST', '/costs/ground-sessions', s),
+  updateGroundSession: (id, s) => request('PUT', `/costs/ground-sessions/${id}`, s),
+  deleteGroundSession: (id) => request('DELETE', `/costs/ground-sessions/${id}`),
+  listTrainingPhases: () => request('GET', '/costs/phases'),
+  setTrainingPhase: (certificate, phase) => request('PUT', `/costs/phases/${certificate}`, phase),
+  deleteTrainingPhase: (certificate) => request('DELETE', `/costs/phases/${certificate}`),
 };
+
+/** Fetches all four rate tables in one round trip, in the shape client/src/lib/cost.js expects. */
+export async function fetchAllRates() {
+  const [aircraft_rates, instructor_rates, ground_rates, simulator_rates] = await Promise.all([
+    api.listAircraftRates(), api.listInstructorRates(), api.listGroundRates(), api.listSimulatorRates(),
+  ]);
+  return { aircraft_rates, instructor_rates, ground_rates, simulator_rates };
+}

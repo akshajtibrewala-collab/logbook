@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useMatch, useNavigate } from 'react-router-dom';
-import { Plus, Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen } from 'lucide-react';
+import { Plus, Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import AirlineBadge from '../components/AirlineBadge.jsx';
@@ -62,6 +62,9 @@ export default function Logbook() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Logbook</h1>
         <div className="flex gap-2">
+          <Link to="/costs" aria-label="Costs" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+            <DollarSign size={20} />
+          </Link>
           <Link to="/aircraft" aria-label="Aircraft" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <PlaneTakeoff size={20} />
           </Link>

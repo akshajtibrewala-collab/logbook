@@ -10,6 +10,7 @@ import expirations from './routes/expirations.js';
 import backup from './routes/backup.js';
 import settings from './routes/settings.js';
 import weather from './routes/weather.js';
+import costs from './routes/costs.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -31,6 +32,7 @@ app.use('/api/expirations', expirations);
 app.use('/api/backup', backup);
 app.use('/api/settings', settings);
 app.use('/api/weather', weather);
+app.use('/api/costs', costs);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });
