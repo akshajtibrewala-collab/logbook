@@ -9,11 +9,14 @@
  * Rates are effective-dated (not a single current value) so an old flight keeps the cost it actually had
  * when a rate later changes — `cost.js` always picks the latest rate with effective_date <= the flight's
  * own date, never "the current rate". Every rate table starts empty except aircraft/instructor/ground,
- * which this migration seeds with the pilot's actual starting rates, effective from their first logged
- * flight (or today, if they have none yet): aircraft rental $195/hr + $15/hr fuel surcharge per aircraft,
- * instructor $85/hr, ground instruction $85/hr (same as the instructor rate, until changed). Simulator
- * rate is left unseeded (blank) — sim time simply doesn't get an aircraft rate, unlike real aircraft time.
+ * which this migration seeds with the pilot's actual starting rates, effective 2026-07-10 (the start of
+ * their actual training, predating their earliest logged flight by a few weeks — chosen so it also covers
+ * their earliest ground-only session and supply expenses from that date): aircraft rental $195/hr + $15/hr
+ * fuel surcharge per aircraft, instructor $85/hr, ground instruction $85/hr (same as the instructor rate,
+ * until changed). Simulator rate is left unseeded (blank) — sim time simply doesn't get an aircraft rate,
+ * unlike real aircraft time.
  */
+const SEED_EFFECTIVE_DATE = '2026-07-10';
 export default async function up({ all, get, run, client }) {
   const flightCols = await all("SELECT name FROM pragma_table_info('flights')");
   const hasFlightCol = (name) => flightCols.some((c) => c.name === name);
@@ -78,17 +81,14 @@ export default async function up({ all, get, run, client }) {
 
   const anyInstructorRate = await get('SELECT id FROM instructor_rates LIMIT 1');
   if (!anyInstructorRate) {
-    const firstFlight = await get('SELECT MIN(date) AS d FROM flights');
-    const effectiveDate = firstFlight?.d || new Date().toISOString().slice(0, 10);
-
-    await run('INSERT INTO instructor_rates (effective_date, hourly_rate) VALUES (?, 85)', [effectiveDate]);
-    await run('INSERT INTO ground_rates (effective_date, hourly_rate) VALUES (?, 85)', [effectiveDate]);
+    await run('INSERT INTO instructor_rates (effective_date, hourly_rate) VALUES (?, 85)', [SEED_EFFECTIVE_DATE]);
+    await run('INSERT INTO ground_rates (effective_date, hourly_rate) VALUES (?, 85)', [SEED_EFFECTIVE_DATE]);
 
     const aircraft = await all('SELECT id FROM aircraft WHERE is_simulator = 0');
     for (const a of aircraft) {
       await run(
         'INSERT INTO aircraft_rates (aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr) VALUES (?, ?, 195, 15)',
-        [a.id, effectiveDate],
+        [a.id, SEED_EFFECTIVE_DATE],
       );
     }
   }

@@ -21,13 +21,13 @@ test('creates the rate, expense, ground-session and training-phase tables', asyn
   }
 });
 
-test('with no flights yet, seeds instructor/ground rates at $85 effective today, and no aircraft rates', async () => {
+test('seeds instructor/ground rates at $85 effective 2026-07-10, and no aircraft rates when no aircraft exist', async () => {
   const instructor = await get('SELECT * FROM instructor_rates ORDER BY id LIMIT 1');
   assert.equal(instructor.hourly_rate, 85);
+  assert.equal(instructor.effective_date, '2026-07-10');
   const ground = await get('SELECT * FROM ground_rates ORDER BY id LIMIT 1');
   assert.equal(ground.hourly_rate, 85);
-  const today = new Date().toISOString().slice(0, 10);
-  assert.equal(instructor.effective_date, today);
+  assert.equal(ground.effective_date, '2026-07-10');
   const aircraftRateCount = (await get('SELECT COUNT(*) AS n FROM aircraft_rates')).n;
   assert.equal(aircraftRateCount, 0); // no aircraft rows existed to seed a rate for
 });
