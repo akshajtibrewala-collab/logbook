@@ -41,6 +41,30 @@ runways seeded (39,566 rows), verified in the browser.
   `server/src/lib/daynight.js` for the pure logic, and `client/src/pages/Weather.jsx` /
   `WeatherSettings.jsx` for the UI.
 
+## Phase 2 — UX polish (time zones, pickers, tablet) — delivered and deployed
+
+Merged to `main` (2026-09-23). No migrations — nothing to back up before this one.
+
+- **Time zone handling**: every weather time is now anchored to a real UTC instant and displayed in the
+  airport's own IANA zone (resolved from lat/lon via `tz-lookup`, since the airports table has no zone
+  column) with Zulu alongside, e.g. "15:00 MDT · 21:00Z" — never the device's zone and never a hardcoded
+  offset. "Plan a flight" interprets each leg's entered time in that leg's own airport zone (previously a
+  naive string comparison made a device and a planned airport in different zones give a wrong "is this in
+  the past" answer). METARs show observed age and flag themselves stale past 90 minutes. See
+  `client/src/lib/timezone.js` and `server/src/lib/timezone.js` (pure, DST-tested against several US
+  zones including one with no DST) plus `server/src/routes/airports.js` (`tz` on every airport response).
+- **Date/time picker**: `DatePicker` gained a `zone` prop so its displayed time, "Now" default, and `min`
+  (a real UTC instant in that mode) all read in an airport's local time; footer buttons and the hour/minute
+  spinner were already normalized to the shared `Button` component and 44px+ targets in an earlier pass.
+- **Tablet/iPad layout**: a side nav rail (`SideNav.jsx`) replaces the bottom tab bar from the `md`
+  breakpoint (768px) up; Logbook gets a real split view (list + detail side by side) via nested routing
+  from `lg` up; Dashboard/Milestones/Currency use a two-column card grid at `md`+; forms are centered at a
+  comfortable max width instead of stretching edge to edge; numeric `TextField`s default to
+  `inputMode="decimal"`; the PWA manifest's `orientation: "portrait"` lock was removed so an installed
+  iPad app can rotate. A narrow iPad Split View/Slide Over pane falls back to the phone layout automatically
+  since it's the same `md`/`lg` breakpoints, not separate device logic. ("Costs" two-column treatment from
+  the original request doesn't apply — there's no Costs page yet, see the Phase 2 idea below.)
+
 ## Known follow-ups
 
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,
@@ -60,6 +84,14 @@ runways seeded (39,566 rows), verified in the browser.
 - **Edit-form loading states** (`AircraftForm`, `ExpirationForm`, `FlightForm`) show plain "Loading…"
   text rather than a `Skeleton`, unlike every list/detail page. Consistent across all three, low-impact
   (loads are near-instant), but worth revisiting in a future polish pass.
+- **On-screen keyboard can still cover the field being edited or a Save button** on some device/keyboard
+  combinations. Relies entirely on the browser's own scroll-into-view on focus rather than any explicit
+  handling (e.g. resizing the viewport or scrolling the focused input above the keyboard) — usually enough
+  in practice, but not guaranteed on every device.
+- **No broader hover-state/focus-ring audit.** Trackpad/keyboard support added so far is limited to
+  SideNav's focus ring and the Escape-to-close handling `Modal`/`DatePicker` already had; most buttons
+  still only style `active:` (touch), not `hover:`/`focus-visible:`, so trackpad users get little visual
+  feedback pointing at a control before clicking it.
 
 ## Phase 2 ideas
 
