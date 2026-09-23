@@ -1,8 +1,9 @@
 # AeroTrail
 
 A personal pilot flight logbook and career-tracking app: flights (with structured stops and typed
-approaches), aircraft, currency/expirations, milestone progress toward certificates, a map and stats.
-Phase 1 is complete — see `docs/ROADMAP.md` for what's next.
+approaches), aircraft, currency/expirations, milestone progress toward certificates, a map and stats,
+manual milestone completions, and a weather go/no-go checker against personal minimums. Phase 1 and the
+first two Phase 2 features are complete and live — see `docs/ROADMAP.md` for what's next.
 
 ## Stack
 
@@ -42,7 +43,11 @@ Each of those has a **`:prod` counterpart** (`migrate:prod`, `seed:prod`, `seed:
 `db:backup:prod`, `db:reconcile:prod`, `db:copy-local:prod`, all run with `-w server`) that loads
 `.env.production` (repo root, gitignored, copy from `.env.production.example`) and prints a `⚠ PRODUCTION
 TURSO ⚠` warning naming the database URL before doing anything. These are the only commands that can ever
-reach Turso from your machine — never run one without meaning to.
+reach Turso from your machine — never run one without meaning to. Each `:prod` script
+(`server/scripts/prod/*.js`) spawns its target script as a real child process
+(`server/scripts/lib/run-target.js`) rather than `import`ing it — `seed-airports.js`/`seed-runways.js`
+guard their own side effects on `process.argv[1]` being their own path, which only holds true for a real
+subprocess; an earlier version of these wrappers used `import` and silently did nothing.
 
 ## Backing up data
 
@@ -66,10 +71,14 @@ reach Turso from your machine — never run one without meaning to.
   -w server`), verify the backup file, and say so explicitly — don't just merge silently.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
   recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
-  was reconciled (migrations 001–009 applied, verified before/after) and is current as of this writing.
+  was reconciled and is current as of this writing: migrations 001–012 applied and verified (flights,
+  hours, landings, and aircraft counts checked unchanged before/after each deploy), runways seeded
+  (39,566 rows).
 - Only commit when asked. Run the full test suite once before each commit; otherwise run just the tests
   for what changed.
 
 ## Status
 
-Phase 1 is complete. See `docs/ROADMAP.md` for what was delivered, known follow-ups, and Phase 2 ideas.
+Phase 1 is complete. Phase 2's manual milestone completions and weather go/no-go checker are complete,
+merged to `main`, and deployed to production. See `docs/ROADMAP.md` for what was delivered, known
+follow-ups, and further Phase 2 ideas.

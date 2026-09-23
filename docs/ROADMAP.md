@@ -23,21 +23,23 @@ The core lifelong-logbook app, complete:
 - **Branding**: AeroTrail name, icon, PWA install.
 - Full test suite (`node:test`), mobile-first UI with light/dark mode, a bottom-nav-aware layout.
 
-## Phase 2 — in progress
+## Phase 2 — delivered and deployed
 
-- **Manual milestone completions**, delivered: "Track manually" requirements can be checked off with a
-  date and optional note (tap to complete, tap again to undo), stored in `milestone_completions`
-  (010), counted toward each certificate's "X of Y met" progress, and included in JSON backup/restore.
-- **Weather go/no-go checker**, delivered: personal minimums (day and night ceiling/visibility/wind/
-  gust/crosswind) and a home airport (`pilot_settings`, 011), current METAR + TAF forecast for any
-  airport fetched server-side from aviationweather.gov with a short cache, decoded conditions compared
-  against those minimums (TAF TEMPO/PROB merged as worst-case and attributed by name), crosswind
-  computed per runway (`runways`, 012, seeded from OurAirports — see docs/DEPLOY.md for adding it to an
-  existing production database) with magnetic variation via NOAA's WMM, day/night minimums chosen by
-  real sunrise/sunset at the airport, a "Plan a flight" multi-leg forecast-at-ETA check, and a Dashboard
-  card for the home airport. See `server/src/lib/weather.js`, `server/src/lib/magvar.js`, and
+Merged to `main` and live in production (2026-09-23): migrations 010–012 applied to production Turso,
+runways seeded (39,566 rows), verified in the browser.
+
+- **Manual milestone completions**: "Track manually" requirements can be checked off with a date and
+  optional note (tap to complete, tap again to undo), stored in `milestone_completions` (010), counted
+  toward each certificate's "X of Y met" progress, and included in JSON backup/restore.
+- **Weather go/no-go checker**: personal minimums (day and night ceiling/visibility/wind/gust/crosswind)
+  and a home airport (`pilot_settings`, 011), current METAR + TAF forecast for any airport fetched
+  server-side from aviationweather.gov with a short cache, decoded conditions compared against those
+  minimums (TAF TEMPO/PROB merged as worst-case and attributed by name), crosswind computed per runway
+  (`runways`, 012, seeded from OurAirports) with magnetic variation via NOAA's WMM, day/night minimums
+  chosen by real sunrise/sunset at the airport, a "Plan a flight" multi-leg forecast-at-ETA check, and a
+  Dashboard card for the home airport. See `server/src/lib/weather.js`, `server/src/lib/magvar.js`, and
   `server/src/lib/daynight.js` for the pure logic, and `client/src/pages/Weather.jsx` /
-  `WeatherSettings.jsx` for the UI. Verified in the browser by the person building this.
+  `WeatherSettings.jsx` for the UI.
 
 ## Known follow-ups
 
