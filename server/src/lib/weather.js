@@ -99,6 +99,7 @@ export function decodeTaf(raw) {
  * period itself), for messages like "TEMPO 1SM -RA below your 3SM minimum".
  */
 export function conditionsAt(decodedTaf, date) {
+  if (date < decodedTaf.validFrom || date > decodedTaf.validTo) return { conditions: null, source: {} };
   const base = [...decodedTaf.periods].filter((p) => !p.isOverlay && p.from <= date).pop()
     ?? decodedTaf.periods.find((p) => !p.isOverlay)
     ?? null;

@@ -4,22 +4,42 @@ import { Calendar, CalendarClock, ChevronLeft, ChevronRight, ChevronUp, ChevronD
 import {
   MONTHS, WEEKDAYS, formatDate, formatDateTime, monthGrid, parseDateTime, parseISO, shiftMonth, toDateTime, toISO, todayISO,
 } from '../lib/calendar.js';
+import Button from './Button.jsx';
 
 const navBtn = 'flex h-10 w-10 items-center justify-center rounded-full text-slate-300 active:bg-navy-800 active:text-accent';
 const wrap = (n, mod) => ((n % mod) + mod) % mod;
+const pad2 = (n) => String(n).padStart(2, '0');
 
-/** One "HH" or "MM" wheel-style stepper, styled to match the calendar's own nav buttons. */
-function TimeStepper({ label, display, onInc, onDec }) {
+/**
+ * One "HH" or "MM" wheel: arrows step it, and the value itself is a real input so it can be typed
+ * directly. Keeps its own text while being edited (so "1" then "4" reads as "14" instead of the
+ * controlled value collapsing it back to "01" after every keystroke) and commits — parsed, wrapped into
+ * range — on blur or Enter.
+ */
+function TimeStepper({ label, value, mod, onCommit, onInc, onDec }) {
+  const [text, setText] = useState(pad2(value));
+  useEffect(() => setText(pad2(value)), [value]);
+
+  const commit = () => {
+    const n = parseInt(text, 10);
+    onCommit(Number.isFinite(n) ? wrap(n, mod) : value);
+  };
+
   return (
     <div className="flex flex-col items-center gap-1">
       <button type="button" onClick={onInc} aria-label={`${label}, increase`} className={navBtn}><ChevronUp size={18} /></button>
-      <div className="w-14 rounded-xl bg-navy-800 py-1.5 text-center text-lg font-semibold tabular-nums">{display}</div>
+      <input value={text} inputMode="numeric" pattern="[0-9]*" aria-label={label}
+        onChange={(e) => setText(e.target.value.replace(/\D/g, '').slice(0, 2))}
+        onFocus={(e) => e.target.select()}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        className="h-11 w-14 rounded-xl border border-edge bg-navy-800 text-center text-lg font-semibold tabular-nums outline-none focus:border-accent" />
       <button type="button" onClick={onDec} aria-label={`${label}, decrease`} className={navBtn}><ChevronDown size={18} /></button>
     </div>
   );
 }
 
-function Sheet({ value, onPick, onClose, clearable, withTime }) {
+function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
   const today = todayISO();
   const now = new Date();
   const picked = withTime ? (parseDateTime(value) ? parseISO(parseDateTime(value).date) : null) : parseISO(value);
@@ -50,15 +70,26 @@ function Sheet({ value, onPick, onClose, clearable, withTime }) {
   // date the user is still assembling (confirmed only on "Done"), which starts equal to `value`'s date.
   const effectiveDate = withTime ? pendingDate : value;
   const effectivePicked = withTime ? parseISO(pendingDate) : picked;
-  const selectDay = (iso) => (withTime ? setPendingDate(iso) : onPick(iso));
-  const confirmDone = () => { onPick(pendingDate ? toDateTime(pendingDate, hour, minute) : ''); onClose(); };
+  const minDatePart = min ? (withTime ? (parseDateTime(min)?.date ?? min.slice(0, 10)) : min) : null;
+  const selectDay = (iso) => {
+    if (minDatePart && iso < minDatePart) return;
+    if (withTime) setPendingDate(iso); else onPick(iso);
+  };
+  const combined = pendingDate ? toDateTime(pendingDate, hour, minute) : '';
+  const tooEarly = withTime && min && combined && combined < min;
+  const confirmDone = () => { if (!tooEarly) { onPick(combined); onClose(); } };
   const pickNow = () => {
-    const roundedMinute = Math.round(now.getMinutes() / 5) * 5 % 60;
-    onPick(toDateTime(todayISO(), now.getHours(), roundedMinute));
+    // Rounds up (never down) so "Now" can't land a few minutes before an active `min`, which is
+    // typically "now" itself — using a real Date so rounding 23:58 up correctly rolls onto tomorrow
+    // instead of wrapping back to 00:00 the same day.
+    const rounded = new Date(now);
+    rounded.setSeconds(0, 0);
+    rounded.setMinutes(Math.ceil(rounded.getMinutes() / 5) * 5);
+    onPick(toDateTime(toISO(rounded.getFullYear(), rounded.getMonth() + 1, rounded.getDate()), rounded.getHours(), rounded.getMinutes()));
     onClose();
   };
 
-  const cell = 'h-11 rounded-xl text-base transition-colors active:bg-navy-800';
+  const cell = 'h-11 rounded-xl text-base transition-colors active:bg-navy-800 disabled:pointer-events-none disabled:text-slate-700';
   const title = view === 'days' ? `${MONTHS[ym.m - 1]} ${ym.y}` : view === 'months' ? String(ym.y) : `${yearPage} – ${yearPage + 11}`;
   const step = (dir) => {
     if (view === 'days') setYm((c) => shiftMonth(c.y, c.m, dir));
@@ -70,6 +101,11 @@ function Sheet({ value, onPick, onClose, clearable, withTime }) {
     else if (view === 'months') { setYearPage(Math.floor(ym.y / 12) * 12); setView('years'); }
     else setView('days');
   };
+
+  // Local vs. Zulu preview for the time being assembled, so the picker is never ambiguous about which
+  // clock it's showing — computed even before a day is confirmed, using the pending (or today's) date.
+  const previewDay = effectivePicked ?? parseISO(today);
+  const zuluHHMM = new Date(previewDay.y, previewDay.m - 1, previewDay.d, hour, minute).toISOString().slice(11, 16);
 
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Choose a date">
@@ -92,8 +128,10 @@ function Sheet({ value, onPick, onClose, clearable, withTime }) {
                 const iso = toISO(ym.y, ym.m, day);
                 const selected = iso === effectiveDate;
                 const isToday = iso === today;
+                const disabled = Boolean(minDatePart && iso < minDatePart);
                 return (
-                  <button key={i} type="button" onClick={() => selectDay(iso)} aria-pressed={selected} aria-label={formatDate(iso)}
+                  <button key={i} type="button" onClick={() => selectDay(iso)} disabled={disabled}
+                    aria-pressed={selected} aria-label={formatDate(iso)}
                     data-focus={selected || (!effectivePicked && isToday) ? '' : undefined}
                     className={`${cell} ${selected ? 'bg-accent font-semibold text-ink active:bg-accent-dark' : isToday ? 'text-accent ring-1 ring-inset ring-accent/60' : ''}`}>
                     {day}
@@ -132,31 +170,37 @@ function Sheet({ value, onPick, onClose, clearable, withTime }) {
         )}
 
         {withTime && (
-          <div className="flex items-center justify-center gap-3 border-t border-edge pt-3">
-            <TimeStepper label="Hour" display={String(hour).padStart(2, '0')}
-              onInc={() => setHour((h) => wrap(h + 1, 24))} onDec={() => setHour((h) => wrap(h - 1, 24))} />
-            <span className="pb-6 text-xl font-semibold text-slate-500">:</span>
-            <TimeStepper label="Minute" display={String(minute).padStart(2, '0')}
-              onInc={() => setMinute((m) => wrap(m + 5, 60))} onDec={() => setMinute((m) => wrap(m - 5, 60))} />
+          <div className="border-t border-edge pt-3">
+            <div className="flex items-center justify-center gap-3">
+              <TimeStepper label="Hour" value={hour} mod={24} onCommit={setHour}
+                onInc={() => setHour((h) => wrap(h + 1, 24))} onDec={() => setHour((h) => wrap(h - 1, 24))} />
+              <span className="flex h-11 items-center text-xl font-semibold text-slate-500">:</span>
+              <TimeStepper label="Minute" value={minute} mod={60} onCommit={setMinute}
+                onInc={() => setMinute((m) => wrap(m + 5, 60))} onDec={() => setMinute((m) => wrap(m - 5, 60))} />
+            </div>
+            <p className="mt-2 text-center text-xs text-slate-500">
+              {pad2(hour)}:{pad2(minute)} local · {zuluHHMM}Z
+            </p>
+            {tooEarly && <p className="mt-1 text-center text-xs text-bad">Choose a time that hasn't already passed.</p>}
           </div>
         )}
 
-        <div className="mt-3 flex items-center justify-between border-t border-edge pt-3 text-sm">
-          <div className="flex gap-1">
-            {withTime ? (
-              <button type="button" onClick={pickNow} className="h-10 rounded-lg px-3 font-medium text-accent active:bg-navy-800">Now</button>
-            ) : (
-              <button type="button" onClick={() => onPick(today)} className="h-10 rounded-lg px-3 font-medium text-accent active:bg-navy-800">Today</button>
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-edge pt-3">
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={withTime ? pickNow : () => onPick(today)}>
+              {withTime ? 'Now' : 'Today'}
+            </Button>
+            {clearable && value && (
+              <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={() => onPick('')}>Clear</Button>
             )}
-            {clearable && value && <button type="button" onClick={() => onPick('')} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Clear</button>}
           </div>
           {withTime ? (
-            <div className="flex gap-1">
-              <button type="button" onClick={onClose} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Cancel</button>
-              <button type="button" onClick={confirmDone} disabled={!pendingDate} className="h-10 rounded-lg bg-accent px-4 font-semibold text-ink active:bg-accent-dark disabled:opacity-50">Done</button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="secondary" size="md" fullWidth={false} onClick={onClose}>Cancel</Button>
+              <Button type="button" variant="primary" size="md" fullWidth={false} disabled={!pendingDate || tooEarly} onClick={confirmDone}>Done</Button>
             </div>
           ) : (
-            <button type="button" onClick={onClose} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Cancel</button>
+            <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={onClose}>Cancel</Button>
           )}
         </div>
       </div>
@@ -168,10 +212,13 @@ function Sheet({ value, onPick, onClose, clearable, withTime }) {
 /**
  * Themed date field: shows the date, opens a calendar sheet. `value`/`onChange` use "YYYY-MM-DD" (or ""
  * when empty) — or, with `withTime`, "YYYY-MM-DDTHH:mm" (the same shape a native datetime-local input
- * produces), and the sheet gains an hour/minute stepper plus a "Now" quick action and a "Done" button
- * (picking a day no longer closes the sheet immediately, since there's still a time to set).
+ * produces), and the sheet gains an hour/minute stepper (tap to type, or step by 5 minutes) plus a local/
+ * Zulu preview, a "Now" quick action, and a "Done" button (picking a day no longer closes the sheet
+ * immediately, since there's still a time to set). `min` (same shape as `value`) disables earlier days
+ * and, in withTime mode, blocks confirming a time that's already passed — leave it unset to allow any
+ * date, past included (flight dates, expirations, ...).
  */
-export default function DatePicker({ label, value, onChange, error, clearable = false, placeholder, withTime = false }) {
+export default function DatePicker({ label, value, onChange, error, clearable = false, placeholder, withTime = false, min }) {
   const [open, setOpen] = useState(false);
   const shown = withTime ? formatDateTime(value) : formatDate(value);
   const shownPlaceholder = placeholder ?? (withTime ? 'Select a date and time' : 'Select a date');
@@ -186,7 +233,7 @@ export default function DatePicker({ label, value, onChange, error, clearable = 
       </button>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}
       {open && (
-        <Sheet value={value} clearable={clearable} withTime={withTime} onClose={() => setOpen(false)}
+        <Sheet value={value} clearable={clearable} withTime={withTime} min={min} onClose={() => setOpen(false)}
           onPick={(v) => { onChange(v); setOpen(false); }} />
       )}
     </div>

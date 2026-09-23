@@ -137,3 +137,13 @@ test('POST /weather/plan checks each leg at its own eta, and rejects a leg with 
   assert.equal(body.legs[1].forecast.unavailable, true);
   assert.equal(body.legs[2].error, 'Each leg needs an ident and a valid eta');
 });
+
+test('POST /weather/plan: a leg beyond the TAF\'s valid period reports unavailable with a clear reason, not extrapolated data', async () => {
+  const res = await call('POST', '/weather/plan', {
+    legs: [{ ident: 'KPAO', eta: new Date((nowSec + 48 * 3600) * 1000).toISOString() }], // TAF is only valid ~24h out
+  });
+  const body = await res.json();
+  const period = body.legs[0].forecast.periods[0];
+  assert.equal(period.unavailable, true);
+  assert.match(period.reason, /beyond the current TAF's valid period/);
+});

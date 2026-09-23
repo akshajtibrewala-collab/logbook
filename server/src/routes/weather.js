@@ -93,7 +93,12 @@ async function checkAirport(code, at) {
       rawText: tafRaw[0].rawTAF, issueTime: decodedTaf.issueTime, validFrom: decodedTaf.validFrom, validTo: decodedTaf.validTo,
       periods: times.map((t) => {
         const { conditions, source } = conditionsAt(decodedTaf, t);
-        if (!conditions) return { time: t, unavailable: true, reason: 'Outside the TAF\'s valid period' };
+        if (!conditions) {
+          const reason = t < decodedTaf.validFrom
+            ? `This time is before the current TAF's valid period (starts ${decodedTaf.validFrom.toISOString()})`
+            : `This time is beyond the current TAF's valid period (through ${decodedTaf.validTo.toISOString()}) — check back closer to departure for an updated forecast`;
+          return { time: t, unavailable: true, reason };
+        }
         return { time: t, ...evaluate(conditions, source, airport, runwayEnds, settings, t) };
       }),
     };

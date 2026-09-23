@@ -120,6 +120,18 @@ test('conditionsAt: a PROB group is labelled with its percentage and only applie
   assert.equal(outside.source.wind, null);
 });
 
+test('conditionsAt: a date outside the TAF\'s own valid period reports unavailable, instead of silently extrapolating the nearest period', () => {
+  const taf = decodeTaf(KDEN_TAF); // valid 1790132400 (2303/2303Z) .. 1790229600 (2406Z)
+  const tooLate = conditionsAt(taf, new Date((1790229600 + 3600) * 1000)); // 1h past validTo
+  assert.equal(tooLate.conditions, null);
+
+  const tooEarly = conditionsAt(taf, new Date((1790132400 - 3600) * 1000)); // 1h before validFrom
+  assert.equal(tooEarly.conditions, null);
+
+  const atTheEdge = conditionsAt(taf, new Date(1790229600 * 1000)); // exactly validTo — still in range
+  assert.notEqual(atTheEdge.conditions, null);
+});
+
 // ---- crosswind ----
 
 test('crosswindComponent: headwind, pure crosswind, and tailwind', () => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, Plus, X, CloudSun } from 'lucide-react';
 import { api } from '../lib/api.js';
+import { toDateTime, todayISO } from '../lib/calendar.js';
 import AirportSearchField from '../components/AirportSearchField.jsx';
 import WeatherConditions from '../components/WeatherConditions.jsx';
 import DatePicker from '../components/DatePicker.jsx';
@@ -12,6 +13,7 @@ import ErrorNote from '../components/ErrorNote.jsx';
 const NOTE = 'A personal planning aid, not a substitute for an official weather briefing. Conditions are shown as within, near, or outside your minimums — never as "safe".';
 
 const fmtTime = (iso) => new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+const nowDateTime = () => { const n = new Date(); return toDateTime(todayISO(), n.getHours(), n.getMinutes()); };
 
 function AirportCheck() {
   const [ident, setIdent] = useState('');
@@ -105,7 +107,7 @@ function PlanFlight() {
             )}
           </div>
           <AirportSearchField value={leg.ident} onChange={(v) => setLeg(i, { ident: v })} />
-          <DatePicker label="Arrival date & time (local)" withTime value={leg.eta} onChange={(v) => setLeg(i, { eta: v })} />
+          <DatePicker label="Arrival date & time (local)" withTime min={nowDateTime()} value={leg.eta} onChange={(v) => setLeg(i, { eta: v })} />
         </div>
       ))}
 

@@ -1,4 +1,4 @@
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, TriangleAlert } from 'lucide-react';
 import Badge from './Badge.jsx';
 
 const STATUS_TONE = { outside: 'bad', near: 'warn', unavailable: 'neutral', within: 'ok' };
@@ -14,10 +14,17 @@ function windText(wind) {
 /** Renders one evaluated conditions block — used for current conditions, each forecast period, and each plan leg. */
 export default function WeatherConditions({ data, label }) {
   if (data.unavailable) {
+    // "Outside the TAF's valid period" is a heads-up worth a warning tone (the checked time just isn't
+    // covered yet) — other unavailable reasons ("no TAF issued", "no runway data") are plainly
+    // informational, not something time will fix.
+    const isWarning = /valid period/.test(data.reason || '');
     return (
-      <div className="card p-4">
+      <div className="card space-y-1 p-4">
         {label && <div className="mb-1 text-sm font-medium">{label}</div>}
-        <p className="text-sm text-slate-400">{data.reason}</p>
+        <p className={`flex items-start gap-1.5 text-sm ${isWarning ? 'text-warn' : 'text-slate-400'}`}>
+          {isWarning && <TriangleAlert size={15} className="mt-0.5 shrink-0" />}
+          <span>{data.reason}</span>
+        </p>
       </div>
     );
   }
