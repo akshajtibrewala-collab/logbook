@@ -37,8 +37,7 @@ The core lifelong-logbook app, complete:
   real sunrise/sunset at the airport, a "Plan a flight" multi-leg forecast-at-ETA check, and a Dashboard
   card for the home airport. See `server/src/lib/weather.js`, `server/src/lib/magvar.js`, and
   `server/src/lib/daynight.js` for the pure logic, and `client/src/pages/Weather.jsx` /
-  `WeatherSettings.jsx` for the UI. Not yet verified in the browser by a human — the person building this
-  should click through it before relying on it.
+  `WeatherSettings.jsx` for the UI. Verified in the browser by the person building this.
 
 ## Known follow-ups
 
