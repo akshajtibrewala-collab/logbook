@@ -36,3 +36,26 @@ export function formatDate(iso) {
   const p = parseISO(iso);
   return p ? new Date(Date.UTC(p.y, p.m - 1, p.d)).toLocaleDateString(undefined, { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : '';
 }
+
+// Date+time values use "YYYY-MM-DDTHH:mm" — the same shape a native <input type="datetime-local">
+// produces, so `new Date(value)` parses it as local wall-clock time with no extra conversion needed.
+export const toDateTime = (iso, hour, minute) => `${iso}T${pad(hour)}:${pad(minute)}`;
+
+/** Splits "YYYY-MM-DDTHH:mm" into { date, hour, minute }, or null if not a real date/time. */
+export function parseDateTime(s) {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/.exec(String(s ?? ''));
+  if (!m) return null;
+  const [, date, h, min] = m;
+  const hour = Number(h);
+  const minute = Number(min);
+  return parseISO(date) && hour <= 23 && minute <= 59 ? { date, hour, minute } : null;
+}
+
+/** "Sep 4, 2026, 2:30 PM" (locale-aware, local wall-clock time); blank or invalid input gives "". */
+export function formatDateTime(s) {
+  const p = parseDateTime(s);
+  if (!p) return '';
+  const { y, m, d } = parseISO(p.date);
+  return new Date(y, m - 1, d, p.hour, p.minute)
+    .toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}

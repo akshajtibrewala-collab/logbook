@@ -1,18 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MONTHS, WEEKDAYS, formatDate, monthGrid, parseISO, shiftMonth, toISO, todayISO } from '../lib/calendar.js';
+import { Calendar, CalendarClock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  MONTHS, WEEKDAYS, formatDate, formatDateTime, monthGrid, parseDateTime, parseISO, shiftMonth, toDateTime, toISO, todayISO,
+} from '../lib/calendar.js';
 
 const navBtn = 'flex h-10 w-10 items-center justify-center rounded-full text-slate-300 active:bg-navy-800 active:text-accent';
+const wrap = (n, mod) => ((n % mod) + mod) % mod;
 
-function Sheet({ value, onPick, onClose, clearable }) {
+/** One "HH" or "MM" wheel-style stepper, styled to match the calendar's own nav buttons. */
+function TimeStepper({ label, display, onInc, onDec }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button type="button" onClick={onInc} aria-label={`${label}, increase`} className={navBtn}><ChevronUp size={18} /></button>
+      <div className="w-14 rounded-xl bg-navy-800 py-1.5 text-center text-lg font-semibold tabular-nums">{display}</div>
+      <button type="button" onClick={onDec} aria-label={`${label}, decrease`} className={navBtn}><ChevronDown size={18} /></button>
+    </div>
+  );
+}
+
+function Sheet({ value, onPick, onClose, clearable, withTime }) {
   const today = todayISO();
-  const picked = parseISO(value);
+  const now = new Date();
+  const picked = withTime ? (parseDateTime(value) ? parseISO(parseDateTime(value).date) : null) : parseISO(value);
   const start = picked ?? parseISO(today);
   const [view, setView] = useState('days'); // 'days' | 'months' | 'years'
   const [ym, setYm] = useState({ y: start.y, m: start.m });
   const [yearPage, setYearPage] = useState(Math.floor(start.y / 12) * 12);
   const ref = useRef(null);
+
+  // withTime keeps its own pending date/time until "Done" is tapped, since picking a day shouldn't
+  // immediately close the sheet when there's still a time to set.
+  const initialTime = parseDateTime(value);
+  const [pendingDate, setPendingDate] = useState(picked ? toISO(picked.y, picked.m, picked.d) : '');
+  const [hour, setHour] = useState(initialTime?.hour ?? now.getHours());
+  const [minute, setMinute] = useState(initialTime?.minute ?? Math.round(now.getMinutes() / 5) * 5 % 60);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -23,6 +45,18 @@ function Sheet({ value, onPick, onClose, clearable }) {
   }, [onClose]);
 
   useEffect(() => { ref.current?.querySelector('[data-focus]')?.focus(); }, [view, ym]);
+
+  // In date-only mode, the "current value" is just `value`/`picked`; in withTime mode, it's the pending
+  // date the user is still assembling (confirmed only on "Done"), which starts equal to `value`'s date.
+  const effectiveDate = withTime ? pendingDate : value;
+  const effectivePicked = withTime ? parseISO(pendingDate) : picked;
+  const selectDay = (iso) => (withTime ? setPendingDate(iso) : onPick(iso));
+  const confirmDone = () => { onPick(pendingDate ? toDateTime(pendingDate, hour, minute) : ''); onClose(); };
+  const pickNow = () => {
+    const roundedMinute = Math.round(now.getMinutes() / 5) * 5 % 60;
+    onPick(toDateTime(todayISO(), now.getHours(), roundedMinute));
+    onClose();
+  };
 
   const cell = 'h-11 rounded-xl text-base transition-colors active:bg-navy-800';
   const title = view === 'days' ? `${MONTHS[ym.m - 1]} ${ym.y}` : view === 'months' ? String(ym.y) : `${yearPage} – ${yearPage + 11}`;
@@ -56,11 +90,11 @@ function Sheet({ value, onPick, onClose, clearable }) {
               {monthGrid(ym.y, ym.m).flat().map((day, i) => {
                 if (!day) return <span key={i} />;
                 const iso = toISO(ym.y, ym.m, day);
-                const selected = iso === value;
+                const selected = iso === effectiveDate;
                 const isToday = iso === today;
                 return (
-                  <button key={i} type="button" onClick={() => onPick(iso)} aria-pressed={selected} aria-label={formatDate(iso)}
-                    data-focus={selected || (!picked && isToday) ? '' : undefined}
+                  <button key={i} type="button" onClick={() => selectDay(iso)} aria-pressed={selected} aria-label={formatDate(iso)}
+                    data-focus={selected || (!effectivePicked && isToday) ? '' : undefined}
                     className={`${cell} ${selected ? 'bg-accent font-semibold text-ink active:bg-accent-dark' : isToday ? 'text-accent ring-1 ring-inset ring-accent/60' : ''}`}>
                     {day}
                   </button>
@@ -73,10 +107,10 @@ function Sheet({ value, onPick, onClose, clearable }) {
         {view === 'months' && (
           <div className="grid grid-cols-3 gap-2 py-2">
             {MONTHS.map((name, i) => {
-              const current = picked && picked.y === ym.y && picked.m === i + 1;
+              const current = effectivePicked && effectivePicked.y === ym.y && effectivePicked.m === i + 1;
               return (
                 <button key={name} type="button" onClick={() => { setYm((c) => ({ ...c, m: i + 1 })); setView('days'); }}
-                  data-focus={current || (!picked && ym.m === i + 1) ? '' : undefined}
+                  data-focus={current || (!effectivePicked && ym.m === i + 1) ? '' : undefined}
                   className={`${cell} h-12 ${current ? 'bg-accent font-semibold text-ink active:bg-accent-dark' : ''}`}>
                   {name.slice(0, 3)}
                 </button>
@@ -97,12 +131,33 @@ function Sheet({ value, onPick, onClose, clearable }) {
           </div>
         )}
 
+        {withTime && (
+          <div className="flex items-center justify-center gap-3 border-t border-edge pt-3">
+            <TimeStepper label="Hour" display={String(hour).padStart(2, '0')}
+              onInc={() => setHour((h) => wrap(h + 1, 24))} onDec={() => setHour((h) => wrap(h - 1, 24))} />
+            <span className="pb-6 text-xl font-semibold text-slate-500">:</span>
+            <TimeStepper label="Minute" display={String(minute).padStart(2, '0')}
+              onInc={() => setMinute((m) => wrap(m + 5, 60))} onDec={() => setMinute((m) => wrap(m - 5, 60))} />
+          </div>
+        )}
+
         <div className="mt-3 flex items-center justify-between border-t border-edge pt-3 text-sm">
           <div className="flex gap-1">
-            <button type="button" onClick={() => onPick(today)} className="h-10 rounded-lg px-3 font-medium text-accent active:bg-navy-800">Today</button>
+            {withTime ? (
+              <button type="button" onClick={pickNow} className="h-10 rounded-lg px-3 font-medium text-accent active:bg-navy-800">Now</button>
+            ) : (
+              <button type="button" onClick={() => onPick(today)} className="h-10 rounded-lg px-3 font-medium text-accent active:bg-navy-800">Today</button>
+            )}
             {clearable && value && <button type="button" onClick={() => onPick('')} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Clear</button>}
           </div>
-          <button type="button" onClick={onClose} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Cancel</button>
+          {withTime ? (
+            <div className="flex gap-1">
+              <button type="button" onClick={onClose} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Cancel</button>
+              <button type="button" onClick={confirmDone} disabled={!pendingDate} className="h-10 rounded-lg bg-accent px-4 font-semibold text-ink active:bg-accent-dark disabled:opacity-50">Done</button>
+            </div>
+          ) : (
+            <button type="button" onClick={onClose} className="h-10 rounded-lg px-3 text-slate-400 active:bg-navy-800">Cancel</button>
+          )}
         </div>
       </div>
     </div>,
@@ -110,20 +165,30 @@ function Sheet({ value, onPick, onClose, clearable }) {
   );
 }
 
-/** Themed date field: shows the date, opens a calendar sheet. `value` and `onChange` use "YYYY-MM-DD" (or "" when empty). */
-export default function DatePicker({ label, value, onChange, error, clearable = false, placeholder = 'Select a date' }) {
+/**
+ * Themed date field: shows the date, opens a calendar sheet. `value`/`onChange` use "YYYY-MM-DD" (or ""
+ * when empty) — or, with `withTime`, "YYYY-MM-DDTHH:mm" (the same shape a native datetime-local input
+ * produces), and the sheet gains an hour/minute stepper plus a "Now" quick action and a "Done" button
+ * (picking a day no longer closes the sheet immediately, since there's still a time to set).
+ */
+export default function DatePicker({ label, value, onChange, error, clearable = false, placeholder, withTime = false }) {
   const [open, setOpen] = useState(false);
-  const shown = formatDate(value);
+  const shown = withTime ? formatDateTime(value) : formatDate(value);
+  const shownPlaceholder = placeholder ?? (withTime ? 'Select a date and time' : 'Select a date');
+  const Icon = withTime ? CalendarClock : Calendar;
   return (
     <div>
       {label && <span className="mb-1 block text-xs text-slate-400">{label}</span>}
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`${label || 'Date'}: ${shown || 'not set'}`}
         className={`flex h-12 w-full items-center justify-between gap-2 rounded-xl border bg-navy-800 px-3 text-left text-base outline-none focus-visible:border-accent ${error ? 'border-bad' : open ? 'border-accent' : 'border-edge'}`}>
-        <span className={shown ? '' : 'text-slate-500'}>{shown || placeholder}</span>
-        <Calendar size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
+        <span className={shown ? '' : 'text-slate-500'}>{shown || shownPlaceholder}</span>
+        <Icon size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
       </button>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}
-      {open && <Sheet value={value} clearable={clearable} onClose={() => setOpen(false)} onPick={(iso) => { onChange(iso); setOpen(false); }} />}
+      {open && (
+        <Sheet value={value} clearable={clearable} withTime={withTime} onClose={() => setOpen(false)}
+          onPick={(v) => { onChange(v); setOpen(false); }} />
+      )}
     </div>
   );
 }

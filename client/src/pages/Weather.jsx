@@ -4,6 +4,7 @@ import { Settings, Plus, X, CloudSun } from 'lucide-react';
 import { api } from '../lib/api.js';
 import AirportSearchField from '../components/AirportSearchField.jsx';
 import WeatherConditions from '../components/WeatherConditions.jsx';
+import DatePicker from '../components/DatePicker.jsx';
 import Button from '../components/Button.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
@@ -104,11 +105,7 @@ function PlanFlight() {
             )}
           </div>
           <AirportSearchField value={leg.ident} onChange={(v) => setLeg(i, { ident: v })} />
-          <label className="block">
-            <span className="mb-1 block text-xs text-slate-400">Arrival date &amp; time (local)</span>
-            <input type="datetime-local" value={leg.eta} onChange={(e) => setLeg(i, { eta: e.target.value })}
-              className="h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent" />
-          </label>
+          <DatePicker label="Arrival date & time (local)" withTime value={leg.eta} onChange={(v) => setLeg(i, { eta: v })} />
         </div>
       ))}
 
