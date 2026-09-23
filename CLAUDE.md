@@ -43,18 +43,27 @@ a scratch file and set `DB_FILE=<path>` when starting the server.
   `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` are scoped to Preview in Vercel project settings. Check that
   scoping before assuming a preview build is safe.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
-  recognize (see `docs/TURSO_RECONCILE.md` — production Turso is currently in exactly that state from an
-  earlier incident and still needs reconciling).
+  recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
+  was reconciled (migrations 001–009 applied, verified before/after) and is current as of this writing;
+  the doc stays as the record of what happened and the one remaining follow-up (the orphaned
+  `certificates`/`custom_expirations`/`pilot_profile`/etc. tables from that incident, left in place,
+  unused by current code — a separate, later decision on whether to drop them).
 - Only commit when asked. Run the full test suite once before each commit; otherwise run just the tests
   for what changed.
 
 ## Phase 1 status
 
-**Done:** aircraft table/picker/management, structured stops, milestones (config-driven), currency +
-expirations + medical, AeroTrail rebrand + icon, rotating Dashboard greeting.
+**Done, as of the `phase1-finish` branch:** aircraft table/picker/management, structured stops, typed
+approach breakdowns, `flight_number`/`dual_given`/`simulator_time`/full-stop landing counts, a two-field
+debrief (wired into the Dashboard greeting subline), milestones (config-driven), currency + expirations
++ medical, AeroTrail rebrand + icon, rotating Dashboard greeting, full JSON export/restore (lifetime
+backup, round-trip tested), CSV export/import covering every new field, a tap-target/loading-state polish
+pass.
 
-**Partial:** Airline/Operator section has `airline` but no `flight_number`; CSV export/import covers only
-the original flat fields (no stops, no aircraft link).
+**Deliberately not built:** a `/logbook/review` screen (dropped — full-stop counts default to 0, fixed
+up through the normal edit form instead); manual-milestone-completion tracking and a settings table
+(mentioned once in a request but nothing else in the app has ever needed them — no UI, no data model —
+so the JSON backup doesn't export tables that don't exist).
 
-**Missing:** `dual_given`, `simulator_time`, full-stop-vs-total landing split, typed approaches, debrief
-fields, a `/logbook/review` screen, JSON export.
+Phase 1 is functionally complete. What's left is ordinary maintenance: the orphaned Turso tables noted
+above, and whatever the user finds while actually using it day to day.
