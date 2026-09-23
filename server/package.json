@@ -8,7 +8,8 @@
     "test": "node --test",
     "migrate": "node --env-file-if-exists=../.env scripts/migrate.js",
     "seed": "node --env-file-if-exists=../.env scripts/seed-airports.js",
-    "db:setup": "npm run migrate && npm run seed",
+    "seed:runways": "node --env-file-if-exists=../.env scripts/seed-runways.js",
+    "db:setup": "npm run migrate && npm run seed && npm run seed:runways",
     "db:copy-local": "node --env-file-if-exists=../.env scripts/copy-local-to-remote.js",
     "db:backup": "node --env-file-if-exists=../.env scripts/backup.js",
     "db:reconcile": "node --env-file-if-exists=../.env scripts/reconcile-turso.js"

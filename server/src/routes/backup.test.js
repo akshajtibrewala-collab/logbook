@@ -25,7 +25,7 @@ test('export shape: format_version, exported_at, and every table present, even w
   const body = await res.json();
   assert.equal(body.format_version, 1);
   assert.ok(body.exported_at);
-  for (const t of ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations', 'milestone_completions']) {
+  for (const t of ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations', 'milestone_completions', 'pilot_settings']) {
     assert.ok(Array.isArray(body.tables[t]), `${t} should be an array`);
   }
 });
