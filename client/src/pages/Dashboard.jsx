@@ -186,46 +186,48 @@ export default function Dashboard() {
 
       {data && (
         <>
-          <WeatherDashboardCard />
+          <div className="grid gap-4 md:grid-cols-2 md:items-start">
+            <WeatherDashboardCard />
 
-          <StatusCard title="Passenger currency" Icon={Plane} result={data.pax.day}
-            detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`}>
-            <div className={`flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm ${TONE[data.pax.night.status].text}`}>
-              <span>Night</span>
-              <span>{data.pax.night.daysRemaining === null ? 'Not current'
-                : data.pax.night.daysRemaining < 0 ? `Lapsed ${-data.pax.night.daysRemaining}d ago`
-                : `${data.pax.night.daysRemaining} days left`}</span>
-            </div>
-          </StatusCard>
-
-          <StatusCard title="Instrument currency" Icon={Gauge} result={data.inst}
-            detail={`${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`} />
-
-          <StatusCard title="Flight review" Icon={ClipboardCheck} result={data.review}
-            detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)} · due ${fmtDate(data.review.expires)}` : 'No flight review logged'}>
-            {logging ? (
-              <form onSubmit={logReview} className="space-y-2">
-                <DatePicker label={editingId ? 'Change review date' : 'Flight review date'} value={reviewDate} onChange={setReviewDate} />
-                <div className="flex gap-2">
-                  <Button size="md" fullWidth={false} className="flex-1">Save</Button>
-                  <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={cancelReview}>Cancel</Button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-1">
-                <Button variant="secondary" size="md" onClick={startAdd}>Log a flight review</Button>
-                {reviews.length > 0 && (
-                  <div className="flex justify-center gap-2 text-sm">
-                    <Button variant="ghost" size="sm" fullWidth={false} onClick={startEdit}>Change date</Button>
-                    <Button variant="danger" size="sm" fullWidth={false} onClick={() => setConfirmRemove(true)}>Remove</Button>
-                  </div>
-                )}
+            <StatusCard title="Passenger currency" Icon={Plane} result={data.pax.day}
+              detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`}>
+              <div className={`flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm ${TONE[data.pax.night.status].text}`}>
+                <span>Night</span>
+                <span>{data.pax.night.daysRemaining === null ? 'Not current'
+                  : data.pax.night.daysRemaining < 0 ? `Lapsed ${-data.pax.night.daysRemaining}d ago`
+                  : `${data.pax.night.daysRemaining} days left`}</span>
               </div>
-            )}
-          </StatusCard>
+            </StatusCard>
 
-          <StatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
-            detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
+            <StatusCard title="Instrument currency" Icon={Gauge} result={data.inst}
+              detail={`${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`} />
+
+            <StatusCard title="Flight review" Icon={ClipboardCheck} result={data.review}
+              detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)} · due ${fmtDate(data.review.expires)}` : 'No flight review logged'}>
+              {logging ? (
+                <form onSubmit={logReview} className="space-y-2">
+                  <DatePicker label={editingId ? 'Change review date' : 'Flight review date'} value={reviewDate} onChange={setReviewDate} />
+                  <div className="flex gap-2">
+                    <Button size="md" fullWidth={false} className="flex-1">Save</Button>
+                    <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={cancelReview}>Cancel</Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-1">
+                  <Button variant="secondary" size="md" onClick={startAdd}>Log a flight review</Button>
+                  {reviews.length > 0 && (
+                    <div className="flex justify-center gap-2 text-sm">
+                      <Button variant="ghost" size="sm" fullWidth={false} onClick={startEdit}>Change date</Button>
+                      <Button variant="danger" size="sm" fullWidth={false} onClick={() => setConfirmRemove(true)}>Remove</Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </StatusCard>
+
+            <StatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
+              detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
+          </div>
 
           <Link to="/currency" className="flex items-center justify-between rounded-xl px-1 py-1 text-sm text-accent active:opacity-70">
             See all currency & expirations<ChevronRight size={16} />
@@ -233,7 +235,7 @@ export default function Dashboard() {
 
           <div>
             <h2 className="mb-2 text-sm font-medium text-slate-400">Hours flown</h2>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 md:max-w-md">
               <Stat label="This month" value={data.stats.month} />
               <Stat label="This year" value={data.stats.year} />
               <Stat label="Total" value={data.stats.total} />

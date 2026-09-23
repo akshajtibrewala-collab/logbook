@@ -54,20 +54,22 @@ export default function Currency() {
 
       {data && (
         <>
-          <CurrencyStatusCard title="Day passenger currency" Icon={Plane} result={data.pax.day}
-            detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <CurrencyStatusCard title="Day passenger currency" Icon={Plane} result={data.pax.day}
+              detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`} />
 
-          <CurrencyStatusCard title="Night passenger currency" Icon={Moon} result={data.pax.night}
-            detail="3 night landings within the preceding 90 days" />
+            <CurrencyStatusCard title="Night passenger currency" Icon={Moon} result={data.pax.night}
+              detail="3 night landings within the preceding 90 days" />
 
-          <CurrencyStatusCard title="Instrument currency" Icon={Gauge} result={data.inst}
-            detail={`${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`} />
+            <CurrencyStatusCard title="Instrument currency" Icon={Gauge} result={data.inst}
+              detail={`${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`} />
 
-          <CurrencyStatusCard title="Flight review" Icon={ClipboardCheck} result={data.review}
-            detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)}` : 'No flight review logged'} />
+            <CurrencyStatusCard title="Flight review" Icon={ClipboardCheck} result={data.review}
+              detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)}` : 'No flight review logged'} />
 
-          <CurrencyStatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
-            detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
+            <CurrencyStatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
+              detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
+          </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -81,7 +83,7 @@ export default function Currency() {
               <EmptyState icon={FileClock} title="Nothing else tracked"
                 description="Add a passport, insurance renewal, or anything else with an expiry date." />
             ) : (
-              <ul className="space-y-2">
+              <ul className="grid gap-2 md:grid-cols-2">
                 {data.custom.map((r) => {
                   const tone = TONE[r.status];
                   const days = daysText(r);

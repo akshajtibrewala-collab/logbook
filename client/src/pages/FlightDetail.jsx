@@ -59,7 +59,7 @@ export default function FlightDetail() {
   return (
     <div className="stagger space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Flight</h1>
         {flight && (
           <Link to={`/logbook/${id}/edit`} aria-label="Edit flight" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">

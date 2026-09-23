@@ -70,7 +70,7 @@ export default function ExpirationForm() {
   if (loading) return <p className="text-slate-400">Loading…</p>;
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => navigate('/currency')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">{id ? 'Edit expiration' : 'Add expiration'}</h1>

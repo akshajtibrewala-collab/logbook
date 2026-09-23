@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav.jsx';
+import SideNav from './components/SideNav.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Logbook from './pages/Logbook.jsx';
 import FlightForm from './pages/FlightForm.jsx';
@@ -22,32 +23,36 @@ const WeatherSettings = lazy(() => import('./pages/WeatherSettings.jsx'));
 export default function App() {
   const location = useLocation();
   return (
-    <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
-      <main key={location.pathname} className="flex-1 animate-[fade_.2s_ease-out] px-4 pt-6 pb-[calc(var(--bottom-nav-h)+2rem)]">
-        <Suspense fallback={<div className="space-y-4"><Skeleton className="h-8 w-40" /><Skeleton className="h-40" /></div>}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/logbook" element={<Logbook />} />
-          <Route path="/logbook/data" element={<ImportExport />} />
-          <Route path="/aircraft" element={<Aircraft />} />
-          <Route path="/aircraft/new" element={<AircraftForm />} />
-          <Route path="/aircraft/:id" element={<AircraftForm />} />
-          <Route path="/logbook/new" element={<FlightForm />} />
-          <Route path="/logbook/:id" element={<FlightDetail />} />
-          <Route path="/logbook/:id/edit" element={<FlightForm />} />
-          <Route path="/milestones" element={<Milestones />} />
-          <Route path="/currency" element={<Currency />} />
-          <Route path="/currency/new" element={<ExpirationForm />} />
-          <Route path="/currency/:id" element={<ExpirationForm />} />
-          <Route path="/weather" element={<Weather />} />
-          <Route path="/weather/settings" element={<WeatherSettings />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </Suspense>
-      </main>
-      <BottomNav />
+    <div className="min-h-dvh md:pl-20">
+      <SideNav />
+      <div className="mx-auto flex min-h-dvh max-w-lg flex-col md:max-w-5xl">
+        <main key={location.pathname} className="flex-1 animate-[fade_.2s_ease-out] px-4 pt-6 pb-[calc(var(--bottom-nav-h)+2rem)] md:px-8 md:pb-10 md:pt-10">
+          <Suspense fallback={<div className="space-y-4"><Skeleton className="h-8 w-40" /><Skeleton className="h-40" /></div>}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/logbook" element={<Logbook />}>
+              <Route path=":id" element={<FlightDetail />} />
+            </Route>
+            <Route path="/logbook/data" element={<ImportExport />} />
+            <Route path="/aircraft" element={<Aircraft />} />
+            <Route path="/aircraft/new" element={<AircraftForm />} />
+            <Route path="/aircraft/:id" element={<AircraftForm />} />
+            <Route path="/logbook/new" element={<FlightForm />} />
+            <Route path="/logbook/:id/edit" element={<FlightForm />} />
+            <Route path="/milestones" element={<Milestones />} />
+            <Route path="/currency" element={<Currency />} />
+            <Route path="/currency/new" element={<ExpirationForm />} />
+            <Route path="/currency/:id" element={<ExpirationForm />} />
+            <Route path="/weather" element={<Weather />} />
+            <Route path="/weather/settings" element={<WeatherSettings />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/stats" element={<Stats />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          </Suspense>
+        </main>
+        <BottomNav />
+      </div>
     </div>
   );
 }
