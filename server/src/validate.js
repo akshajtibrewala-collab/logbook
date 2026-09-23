@@ -148,6 +148,21 @@ export function parseAircraft(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
+/** Validates a manual milestone completion payload: { completed_at, note? }. Returns { value, errors }. */
+export function parseMilestoneCompletion(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  if (!isIsoDate(b.completed_at)) errors.completed_at = 'Date must be YYYY-MM-DD';
+  else v.completed_at = b.completed_at;
+
+  const note = String(b.note ?? '').trim();
+  v.note = note || null;
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
 export const EXPIRATION_FIELDS = ['kind', 'label', 'issued_date', 'expires_date', 'notes'];
 
 /** Validates and normalises an expiration payload (medical certificate, passport, or any custom item). */

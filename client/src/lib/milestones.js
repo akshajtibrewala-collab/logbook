@@ -28,14 +28,24 @@ export function matchesFilter(flight, clauses, aircraftById) {
   });
 }
 
+/** The key a completion is stored/looked up under: certificate + requirement_key (never config row id). */
+export const completionKey = (certificate, requirementKey) => `${certificate}|${requirementKey}`;
+
 /**
  * Progress toward one requirement row. `req.sum_field` may list several flight columns, comma-
  * separated, summed together (e.g. "instrument_actual,instrument_simulated"). Manual requirements (no
- * sum_field, req.manual true) return current: null — there is nothing to compute, only to check off.
+ * sum_field, req.manual true) have nothing to sum — instead they look up a manual completion (a date +
+ * optional note the user checked off by hand, keyed by certificate/requirement_key) from `completions`
+ * and report `met` as whether one exists, so a manual requirement now counts toward certificate progress
+ * once checked off, rather than being permanently excluded from it.
  */
-export function computeRequirement(req, flights, aircraftById = {}) {
+export function computeRequirement(req, flights, aircraftById = {}, completions = {}) {
   if (req.manual || !req.sum_field) {
-    return { ...req, current: null, percent: null, met: null };
+    const completion = completions[completionKey(req.certificate, req.requirement_key)] ?? null;
+    return {
+      ...req, current: null, percent: null, met: Boolean(completion),
+      completed_at: completion?.completed_at ?? null, completion_note: completion?.note ?? null,
+    };
   }
   const fields = req.sum_field.split(',').map((s) => s.trim());
   const clauses = req.flight_filter ? JSON.parse(req.flight_filter) : [];
@@ -49,10 +59,10 @@ export function computeRequirement(req, flights, aircraftById = {}) {
 }
 
 /** Every requirement's progress, grouped by certificate, in the config's own sort order. */
-export function computeMilestones(config, flights, aircraftById = {}) {
+export function computeMilestones(config, flights, aircraftById = {}, completions = {}) {
   const byCert = new Map();
   for (const req of config) {
-    const computed = computeRequirement(req, flights, aircraftById);
+    const computed = computeRequirement(req, flights, aircraftById, completions);
     if (!byCert.has(req.certificate)) byCert.set(req.certificate, []);
     byCert.get(req.certificate).push(computed);
   }
@@ -87,13 +97,19 @@ export function groupRequirements(requirements) {
 }
 
 /**
- * A certificate's overall completion: how many of its *computable* requirements are met (manual ones
- * have no met/not-met state, so they're excluded from both the count and the percent — they're tracked,
- * not scored) and the resulting percent, for a summary ring/bar.
+ * A certificate's overall completion: how many requirements are met and the resulting percent, for a
+ * summary ring/bar. Every requirement here has a real met: true/false by this point — flight-time
+ * requirements from their sum vs. min_value, manual ones from whether they've been checked off — so all
+ * of them count toward the ratio; there's no longer an "unscoreable" requirement to exclude.
  */
 export function certificateSummary(requirements) {
-  const computable = requirements.filter((r) => !r.manual);
+  const computable = requirements.filter((r) => r.met !== null);
   const metCount = computable.filter((r) => r.met).length;
   const percent = computable.length ? (metCount / computable.length) * 100 : 0;
   return { metCount, computableCount: computable.length, percent, complete: computable.length > 0 && metCount === computable.length };
+}
+
+/** Builds the `completions` lookup computeRequirement/computeMilestones expect from the API's flat list. */
+export function completionsByKey(completions) {
+  return Object.fromEntries(completions.map((c) => [completionKey(c.certificate, c.requirement_key), c]));
 }

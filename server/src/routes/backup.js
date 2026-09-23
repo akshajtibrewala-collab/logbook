@@ -13,7 +13,7 @@ export const FORMAT_VERSION = 1;
 // `airports` (shared reference data, re-seeded from OurAirports, not personal) and `milestones_config`
 // (the requirement definitions — seed/config data edited via migrations, not something a restore should
 // ever overwrite with a stale copy) and `_migrations` (schema bookkeeping, not data).
-const TABLES = ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations'];
+const TABLES = ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations', 'milestone_completions'];
 const DELETE_ORDER = [...TABLES].reverse();
 
 const router = Router();

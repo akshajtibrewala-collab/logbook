@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesFilter, computeRequirement, computeMilestones, certificateLabel, requirementGroup, groupRequirements, certificateSummary } from './milestones.js';
+import { matchesFilter, computeRequirement, computeMilestones, certificateLabel, requirementGroup, groupRequirements, certificateSummary, completionsByKey, completionKey } from './milestones.js';
 
 const flight = (o) => ({ total_time: 0, pic_time: 0, dual_received: 0, solo_time: 0, cross_country_time: 0, night_time: 0, aircraft_id: null, ...o });
 
@@ -60,11 +60,27 @@ test('the seeded commercial complex/turbine/TAA requirement end-to-end, via the 
   assert.equal(r.met, false);
 });
 
-test('manual requirements have no computable progress', () => {
-  const r = computeRequirement({ manual: true, min_value: 1 }, [flight({ total_time: 999 })]);
-  assert.equal(r.current, null);
-  assert.equal(r.met, null);
-  assert.equal(r.percent, null);
+test('manual requirements have no computable progress; met reflects whether a completion is on record', () => {
+  const req = { certificate: 'private', requirement_key: 'solo_xc_150nm', manual: true, min_value: 1 };
+  const flights = [flight({ total_time: 999 })];
+
+  const uncompleted = computeRequirement(req, flights);
+  assert.equal(uncompleted.current, null);
+  assert.equal(uncompleted.percent, null);
+  assert.equal(uncompleted.met, false); // not "unknown" — it counts toward progress as not-yet-met
+  assert.equal(uncompleted.completed_at, null);
+
+  const completions = { [completionKey('private', 'solo_xc_150nm')]: { completed_at: '2026-03-01', note: 'KPAO-KSNS-KWVI-KPAO' } };
+  const completed = computeRequirement(req, flights, {}, completions);
+  assert.equal(completed.met, true);
+  assert.equal(completed.completed_at, '2026-03-01');
+  assert.equal(completed.completion_note, 'KPAO-KSNS-KWVI-KPAO');
+});
+
+test('completionsByKey turns the API\'s flat completion list into the lookup computeRequirement expects', () => {
+  const completions = completionsByKey([{ certificate: 'private', requirement_key: 'solo_xc_150nm', completed_at: '2026-03-01', note: null }]);
+  const req = { certificate: 'private', requirement_key: 'solo_xc_150nm', manual: true };
+  assert.equal(computeRequirement(req, [], {}, completions).met, true);
 });
 
 test('computeMilestones groups by certificate in config order', () => {
@@ -109,21 +125,21 @@ test('groupRequirements buckets a certificate\'s requirements and preserves Flig
   assert.deepEqual(groups['Tracked manually'].map((r) => r.requirement_key), ['a']);
 });
 
-test('certificateSummary counts only computable requirements, excluding manual ones from the ratio', () => {
+test('certificateSummary counts manual requirements too, once they have a real met: true/false', () => {
   const reqs = [
     { manual: false, met: true }, { manual: false, met: false }, { manual: false, met: true },
-    { manual: true, met: null },
+    { manual: true, met: false }, // an unchecked "track manually" requirement counts against the ratio
   ];
   const s = certificateSummary(reqs);
   assert.equal(s.metCount, 2);
-  assert.equal(s.computableCount, 3);
-  assert.ok(Math.abs(s.percent - 66.67) < 0.01);
+  assert.equal(s.computableCount, 4);
+  assert.ok(Math.abs(s.percent - 50) < 0.01);
   assert.equal(s.complete, false);
 });
 
-test('certificateSummary: complete when every computable requirement is met; 0% with none computable', () => {
-  assert.equal(certificateSummary([{ manual: false, met: true }, { manual: false, met: true }]).complete, true);
-  const empty = certificateSummary([{ manual: true, met: null }]);
+test('certificateSummary: complete when every requirement (including checked-off manual ones) is met; 0% with none present', () => {
+  assert.equal(certificateSummary([{ manual: false, met: true }, { manual: true, met: true }]).complete, true);
+  const empty = certificateSummary([]);
   assert.equal(empty.computableCount, 0);
   assert.equal(empty.percent, 0);
   assert.equal(empty.complete, false);

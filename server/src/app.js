@@ -5,6 +5,7 @@ import reviews from './routes/reviews.js';
 import airports from './routes/airports.js';
 import aircraft from './routes/aircraft.js';
 import milestones from './routes/milestones.js';
+import milestoneCompletions from './routes/milestone-completions.js';
 import expirations from './routes/expirations.js';
 import backup from './routes/backup.js';
 
@@ -23,6 +24,7 @@ app.use('/api/reviews', reviews);
 app.use('/api/airports', airports);
 app.use('/api/aircraft', aircraft);
 app.use('/api/milestones', milestones);
+app.use('/api/milestone-completions', milestoneCompletions);
 app.use('/api/expirations', expirations);
 app.use('/api/backup', backup);
 

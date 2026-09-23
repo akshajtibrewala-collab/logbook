@@ -25,7 +25,7 @@ test('export shape: format_version, exported_at, and every table present, even w
   const body = await res.json();
   assert.equal(body.format_version, 1);
   assert.ok(body.exported_at);
-  for (const t of ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations']) {
+  for (const t of ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations', 'milestone_completions']) {
     assert.ok(Array.isArray(body.tables[t]), `${t} should be an array`);
   }
 });
@@ -53,6 +53,7 @@ test('round trip: export -> restore into an empty database -> export again match
   })).json();
   await call('POST', '/reviews', { date: '2026-05-01' });
   await call('POST', '/expirations', { kind: 'medical', label: '3rd Class', expires_date: '2027-01-01' });
+  await call('PUT', '/milestone-completions/private/solo_xc_150nm', { completed_at: '2026-04-01', note: 'KPAO-KSNS-KWVI-KPAO' });
 
   const before = await (await call('GET', '/backup/export')).json();
   assert.equal(before.tables.flights.length, 2); // the one from the previous test plus this one
@@ -61,6 +62,7 @@ test('round trip: export -> restore into an empty database -> export again match
   assert.equal(before.tables.aircraft.length, 1);
   assert.equal(before.tables.flight_reviews.length, 1);
   assert.equal(before.tables.expirations.length, 1);
+  assert.equal(before.tables.milestone_completions.length, 1);
 
   const restore = await call('POST', '/backup/restore', { ...before, mode: 'replace' });
   assert.equal(restore.status, 200);

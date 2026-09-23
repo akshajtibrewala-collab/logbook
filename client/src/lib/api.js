@@ -46,6 +46,10 @@ export const api = {
   unarchiveAircraft: (id) => request('POST', `/aircraft/${id}/unarchive`),
   deleteAircraft: (id) => request('DELETE', `/aircraft/${id}`),
   listMilestonesConfig: () => request('GET', '/milestones'),
+  listMilestoneCompletions: () => request('GET', '/milestone-completions'),
+  completeMilestone: (certificate, requirementKey, completedAt, note) =>
+    request('PUT', `/milestone-completions/${certificate}/${requirementKey}`, { completed_at: completedAt, note }),
+  uncompleteMilestone: (certificate, requirementKey) => request('DELETE', `/milestone-completions/${certificate}/${requirementKey}`),
   listExpirations: () => request('GET', '/expirations'),
   createExpiration: (e) => request('POST', '/expirations', e),
   updateExpiration: (id, e) => request('PUT', `/expirations/${id}`, e),
