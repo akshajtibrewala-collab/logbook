@@ -1,6 +1,9 @@
 // Seeds the airports table from the OurAirports open dataset (public domain).
-//   npm run seed -w server                 downloads the CSV, then loads it into the configured database
-//   node scripts/seed-airports.js file.csv  loads a CSV you already downloaded
+//   npm run seed -w server                 the LOCAL file — never loads any .env file, so it can't touch
+//                                           Turso by accident
+//   npm run seed:prod -w server             production Turso, loading .env.production (docs/DEPLOY.md)
+//   node scripts/seed-airports.js file.csv  loads a CSV you already downloaded, into whichever database
+//                                           the current environment (or lack of one) points at
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { client, isRemote } from '../src/db.js';

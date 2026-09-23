@@ -78,7 +78,7 @@ This makes the situation loud instead of silent. It does not fix the schema mism
    - Leaves `certificates`, `certificate_requirements`, `requirement_completions`, `custom_expirations`,
      `pilot_profile` in place rather than dropping them — they're unused by current code but dropping
      data should be its own deliberate, reviewed step, not folded into a schema-reconciliation migration.
-3. **Run the new migration against a copy of the Turso data first** (export via `db:backup`, restore to
+3. **Run the new migration against a copy of the Turso data first** (export via `db:backup:prod`, restore to
    a scratch/dev Turso database or a local file), not against production directly.
 4. Once verified, run it against production Turso deliberately (not via an automatic Preview/Production
    build) and confirm with a read-only report afterward.

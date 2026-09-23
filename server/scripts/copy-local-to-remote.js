@@ -1,8 +1,10 @@
 // One-time copy of your existing local logbook (flights + flight reviews) into Turso.
-//   npm run db:copy-local -w server            reads server/logbook.db
-//   node scripts/copy-local-to-remote.js path/to/other.db
-// Needs TURSO_DATABASE_URL and TURSO_AUTH_TOKEN (repo-root .env). The local file is only read, never changed.
-// Refuses to run if the Turso database already has flights, so it can't create duplicates.
+//   npm run db:copy-local:prod -w server              reads server/logbook.db, writes to production
+//                                                      Turso, loading .env.production (docs/DEPLOY.md)
+//   npm run db:copy-local:prod -w server -- path.db    reads a different local file instead
+// Needs TURSO_DATABASE_URL and TURSO_AUTH_TOKEN — this only ever makes sense against Turso, so there is
+// no local-only variant. The local file is only read, never changed. Refuses to run if the Turso
+// database already has flights, so it can't create duplicates.
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@libsql/client';

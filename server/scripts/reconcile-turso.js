@@ -16,8 +16,8 @@
 // Leaves the orphaned tables (certificates, certificate_requirements, requirement_completions,
 // custom_expirations, pilot_profile) in place — dropping them is a separate, later, deliberate decision.
 //
-// Run against Turso only:  npm run db:reconcile   (loads ../.env, same convention as db:backup)
-// BACK UP FIRST: npm run db:backup. This makes real schema changes; the backup script does not.
+// Run against Turso only:  npm run db:reconcile:prod -w server   (loads .env.production — docs/DEPLOY.md)
+// BACK UP FIRST: npm run db:backup:prod -w server. This makes real schema changes; the backup script does not.
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';

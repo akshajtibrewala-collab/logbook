@@ -1,7 +1,9 @@
 // Seeds the runways table from the OurAirports open dataset (public domain) — runway ends with true
 // headings where published, used by the weather go/no-go checker's crosswind calculation.
-//   npm run seed:runways -w server                downloads the CSV, then loads it
-//   node scripts/seed-runways.js file.csv          loads a CSV you already downloaded
+//   npm run seed:runways -w server          the LOCAL file — never loads any .env file, so it can't
+//                                           touch Turso by accident
+//   npm run seed:runways:prod -w server     production Turso, loading .env.production (docs/DEPLOY.md)
+//   node scripts/seed-runways.js file.csv   loads a CSV you already downloaded
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { client, isRemote } from '../src/db.js';

@@ -9,7 +9,8 @@ Phase 1 is complete — see `docs/ROADMAP.md` for what's next.
 - `client/` — React + Vite + Tailwind, react-router-dom, lucide-react icons. Dark by default, `.light`
   class for light mode.
 - `server/` — Express + `@libsql/client`. SQLite file locally (`server/logbook.db`), Turso (hosted
-  libSQL) when `TURSO_DATABASE_URL` is set — **never set locally**, only in Vercel/`.env`.
+  libSQL) when `TURSO_DATABASE_URL` is set — in Vercel, or in `.env.production` for the `:prod` npm
+  scripts (see "Running and testing locally" below). **Never** in the plain root `.env`/`.env.local`.
 - `api/` — the Vercel serverless function wrapping the Express app for production.
 - Root `package.json` orchestrates both workspaces (`npm run dev`, `npm test`).
 - Tests: `node:test` + `node:assert/strict` only. No DOM testing — JSX components aren't unit tested,
@@ -31,17 +32,25 @@ npm run dev     # both workspaces; server on :3001, client on :5173 (proxies /ap
 npm test         # server tests, then client tests
 ```
 
-Local dev **never touches Turso** — `.env` (repo root) is only read by `db:*`/`migrate` npm scripts, not
-by `npm run dev`. To poke at a real data copy without risk, copy `server/logbook.db` to a scratch file
-and set `DB_FILE=<path>` when starting the server.
+Local dev **never touches Turso** — `npm run dev` loads no `.env` file at all. Every plain `db:*`/
+`migrate`/`seed*` npm script (`npm run migrate -w server`, `npm run db:backup`, ...) also never loads any
+`.env` file, so it always runs against the local SQLite file, on purpose — production can't be touched by
+accident. To poke at a real data copy without risk, copy `server/logbook.db` to a scratch file and set
+`DB_FILE=<path>` when starting the server.
+
+Each of those has a **`:prod` counterpart** (`migrate:prod`, `seed:prod`, `seed:runways:prod`,
+`db:backup:prod`, `db:reconcile:prod`, `db:copy-local:prod`, all run with `-w server`) that loads
+`.env.production` (repo root, gitignored, copy from `.env.production.example`) and prints a `⚠ PRODUCTION
+TURSO ⚠` warning naming the database URL before doing anything. These are the only commands that can ever
+reach Turso from your machine — never run one without meaning to.
 
 ## Backing up data
 
 - In the app: Logbook → the swap icon → **Export everything** — a full JSON dump (every table, format-
   versioned) via `GET /api/backup/export`, restorable via `POST /api/backup/restore`.
-- From the command line: `npm run db:backup` dumps whatever database you're currently pointed at (local
-  file by default) to a timestamped JSON file under `server/backups/`. **Always run this before any
-  migration or schema change touches Turso** — see `docs/DEPLOY.md` for pointing it at Turso.
+- From the command line: `npm run db:backup` dumps the local file to a timestamped JSON file under
+  `server/backups/`. **Always run `npm run db:backup:prod` before any migration or schema change touches
+  Turso** — see `docs/DEPLOY.md`.
 
 ## Branch and deploy safety
 
@@ -53,8 +62,8 @@ and set `DB_FILE=<path>` when starting the server.
   `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` are scoped to Preview in Vercel project settings. `TURSO_*`
   should stay **Production-only**; check that scoping before assuming a preview build is safe, and never
   change it yourself without being asked.
-- Before merging a branch that adds new migrations: back up production Turso (`npm run db:backup`),
-  verify the backup file, and say so explicitly — don't just merge silently.
+- Before merging a branch that adds new migrations: back up production Turso (`npm run db:backup:prod
+  -w server`), verify the backup file, and say so explicitly — don't just merge silently.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
   recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
   was reconciled (migrations 001–009 applied, verified before/after) and is current as of this writing.
