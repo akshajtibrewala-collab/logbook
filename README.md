@@ -57,9 +57,10 @@ database — no setup needed.
 
 - **In the app**: Logbook → the swap icon → **Export everything**, under Import & export. Downloads one
   JSON file with every flight, stop, approach, aircraft, flight review and expiration.
-- **From the command line**: `npm run db:backup` dumps every table in the database you're currently
-  pointed at (local file by default; see [DEPLOY.md](docs/DEPLOY.md) to point it at Turso) to a
-  timestamped JSON file under `server/backups/`.
+- **From the command line**: `npm run db:backup` always dumps your local file to a timestamped JSON file
+  under `server/backups/` — it never loads any `.env` file, so it can't touch Turso by accident. To back
+  up production, use `npm run db:backup:prod` (loads `.env.production`, prints a warning naming the
+  database first). See [DEPLOY.md](docs/DEPLOY.md) for setting up `.env.production`.
 - **CSV**: also in Import & export, for opening your logbook in a spreadsheet, or for insurance/job
   applications. See [docs/CSV.md](docs/CSV.md) for exactly which columns are covered.
 

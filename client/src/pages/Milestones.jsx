@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ChevronDown, EyeOff, GraduationCap, Info, ListChecks } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Circle, EyeOff, GraduationCap, Info, ListChecks } from 'lucide-react';
 import { api } from '../lib/api.js';
-import { computeMilestones, certificateLabel, groupRequirements, certificateSummary } from '../lib/milestones.js';
+import { computeMilestones, certificateLabel, groupRequirements, certificateSummary, completionsByKey } from '../lib/milestones.js';
 import { fmtHours } from '../lib/hours.js';
+import { todayISO } from '../lib/calendar.js';
 import Card from '../components/Card.jsx';
-import Badge from '../components/Badge.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 import RingProgress from '../components/RingProgress.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import Modal from '../components/Modal.jsx';
+import DatePicker from '../components/DatePicker.jsx';
 
 // A note is seeded as "§citation" or "§citation; longer explanation" (see 006_milestone_citations.js) —
 // split so the citation can sit as a small muted label and the rest stays tucked behind an info toggle.
@@ -39,18 +41,30 @@ function Citation({ notes }) {
   );
 }
 
-function Requirement({ req }) {
-  if (req.manual) {
-    return (
-      <li className="py-2.5">
-        <div className="flex items-start justify-between gap-3">
-          <span className="min-w-0 text-sm">{req.label}</span>
-          <Badge tone="neutral" className="shrink-0">Manual</Badge>
+function ManualRequirement({ req, onComplete, onUndo }) {
+  return (
+    <li className="py-2.5">
+      <button type="button" onClick={() => (req.met ? onUndo(req) : onComplete(req))}
+        className="flex w-full items-start justify-between gap-3 text-left active:opacity-70">
+        <div className="min-w-0">
+          <span className="text-sm">{req.label}</span>
+          {req.met && (
+            <div className="mt-0.5 text-xs text-slate-400">
+              Completed {req.completed_at}{req.completion_note ? ` — ${req.completion_note}` : ''}
+            </div>
+          )}
         </div>
-        <Citation notes={req.notes} />
-      </li>
-    );
-  }
+        {req.met
+          ? <CheckCircle2 size={20} className="shrink-0 text-ok" />
+          : <Circle size={20} className="shrink-0 text-slate-600" />}
+      </button>
+      <Citation notes={req.notes} />
+    </li>
+  );
+}
+
+function Requirement({ req, onComplete, onUndo }) {
+  if (req.manual) return <ManualRequirement req={req} onComplete={onComplete} onUndo={onUndo} />;
   return (
     <li className="py-2.5">
       <div className="flex items-baseline justify-between gap-3">
@@ -69,20 +83,20 @@ function Requirement({ req }) {
   );
 }
 
-function RequirementGroup({ title, requirements, hideCompleted }) {
+function RequirementGroup({ title, requirements, hideCompleted, onComplete, onUndo }) {
   const visible = hideCompleted ? requirements.filter((r) => !r.met) : requirements;
   if (!visible.length) return null;
   return (
     <div>
       <h3 className="mb-0.5 text-xs font-medium uppercase tracking-wide text-slate-500">{title}</h3>
       <ul className="divide-y divide-white/5">
-        {visible.map((r) => <Requirement key={r.requirement_key} req={r} />)}
+        {visible.map((r) => <Requirement key={r.requirement_key} req={r} onComplete={onComplete} onUndo={onUndo} />)}
       </ul>
     </div>
   );
 }
 
-function CertificateCard({ certificate, requirements, expanded, onToggle, hideCompleted }) {
+function CertificateCard({ certificate, requirements, expanded, onToggle, hideCompleted, onComplete, onUndo }) {
   const { metCount, computableCount, percent, complete } = certificateSummary(requirements);
   const tone = complete ? 'ok' : percent >= 50 ? 'accent' : 'neutral';
   const groups = groupRequirements(requirements);
@@ -105,7 +119,8 @@ function CertificateCard({ certificate, requirements, expanded, onToggle, hideCo
       {expanded && (
         <div className="space-y-4 border-t border-edge px-4 pb-4 pt-3">
           {Object.entries(groups).map(([title, reqs]) => (
-            <RequirementGroup key={title} title={title} requirements={reqs} hideCompleted={hideCompleted} />
+            <RequirementGroup key={title} title={title} requirements={reqs} hideCompleted={hideCompleted}
+              onComplete={onComplete} onUndo={onUndo} />
           ))}
         </div>
       )}
@@ -113,28 +128,62 @@ function CertificateCard({ certificate, requirements, expanded, onToggle, hideCo
   );
 }
 
+function CompleteModal({ req, onClose, onSave }) {
+  const [date, setDate] = useState(todayISO());
+  const [note, setNote] = useState('');
+  if (!req) return null;
+  return (
+    <Modal open onClose={onClose} title="Mark complete"
+      footer={<>
+        <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-sm text-slate-400 active:bg-navy-800">Cancel</button>
+        <button type="button" onClick={() => onSave(req, date, note)}
+          className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-navy-950 active:opacity-80">Save</button>
+      </>}>
+      <p className="mb-3 text-sm text-slate-300">{req.label}</p>
+      <DatePicker label="Completed on" value={date} onChange={setDate} />
+      <label className="mt-3 block text-sm">
+        <span className="mb-1 block text-slate-400">Note (optional)</span>
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2}
+          className="w-full rounded-xl border border-edge bg-navy-900 p-3 text-sm" placeholder="e.g. KPAO-KSNS-KWVI-KPAO" />
+      </label>
+    </Modal>
+  );
+}
+
 export default function Milestones() {
   const [config, setConfig] = useState(null);
   const [flights, setFlights] = useState(null);
   const [aircraft, setAircraft] = useState(null);
+  const [completions, setCompletions] = useState(null);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [completingReq, setCompletingReq] = useState(null);
   const autoExpandedRef = useRef(false);
 
   const load = useCallback(() => {
     setError('');
-    Promise.all([api.listMilestonesConfig(), api.listFlights(), api.listAircraft(true)])
-      .then(([c, f, a]) => { setConfig(c); setFlights(f); setAircraft(a); })
+    Promise.all([api.listMilestonesConfig(), api.listFlights(), api.listAircraft(true), api.listMilestoneCompletions()])
+      .then(([c, f, a, m]) => { setConfig(c); setFlights(f); setAircraft(a); setCompletions(m); })
       .catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
 
   const grouped = useMemo(() => {
-    if (!config || !flights || !aircraft) return null;
+    if (!config || !flights || !aircraft || !completions) return null;
     const aircraftById = Object.fromEntries(aircraft.map((a) => [a.id, a]));
-    return computeMilestones(config, flights, aircraftById);
-  }, [config, flights, aircraft]);
+    return computeMilestones(config, flights, aircraftById, completionsByKey(completions));
+  }, [config, flights, aircraft, completions]);
+
+  const saveCompletion = async (req, date, note) => {
+    setCompletingReq(null);
+    await api.completeMilestone(req.certificate, req.requirement_key, date, note);
+    load();
+  };
+  const undoCompletion = async (req) => {
+    await api.uncompleteMilestone(req.certificate, req.requirement_key);
+    load();
+  };
 
   // Auto-expand the first certificate (in config order) that isn't fully complete — once. After that,
   // expand/collapse is entirely up to the user, including re-collapsing that same card.
@@ -173,12 +222,16 @@ export default function Milestones() {
 
       {grouped && [...grouped.entries()].map(([certificate, requirements]) => (
         <CertificateCard key={certificate} certificate={certificate} requirements={requirements}
-          expanded={expanded.has(certificate)} onToggle={() => toggle(certificate)} hideCompleted={hideCompleted} />
+          expanded={expanded.has(certificate)} onToggle={() => toggle(certificate)} hideCompleted={hideCompleted}
+          onComplete={setCompletingReq} onUndo={undoCompletion} />
       ))}
 
       {grouped && grouped.size > 0 && (
         <p className="px-1 text-xs text-slate-500">Approximate 14 CFR Part 61 totals, not certified — verify with your instructor.</p>
       )}
+
+      <CompleteModal key={completingReq ? `${completingReq.certificate}|${completingReq.requirement_key}` : 'none'}
+        req={completingReq} onClose={() => setCompletingReq(null)} onSave={saveCompletion} />
     </div>
   );
 }

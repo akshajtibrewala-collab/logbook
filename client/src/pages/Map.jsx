@@ -41,11 +41,14 @@ function airportIcon(visits, max) {
   });
 }
 
-// Collapsed "i" button that expands the required map credits.
+// Collapsed "i" button that expands the required map credits, anchored to the map's own bottom-right
+// corner. This only reads right because the map container itself now ends exactly at the bottom nav
+// (see MapPage's height below) — the map no longer extends underneath the nav, so this needs no
+// extra offset to clear it.
 function AttributionToggle() {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ bottom: 'calc(var(--bottom-nav-h) + 0.75rem)' }} className="absolute right-3 z-[1000] flex items-end gap-2">
+    <div className="absolute bottom-3 right-3 z-[1000] flex items-end gap-2">
       {open && (
         <p id="map-credits" className="max-w-[15rem] rounded-xl border border-edge-strong bg-navy-900/95 p-3 text-[11px] leading-snug text-slate-300 backdrop-blur">
           <a href="https://leafletjs.com" target="_blank" rel="noreferrer" className="underline">Leaflet</a>
@@ -128,7 +131,7 @@ export default function MapPage() {
   const points = useMemo(() => data?.stops.map((s) => [s.lat, s.lon]) ?? [], [data]);
 
   return (
-    <div className="relative isolate -mx-4 -mt-6 h-[calc(100dvh-4.5rem)] mb-[calc(-1*(var(--bottom-nav-h)+2rem))]">
+    <div className="relative isolate -mx-4 -mt-6 h-[calc(100dvh-var(--bottom-nav-h))] mb-[calc(-1*(var(--bottom-nav-h)+2rem))]">
       <MapContainer center={[39, -98]} zoom={4} zoomControl={false} attributionControl={false} zoomSnap={0.5} zoomDelta={0.5} minZoom={2} worldCopyJump className="h-full w-full bg-navy-950">
         <TileLayer key={`${tileSet}-base`}
           url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${tileSet}_Base/MapServer/tile/{z}/{y}/{x}`}

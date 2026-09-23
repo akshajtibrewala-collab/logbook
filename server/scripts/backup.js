@@ -1,17 +1,13 @@
-// Dumps every table in the configured database (local file or Turso, whichever DB_FILE/TURSO_* currently
-// point at — see server/src/db.js and "Pointing this at Turso vs local" below) to a timestamped JSON
-// file. Read-only: never writes to the database. The table list is read from sqlite_master at run time,
-// not hardcoded, so a table added by a future migration is backed up automatically without editing this
-// file — including reference data (airports) and the migrations ledger (_migrations).
+// Dumps every table in the configured database to a timestamped JSON file. Read-only: never writes to
+// the database. The table list is read from sqlite_master at run time, not hardcoded, so a table added
+// by a future migration is backed up automatically without editing this file — including reference data
+// (airports, runways) and the migrations ledger (_migrations).
 //
 // Run this before any schema/migration change touches Turso.
 //
-//   npm run db:backup                       Turso, IF ../.env has TURSO_DATABASE_URL/TURSO_AUTH_TOKEN set
-//                                            (this repo's existing convention: migrate/seed/db:setup all
-//                                            auto-load ../.env the same way — see docs/DEPLOY.md)
-//   node server/scripts/backup.js            the LOCAL file (server/logbook.db, or $DB_FILE) — run
-//                                            directly with plain `node`, NOT the npm script, so ../.env
-//                                            is never loaded and TURSO_DATABASE_URL can't be picked up
+//   npm run db:backup -w server         the LOCAL file (server/logbook.db, or $DB_FILE) — this script
+//                                       never loads any .env file, so it can't touch Turso by accident
+//   npm run db:backup:prod -w server    production Turso, loading .env.production — see docs/DEPLOY.md
 //
 // To restore: the JSON is one row array per table, human-readable, and can be re-inserted by hand or
 // with a small script. There's no one-command restore yet — a backup you actually have always beats a

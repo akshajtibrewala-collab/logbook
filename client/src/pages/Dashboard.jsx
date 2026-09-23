@@ -9,6 +9,7 @@ import ErrorNote from '../components/ErrorNote.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import CurrencyStatusCard, { TONE } from '../components/CurrencyStatusCard.jsx';
+import WeatherDashboardCard from '../components/WeatherDashboardCard.jsx';
 import { fmtHours } from '../lib/hours.js';
 import { pickHeadline, pickSubline } from '../lib/greeting.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations, daysBetween, summarize } from '../lib/currency.js';
@@ -185,6 +186,8 @@ export default function Dashboard() {
 
       {data && (
         <>
+          <WeatherDashboardCard />
+
           <StatusCard title="Passenger currency" Icon={Plane} result={data.pax.day}
             detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`}>
             <div className={`flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm ${TONE[data.pax.night.status].text}`}>

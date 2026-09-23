@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseISO, toISO, daysInMonth, firstWeekday, monthGrid, shiftMonth, formatDate } from './calendar.js';
+import { parseISO, toISO, daysInMonth, firstWeekday, monthGrid, shiftMonth, formatDate, toDateTime, parseDateTime, formatDateTime } from './calendar.js';
 
 test('parses only real calendar dates', () => {
   assert.deepEqual(parseISO('2026-09-04'), { y: 2026, m: 9, d: 4 });
@@ -42,4 +42,27 @@ test('formats without time zone drift', () => {
   assert.match(formatDate('2026-09-04'), /4/);
   assert.equal(formatDate(''), '');
   assert.equal(formatDate('nope'), '');
+});
+
+test('toDateTime combines a date and hour/minute into the datetime-local shape, zero-padded', () => {
+  assert.equal(toDateTime('2026-09-04', 9, 5), '2026-09-04T09:05');
+  assert.equal(toDateTime('2026-09-04', 23, 0), '2026-09-04T23:00');
+});
+
+test('parseDateTime accepts only the exact datetime-local shape with a real date and valid time', () => {
+  assert.deepEqual(parseDateTime('2026-09-04T14:30'), { date: '2026-09-04', hour: 14, minute: 30 });
+  assert.equal(parseDateTime('2026-02-30T10:00'), null); // not a real date
+  assert.equal(parseDateTime('2026-09-04T24:00'), null); // hour out of range
+  assert.equal(parseDateTime('2026-09-04T10:60'), null); // minute out of range
+  assert.equal(parseDateTime('2026-09-04'), null); // no time part
+  assert.equal(parseDateTime(''), null);
+  assert.equal(parseDateTime(null), null);
+});
+
+test('formatDateTime reads back as the same wall-clock time regardless of the runner\'s time zone', () => {
+  assert.match(formatDateTime('2026-09-04T14:30'), /Sep/);
+  assert.match(formatDateTime('2026-09-04T14:30'), /4/);
+  assert.match(formatDateTime('2026-09-04T14:30'), /:30/);
+  assert.equal(formatDateTime(''), '');
+  assert.equal(formatDateTime('nope'), '');
 });

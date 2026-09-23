@@ -6,15 +6,22 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "test": "node --test",
-    "migrate": "node --env-file-if-exists=../.env scripts/migrate.js",
-    "seed": "node --env-file-if-exists=../.env scripts/seed-airports.js",
-    "db:setup": "npm run migrate && npm run seed",
-    "db:copy-local": "node --env-file-if-exists=../.env scripts/copy-local-to-remote.js",
-    "db:backup": "node --env-file-if-exists=../.env scripts/backup.js",
-    "db:reconcile": "node --env-file-if-exists=../.env scripts/reconcile-turso.js"
+    "migrate": "node scripts/migrate.js",
+    "migrate:prod": "node --env-file=../.env.production scripts/prod/migrate.js",
+    "seed": "node scripts/seed-airports.js",
+    "seed:prod": "node --env-file=../.env.production scripts/prod/seed.js",
+    "seed:runways": "node scripts/seed-runways.js",
+    "seed:runways:prod": "node --env-file=../.env.production scripts/prod/seed-runways.js",
+    "db:setup": "npm run migrate && npm run seed && npm run seed:runways",
+    "db:copy-local:prod": "node --env-file=../.env.production scripts/prod/copy-local.js",
+    "db:backup": "node scripts/backup.js",
+    "db:backup:prod": "node --env-file=../.env.production scripts/prod/backup.js",
+    "db:reconcile:prod": "node --env-file=../.env.production scripts/prod/reconcile.js"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "geomagnetism": "^0.2.0",
+    "suncalc": "^2.0.2"
   }
 }

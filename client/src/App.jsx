@@ -16,6 +16,8 @@ const AircraftForm = lazy(() => import('./pages/AircraftForm.jsx'));
 const Milestones = lazy(() => import('./pages/Milestones.jsx'));
 const Currency = lazy(() => import('./pages/Currency.jsx'));
 const ExpirationForm = lazy(() => import('./pages/ExpirationForm.jsx'));
+const Weather = lazy(() => import('./pages/Weather.jsx'));
+const WeatherSettings = lazy(() => import('./pages/WeatherSettings.jsx'));
 
 export default function App() {
   const location = useLocation();
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="/currency" element={<Currency />} />
           <Route path="/currency/new" element={<ExpirationForm />} />
           <Route path="/currency/:id" element={<ExpirationForm />} />
+          <Route path="/weather" element={<Weather />} />
+          <Route path="/weather/settings" element={<WeatherSettings />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="*" element={<Navigate to="/" replace />} />

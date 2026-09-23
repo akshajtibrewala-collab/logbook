@@ -43,7 +43,7 @@ if a button is worded differently, look for the closest match.
    git remote add origin https://github.com/YOUR-USER/logbook.git
    git push -u origin main
    ```
-   `.gitignore` already keeps `node_modules`, `.env`, and your local `*.db` files out of the repo.
+   `.gitignore` already keeps `node_modules`, every `.env*` file, and your local `*.db` files out of the repo.
 
 ### 2. Turso (database)
 
@@ -56,17 +56,61 @@ if a button is worded differently, look for the closest match.
 
 ### 3. Load your data into Turso (from your computer)
 
-1. In the project folder, copy `.env.example` to `.env` and fill in `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
-2. Create the tables and load the airport list (about 72,000 rows, takes a minute or two):
+Every command in this section is a **`:prod` script** — it loads `.env.production` (never the plain
+`.env`/local dev config) and prints a `⚠ PRODUCTION TURSO ⚠` warning naming the database URL before doing
+anything. The corresponding plain command (`migrate`, `seed`, ...) always targets your local SQLite file
+instead, and cannot reach Turso no matter what — see "Local vs. production commands" below if that's not
+obvious from the names.
+
+1. In the project folder, copy `.env.production.example` to `.env.production` and fill in `TURSO_DATABASE_URL`
+   and `TURSO_AUTH_TOKEN`.
+2. Create the tables and load the airport and runway lists (about 72,000 airports plus ~40,000 runways,
+   takes a couple of minutes):
    ```bash
-   npm run db:setup
+   npm run migrate:prod -w server
+   npm run seed:prod -w server
+   npm run seed:runways:prod -w server
    ```
 3. Copy your existing flights and flight reviews from the local file. It only reads `server/logbook.db`, and refuses to
    run if Turso already has flights:
    ```bash
-   npm run db:copy-local
+   npm run db:copy-local:prod -w server
    ```
 4. In the Turso dashboard's data browser, check that `flights` has your rows.
+
+### Adding runways to an already-live production database
+
+If you're adding the weather checker to a **database that's already in production** from before this
+feature existed, `runways` is empty until you seed it once:
+
+```bash
+npm run db:backup:prod -w server     # back up first — see "Branch and deploy safety" in CLAUDE.md
+npm run migrate:prod -w server       # applies 011_pilot_settings and 012_runways if not already applied
+npm run seed:runways:prod -w server
+```
+
+This is a separate, explicit step — it is **not** run automatically by `build:vercel` on every deploy
+(same as the airports seed), so it only touches production when you choose to run it. Skipping it isn't
+harmful: crosswind checks just report "no runway data for this airport" until you do.
+
+### Local vs. production commands
+
+Every database script in `server/package.json` comes in two forms:
+
+| Local (default) | Production (`:prod`) | Loads |
+| --- | --- | --- |
+| `npm run migrate -w server` | `npm run migrate:prod -w server` | `.env.production` |
+| `npm run seed -w server` | `npm run seed:prod -w server` | `.env.production` |
+| `npm run seed:runways -w server` | `npm run seed:runways:prod -w server` | `.env.production` |
+| `npm run db:backup -w server` | `npm run db:backup:prod -w server` | `.env.production` |
+| — (Turso-only) | `npm run db:reconcile:prod -w server` | `.env.production` |
+| — (Turso-only) | `npm run db:copy-local:prod -w server` | `.env.production` |
+
+The local forms never load any `.env*` file, so `TURSO_DATABASE_URL` can't reach them by any path other
+than an actual exported shell variable you set yourself. The `:prod` forms load `.env.production`
+specifically (via Node's `--env-file`, which errors immediately if that file doesn't exist) and print the
+warning before running. `db:reconcile` and `db:copy-local` only ever make sense against Turso, so they
+have no local variant.
 
 ### 4. Vercel (hosting)
 

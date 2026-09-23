@@ -148,6 +148,58 @@ export function parseAircraft(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
+/** Validates a manual milestone completion payload: { completed_at, note? }. Returns { value, errors }. */
+export function parseMilestoneCompletion(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  if (!isIsoDate(b.completed_at)) errors.completed_at = 'Date must be YYYY-MM-DD';
+  else v.completed_at = b.completed_at;
+
+  const note = String(b.note ?? '').trim();
+  v.note = note || null;
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
+export const PILOT_SETTINGS_CEILING_FIELDS = ['min_ceiling_ft', 'night_min_ceiling_ft'];
+export const PILOT_SETTINGS_WIND_FIELDS = ['max_wind_kt', 'max_gust_kt', 'max_crosswind_kt', 'night_max_wind_kt', 'night_max_gust_kt', 'night_max_crosswind_kt'];
+export const PILOT_SETTINGS_REAL_FIELDS = ['min_visibility_sm', 'night_min_visibility_sm'];
+export const PILOT_SETTINGS_FIELDS = ['home_airport_ident', ...PILOT_SETTINGS_CEILING_FIELDS, ...PILOT_SETTINGS_WIND_FIELDS, ...PILOT_SETTINGS_REAL_FIELDS];
+
+/**
+ * Validates a pilot_settings payload. Every minimum is optional — a blank field means "don't check this
+ * limit yet" (null), not zero, so an incomplete settings form still lets everything else work.
+ */
+export function parsePilotSettings(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  const airport = String(b.home_airport_ident ?? '').trim().toUpperCase();
+  if (airport && !/^[A-Z0-9]{3,4}$/.test(airport)) errors.home_airport_ident = 'Use a 3-4 character ICAO/IATA code';
+  v.home_airport_ident = airport || null;
+
+  const validateInt = (f, max) => {
+    if (isBlank(b[f])) { v[f] = null; return; }
+    const n = Number(b[f]);
+    if (!Number.isInteger(n) || n < 0 || n > max) errors[f] = `Must be a whole number from 0 to ${max}`;
+    else v[f] = n;
+  };
+  for (const f of PILOT_SETTINGS_CEILING_FIELDS) validateInt(f, 60000); // service ceiling of light GA aircraft
+  for (const f of PILOT_SETTINGS_WIND_FIELDS) validateInt(f, 200); // well above any GA aircraft's demonstrated crosswind
+
+  for (const f of PILOT_SETTINGS_REAL_FIELDS) {
+    if (isBlank(b[f])) { v[f] = null; continue; }
+    const n = Number(b[f]);
+    if (!Number.isFinite(n) || n < 0 || n > 99) errors[f] = 'Must be a number, 0 or more';
+    else v[f] = round2(n);
+  }
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}
+
 export const EXPIRATION_FIELDS = ['kind', 'label', 'issued_date', 'expires_date', 'notes'];
 
 /** Validates and normalises an expiration payload (medical certificate, passport, or any custom item). */
