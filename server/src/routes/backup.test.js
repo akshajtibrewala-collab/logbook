@@ -59,10 +59,10 @@ test('round trip: export -> restore into an empty database -> export again match
   await call('POST', '/expirations', { kind: 'medical', label: '3rd Class', expires_date: '2027-01-01' });
   await call('PUT', '/milestone-completions/private/solo_xc_150nm', { completed_at: '2026-04-01', note: 'KPAO-KSNS-KWVI-KPAO' });
   await call('PUT', '/settings', { home_airport_ident: 'KPAO', min_ceiling_ft: 1000, max_crosswind_kt: 10 });
-  await call('POST', '/costs/rates/aircraft', { aircraft_id: aircraft.id, effective_date: '2026-01-01', rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 });
-  await call('POST', '/costs/rates/instructor', { effective_date: '2026-01-01', hourly_rate: 85 });
-  await call('POST', '/costs/rates/ground', { effective_date: '2026-01-01', hourly_rate: 85 });
-  await call('POST', '/costs/rates/simulator', { effective_date: '2026-01-01', hourly_rate: 50 });
+  await call('POST', '/costs/rates/aircraft', { certificate: 'private', aircraft_id: aircraft.id, effective_date: '2026-01-01', rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 });
+  await call('POST', '/costs/rates/instructor', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 85 });
+  await call('POST', '/costs/rates/ground', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 85 });
+  await call('POST', '/costs/rates/simulator', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 50 });
   await call('POST', '/costs/expenses', { category: 'headset', date: '2026-05-01', amount: 899, note: 'Bose A20' });
   await call('POST', '/costs/ground-sessions', { date: '2026-05-01', hours: 1, instructor: 'Jane', topics: 'Weather' });
   await call('PUT', '/costs/phases/private', { start_date: '2026-01-01', end_date: null });

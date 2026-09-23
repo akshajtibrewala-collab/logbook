@@ -12,6 +12,7 @@ export const CATEGORIES = [
   ['cross_country_time', 'Cross-country'],
   ['instrument_actual', 'Instrument (actual)'],
   ['instrument_simulated', 'Instrument (simulated)'],
+  ['ground_time', 'Ground instruction'],
 ];
 
 /** Hours per category. Categories overlap (e.g. night PIC), so slices need not sum to total time. */

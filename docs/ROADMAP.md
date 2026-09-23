@@ -67,20 +67,34 @@ Merged to `main` (2026-09-23). No migrations — nothing to back up before this 
 
 ## Phase 2b — training cost tracker — delivered, not yet merged
 
-On branch `phase2b`. Migration 013 adds effective-dated rate tables (aircraft rental+fuel surcharge per
-aircraft, instructor, ground instruction, simulator — each a history, not a single current value, so an
-old flight keeps the cost it actually had), `other_expenses`, `ground_sessions` (ground-only training with
-no flight logged), `training_phases` (a certificate's own date range, for splitting spend per certificate
-without relying on which milestones a flight's hours happen to satisfy), and `ground_time`/`cost_override`
-on `flights`. Seeded starting rates ($195/hr rental + $15/hr fuel, $85/hr instructor, $85/hr ground),
-effective from the pilot's first logged flight. All calculation (cost breakdown, spend totals, spend per
-certificate, average cost per flight hour, and a two-estimate remaining-cost projection — FAA minimum vs.
-a settable "realistic" total-hours target) lives in `client/src/lib/cost.js`, pure and unit-tested against
-the plan's own worked examples ($442.50 for a 1.5hr dual lesson, $315 solo, $485 with 0.5hr ground). New
-`Costs.jsx` (summary, spending chart, expenses, ground sessions) and `CostSettings.jsx` (rate history
-editors, training phases, default ground-briefing-time and realistic-hours-target settings), reached from
-Logbook's header icon row. `FlightForm`/`FlightDetail` show a computed cost with an optional manual
-override. CSV, JSON backup/restore, and their tests cover every new field/table.
+On branch `phase2b`. The Logbook is now the single place flights *and* ground-only sessions get logged:
+the + button offers "Log flight" or "Log ground session", both entry kinds show together in one date-
+ordered list (a filter narrows to All/Flights/Ground), and tapping either opens a matching detail/edit view
+(`GroundSessionForm.jsx`, `GroundSessionDetail.jsx`). `FlightForm`'s ground-instruction-hours field lives in
+the main time section (auto-filled from a default briefing time on dual flights, editable), with the
+calculated cost shown live and a manual override tucked behind a disclosure.
+
+Costs are calculated per **training phase**, not globally: migration 013 adds `other_expenses`,
+`ground_sessions`, `training_phases` (a certificate's own date range) and `ground_time`/`cost_override` on
+`flights`; migration 014 adds `instructor`/`invoice_ref` (for idempotent external imports); migration 015
+scopes every rate table (aircraft rental+fuel, instructor, ground, simulator) to one training phase's own
+`certificate`, and gives each phase a `track_costs` toggle. A flight or ground session only gets a
+calculated cost when its date falls inside a phase with cost tracking on, using *that phase's own* rates —
+never a global "current rate" — so ending a phase (an end_date, e.g. a checkride date) freezes its totals
+permanently: a later rate change is always a different phase's row and can never reach back in. Outside any
+tracked phase, cost is `null` (shown as "Not tracked"), not $0, and excluded from totals/projections; a
+manual cost override still applies anywhere, tracked or not. All of this — cost breakdown, phase lookup,
+spend totals, spend per phase, average cost per flight hour, and a two-estimate remaining-cost projection
+(FAA minimum vs. a settable "realistic" total-hours target) — lives in `client/src/lib/cost.js`, pure and
+unit-tested against the plan's own worked examples ($442.50 for a 1.5hr dual lesson, $315 solo, $485 with
+0.5hr ground). `Costs.jsx` (summary, per-phase totals, spending chart, projections, expenses) and
+`CostSettings.jsx` (per-phase rate history editors, the track-costs toggle, default-ground-time and
+realistic-hours-target settings) are reached from Logbook's header icon row. CSV, JSON backup/restore, and
+their tests cover every new field/table.
+
+Locally imported the pilot's Elite Aviation invoice history into the Private phase (effective 2026-07-10,
+matching the phase's start) — 20 flights, 6 ground-only sessions, 6 expenses, matched idempotently by
+invoice number. That data lives only in the local database, never in this repo.
 
 ## Known follow-ups
 

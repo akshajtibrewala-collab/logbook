@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, Plus, Trash2, DollarSign, AlertTriangle } from 'lucide-react';
+import { Settings, Plus, Trash2, DollarSign, AlertTriangle, GraduationCap } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import {
-  computeFlightCost, computeGroundSessionCost, totalSpent, spentPerCertificate, averageCostPerFlightHour,
+  computeFlightCost, totalSpent, spentPerCertificate, averageCostPerFlightHour,
   projectRemainingCost, fmtMoney, pickRate,
 } from '../lib/cost.js';
 import { certificateLabel } from '../lib/milestones.js';
@@ -12,7 +12,6 @@ import Card from '../components/Card.jsx';
 import Select from '../components/Select.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import TextField from '../components/TextField.jsx';
-import HoursInput from '../components/HoursInput.jsx';
 import Modal from '../components/Modal.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Skeleton from '../components/Skeleton.jsx';
@@ -31,14 +30,14 @@ const EXPENSE_CATEGORIES = [
 const categoryLabel = (v) => EXPENSE_CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
 /** Monthly spend for the last `months` calendar months (oldest first), for the bar chart. */
-function monthlySpend(flights, groundSessions, expenses, rates, months = 12) {
+function monthlySpend(flights, groundSessions, expenses, rates, phases, months = 12) {
   const now = new Date();
   const buckets = [];
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     const from = d.toISOString().slice(0, 10);
     const to = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
-    buckets.push({ label: d.toLocaleDateString(undefined, { month: 'short' }), total: totalSpent(flights, groundSessions, expenses, rates, { from, to }) });
+    buckets.push({ label: d.toLocaleDateString(undefined, { month: 'short' }), total: totalSpent(flights, groundSessions, expenses, rates, phases, { from, to }) });
   }
   return buckets;
 }
@@ -90,48 +89,12 @@ function ExpenseModal({ open, onClose, onSave, initial }) {
   );
 }
 
-function GroundSessionModal({ open, onClose, onSave, initial }) {
-  const [form, setForm] = useState(initial);
-  useEffect(() => setForm(initial), [initial]);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-  if (!open) return null;
-  const submit = async () => {
-    setSaving(true);
-    try {
-      await onSave(form);
-    } catch (err) {
-      setErrors(err.fieldErrors || {});
-      setSaving(false);
-    }
-  };
-  return (
-    <Modal open={open} onClose={onClose} title={initial.id ? 'Edit ground session' : 'Add ground-only session'}
-      footer={<>
-        <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-sm text-slate-400 active:bg-navy-800">Cancel</button>
-        <button type="button" disabled={saving} onClick={submit} className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-navy-950 active:opacity-80 disabled:opacity-60">
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </>}>
-      <div className="space-y-3">
-        <DatePicker label="Date" value={form.date} onChange={(v) => setForm((f) => ({ ...f, date: v }))} error={errors.date} />
-        <HoursInput label="Hours" value={form.hours} onChange={(v) => setForm((f) => ({ ...f, hours: v }))} error={errors.hours} />
-        <TextField label="Instructor (optional)" value={form.instructor ?? ''} onChange={(v) => setForm((f) => ({ ...f, instructor: v }))} />
-        <TextField label="Topics covered (optional)" value={form.topics ?? ''} onChange={(v) => setForm((f) => ({ ...f, topics: v }))} />
-        <TextField label="Notes (optional)" value={form.notes ?? ''} onChange={(v) => setForm((f) => ({ ...f, notes: v }))} />
-      </div>
-    </Modal>
-  );
-}
-
 const blankExpense = () => ({ category: 'other', date: todayISO(), amount: '', note: '' });
-const blankSession = () => ({ date: todayISO(), hours: '1.0', instructor: '', topics: '', notes: '' });
 
 export default function Costs() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [expenseModal, setExpenseModal] = useState(null);
-  const [sessionModal, setSessionModal] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [projectCert, setProjectCert] = useState('private');
 
@@ -151,10 +114,10 @@ export default function Costs() {
     if (!data) return null;
     const { flights, groundSessions, expenses, rates, phases, milestonesConfig, settings } = data;
     const today = todayISO();
-    const total = totalSpent(flights, groundSessions, expenses, rates);
+    const total = totalSpent(flights, groundSessions, expenses, rates, phases);
     const perCert = spentPerCertificate(phases, flights, groundSessions, expenses, rates, today);
-    const avgPerHour = averageCostPerFlightHour(flights, rates);
-    const chart = monthlySpend(flights, groundSessions, expenses, rates);
+    const avgPerHour = averageCostPerFlightHour(flights, rates, phases);
+    const chart = monthlySpend(flights, groundSessions, expenses, rates, phases);
 
     const dualReq = milestonesConfig.find((r) => r.certificate === projectCert && r.requirement_key === 'dual_received');
     const soloReq = milestonesConfig.find((r) => r.certificate === projectCert && r.requirement_key === 'solo_time');
@@ -167,10 +130,11 @@ export default function Costs() {
       // The aircraft flown most recently stands in for "the aircraft you'll keep training in" — with
       // more than one active aircraft this is necessarily a simplification, clearly labeled an estimate.
       const mostRecentAircraftId = [...flights].sort((a, b) => b.date.localeCompare(a.date)).find((f) => f.aircraft_id)?.aircraft_id;
+      const projectAircraftRates = rates.aircraft_rates.filter((r) => r.certificate === projectCert);
       const currentAircraftRate = mostRecentAircraftId
-        ? pickRate(rates.aircraft_rates.filter((r) => r.aircraft_id === mostRecentAircraftId), today)
-        : pickRate(rates.aircraft_rates, today);
-      const currentInstructorRate = pickRate(rates.instructor_rates, today);
+        ? pickRate(projectAircraftRates.filter((r) => r.aircraft_id === mostRecentAircraftId), today)
+        : pickRate(projectAircraftRates, today);
+      const currentInstructorRate = pickRate(rates.instructor_rates.filter((r) => r.certificate === projectCert), today);
       const realisticTotalHours = projectCert === 'private' && settings.private_realistic_total_hours
         ? settings.private_realistic_total_hours
         : totalReq.min_value;
@@ -181,7 +145,10 @@ export default function Costs() {
       });
     }
 
-    const missingRateFlights = flights.filter((f) => computeFlightCost(f, rates).missingRate);
+    const missingRateFlights = flights.filter((f) => {
+      const c = computeFlightCost(f, rates, phases);
+      return c.tracked && c.missingRate;
+    });
     return { total, perCert, avgPerHour, chart, projection, missingRateFlights };
   }, [data, projectCert]);
 
@@ -198,15 +165,8 @@ export default function Costs() {
     setExpenseModal(null);
     load();
   };
-  const saveSession = async (form) => {
-    if (form.id) await api.updateGroundSession(form.id, form);
-    else await api.createGroundSession(form);
-    setSessionModal(null);
-    load();
-  };
   const doDelete = async () => {
-    if (confirmDelete.kind === 'expense') await api.deleteExpense(confirmDelete.id);
-    else await api.deleteGroundSession(confirmDelete.id);
+    await api.deleteExpense(confirmDelete.id);
     setConfirmDelete(null);
     load();
   };
@@ -215,9 +175,14 @@ export default function Costs() {
     <div className="stagger space-y-4 md:mx-auto md:max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Costs</h1>
-        <Link to="/costs/settings" aria-label="Rates & settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
-          <Settings size={20} />
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/logbook/ground/new" aria-label="Add ground session" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+            <GraduationCap size={20} />
+          </Link>
+          <Link to="/costs/settings" aria-label="Rates & settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+            <Settings size={20} />
+          </Link>
+        </div>
       </div>
 
       {error && <ErrorNote message={error} onRetry={load} />}
@@ -234,13 +199,28 @@ export default function Costs() {
               <div className="text-xs text-slate-400">Avg / flight hour</div>
               <div className="mt-1 text-xl font-semibold">{fmtMoney(computed.avgPerHour)}</div>
             </Card>
-            {Object.entries(computed.perCert).map(([cert, spent]) => (
-              <Card key={cert}>
-                <div className="text-xs text-slate-400">{certificateLabel(cert)}</div>
-                <div className="mt-1 text-xl font-semibold">{fmtMoney(spent)}</div>
-              </Card>
-            ))}
           </div>
+
+          <Card>
+            <h2 className="mb-3 text-sm font-medium text-accent">Spend per training phase</h2>
+            <div className="space-y-2">
+              {data.phases.length === 0 ? (
+                <p className="text-sm text-slate-400">No training phases set up yet. <Link to="/costs/settings" className="text-accent underline">Set one up</Link>.</p>
+              ) : (
+                [...data.phases].sort((a, b) => a.start_date.localeCompare(b.start_date)).map((p) => (
+                  <div key={p.certificate} className="flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2.5 text-sm">
+                    <div>
+                      <div className="font-medium">{certificateLabel(p.certificate)}</div>
+                      <div className="text-xs text-slate-500">
+                        {p.start_date} – {p.end_date ?? 'ongoing'}{p.end_date ? ' · closed' : ''}{!p.track_costs ? ' · not tracked' : ''}
+                      </div>
+                    </div>
+                    <span className="text-base font-semibold">{fmtMoney(computed.perCert[p.certificate] ?? 0)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
 
           {computed.missingRateFlights.length > 0 && (
             <div className="flex items-start gap-2 rounded-xl bg-bad/10 p-3 text-sm text-bad">
@@ -301,32 +281,7 @@ export default function Costs() {
                     </button>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{fmtMoney(e.amount)}</span>
-                      <button type="button" onClick={() => setConfirmDelete({ kind: 'expense', id: e.id })} aria-label="Delete expense" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={16} /></button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          <Card padded={false}>
-            <div className="flex items-center justify-between p-4 pb-0">
-              <h2 className="text-sm font-medium text-accent">Ground-only sessions</h2>
-              <button type="button" onClick={() => setSessionModal(blankSession())} aria-label="Add ground session" className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-accent active:opacity-70"><Plus size={16} /></button>
-            </div>
-            {data.groundSessions.length === 0 ? (
-              <EmptyState icon={DollarSign} title="No ground-only sessions logged" className="py-8" />
-            ) : (
-              <ul className="divide-y divide-white/5 px-4">
-                {data.groundSessions.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-3 py-3">
-                    <button type="button" onClick={() => setSessionModal({ ...s, hours: fmtHours(s.hours) })} className="min-w-0 flex-1 text-left">
-                      <div className="text-sm">{fmtHours(s.hours)}h{s.instructor ? ` with ${s.instructor}` : ''}{s.topics ? ` — ${s.topics}` : ''}</div>
-                      <div className="text-xs text-slate-500">{s.date}</div>
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{fmtMoney(computeGroundSessionCost(s, data.rates.ground_rates).total)}</span>
-                      <button type="button" onClick={() => setConfirmDelete({ kind: 'session', id: s.id })} aria-label="Delete session" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={16} /></button>
+                      <button type="button" onClick={() => setConfirmDelete({ id: e.id })} aria-label="Delete expense" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={16} /></button>
                     </div>
                   </li>
                 ))}
@@ -337,8 +292,7 @@ export default function Costs() {
       )}
 
       {expenseModal && <ExpenseModal open onClose={() => setExpenseModal(null)} onSave={saveExpense} initial={expenseModal} />}
-      {sessionModal && <GroundSessionModal open onClose={() => setSessionModal(null)} onSave={saveSession} initial={sessionModal} />}
-      <ConfirmDialog open={Boolean(confirmDelete)} title="Delete this?" description="This cannot be undone."
+      <ConfirmDialog open={Boolean(confirmDelete)} title="Delete this expense?" description="This cannot be undone."
         confirmLabel="Delete" onConfirm={doDelete} onClose={() => setConfirmDelete(null)} />
     </div>
   );

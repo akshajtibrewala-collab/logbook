@@ -11,19 +11,19 @@ const router = Router();
 function hourlyRateRouter(table) {
   const sub = Router();
   sub.get('/', async (_req, res) => {
-    res.json(await all(`SELECT * FROM ${table} ORDER BY effective_date`));
+    res.json(await all(`SELECT * FROM ${table} ORDER BY certificate, effective_date`));
   });
   sub.post('/', async (req, res) => {
     const { value, errors } = parseHourlyRate(req.body);
     if (errors) return res.status(400).json({ errors });
-    const { lastId } = await run(`INSERT INTO ${table} (effective_date, hourly_rate) VALUES (:effective_date, :hourly_rate)`, value);
+    const { lastId } = await run(`INSERT INTO ${table} (certificate, effective_date, hourly_rate) VALUES (:certificate, :effective_date, :hourly_rate)`, value);
     res.status(201).json(await get(`SELECT * FROM ${table} WHERE id = ?`, [lastId]));
   });
   sub.put('/:id', async (req, res) => {
     const { value, errors } = parseHourlyRate(req.body);
     if (errors) return res.status(400).json({ errors });
     const { changes } = await run(
-      `UPDATE ${table} SET effective_date = :effective_date, hourly_rate = :hourly_rate WHERE id = :id`,
+      `UPDATE ${table} SET certificate = :certificate, effective_date = :effective_date, hourly_rate = :hourly_rate WHERE id = :id`,
       { ...value, id: req.params.id },
     );
     if (!changes) return res.status(404).json({ error: 'Rate not found' });
@@ -42,13 +42,13 @@ router.use('/rates/ground', hourlyRateRouter('ground_rates'));
 router.use('/rates/simulator', hourlyRateRouter('simulator_rates'));
 
 router.get('/rates/aircraft', async (_req, res) => {
-  res.json(await all('SELECT * FROM aircraft_rates ORDER BY aircraft_id, effective_date'));
+  res.json(await all('SELECT * FROM aircraft_rates ORDER BY certificate, aircraft_id, effective_date'));
 });
 router.post('/rates/aircraft', async (req, res) => {
   const { value, errors } = parseAircraftRate(req.body);
   if (errors) return res.status(400).json({ errors });
   const { lastId } = await run(
-    'INSERT INTO aircraft_rates (aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr) VALUES (:aircraft_id, :effective_date, :rental_rate_per_hr, :fuel_surcharge_per_hr)',
+    'INSERT INTO aircraft_rates (certificate, aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr) VALUES (:certificate, :aircraft_id, :effective_date, :rental_rate_per_hr, :fuel_surcharge_per_hr)',
     value,
   );
   res.status(201).json(await get('SELECT * FROM aircraft_rates WHERE id = ?', [lastId]));
@@ -57,7 +57,7 @@ router.put('/rates/aircraft/:id', async (req, res) => {
   const { value, errors } = parseAircraftRate(req.body);
   if (errors) return res.status(400).json({ errors });
   const { changes } = await run(
-    'UPDATE aircraft_rates SET aircraft_id = :aircraft_id, effective_date = :effective_date, rental_rate_per_hr = :rental_rate_per_hr, fuel_surcharge_per_hr = :fuel_surcharge_per_hr WHERE id = :id',
+    'UPDATE aircraft_rates SET certificate = :certificate, aircraft_id = :aircraft_id, effective_date = :effective_date, rental_rate_per_hr = :rental_rate_per_hr, fuel_surcharge_per_hr = :fuel_surcharge_per_hr WHERE id = :id',
     { ...value, id: req.params.id },
   );
   if (!changes) return res.status(404).json({ error: 'Rate not found' });
@@ -99,6 +99,11 @@ router.delete('/expenses/:id', async (req, res) => {
 router.get('/ground-sessions', async (_req, res) => {
   res.json(await all('SELECT * FROM ground_sessions ORDER BY date DESC, id DESC'));
 });
+router.get('/ground-sessions/:id', async (req, res) => {
+  const row = await get('SELECT * FROM ground_sessions WHERE id = ?', [req.params.id]);
+  if (!row) return res.status(404).json({ error: 'Ground session not found' });
+  res.json(row);
+});
 router.post('/ground-sessions', async (req, res) => {
   const { value, errors } = parseGroundSession(req.body);
   if (errors) return res.status(400).json({ errors });
@@ -133,9 +138,9 @@ router.put('/phases/:certificate', async (req, res) => {
   if (errors) return res.status(400).json({ errors });
   const existing = await get('SELECT id FROM training_phases WHERE certificate = ?', [value.certificate]);
   if (existing) {
-    await run('UPDATE training_phases SET start_date = :start_date, end_date = :end_date WHERE certificate = :certificate', value);
+    await run('UPDATE training_phases SET start_date = :start_date, end_date = :end_date, track_costs = :track_costs WHERE certificate = :certificate', value);
   } else {
-    await run('INSERT INTO training_phases (certificate, start_date, end_date) VALUES (:certificate, :start_date, :end_date)', value);
+    await run('INSERT INTO training_phases (certificate, start_date, end_date, track_costs) VALUES (:certificate, :start_date, :end_date, :track_costs)', value);
   }
   res.json(await get('SELECT * FROM training_phases WHERE certificate = ?', [value.certificate]));
 });

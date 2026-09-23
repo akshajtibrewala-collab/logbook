@@ -37,6 +37,7 @@ function Stat({ label, value }) {
 
 export default function Dashboard() {
   const [flights, setFlights] = useState(null);
+  const [groundSessions, setGroundSessions] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [expirations, setExpirations] = useState([]);
   const [milestonesConfig, setMilestonesConfig] = useState([]);
@@ -59,11 +60,23 @@ export default function Dashboard() {
 
   const load = useCallback(() => {
     setError('');
-    Promise.all([api.listFlights(), api.listReviews(), api.listExpirations(), api.listMilestonesConfig(), api.listAircraft(true)])
-      .then(([f, r, e, m, a]) => { setFlights(f); setReviews(r); setExpirations(e); setMilestonesConfig(m); setAircraft(a); })
+    Promise.all([
+      api.listFlights(), api.listReviews(), api.listExpirations(), api.listMilestonesConfig(), api.listAircraft(true),
+      api.listGroundSessions(),
+    ])
+      .then(([f, r, e, m, a, g]) => { setFlights(f); setReviews(r); setExpirations(e); setMilestonesConfig(m); setAircraft(a); setGroundSessions(g); })
       .catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
+
+  // Total ground training hours: ground instruction logged with a flight, plus ground-only sessions —
+  // the same total the cost tracker bills at the ground rate, shown here regardless of cost tracking.
+  const totalGroundHours = useMemo(() => {
+    if (!flights) return 0;
+    const flightGround = flights.reduce((s, f) => s + (Number(f.ground_time) || 0), 0);
+    const groundOnly = groundSessions.reduce((s, g) => s + (Number(g.hours) || 0), 0);
+    return flightGround + groundOnly;
+  }, [flights, groundSessions]);
 
   const data = useMemo(() => {
     if (!flights) return null;
@@ -241,6 +254,15 @@ export default function Dashboard() {
               <Stat label="Total" value={data.stats.total} />
             </div>
           </div>
+
+          {totalGroundHours > 0 && (
+            <div>
+              <h2 className="mb-2 text-sm font-medium text-slate-400">Ground training</h2>
+              <div className="grid grid-cols-3 gap-3 md:max-w-md">
+                <Stat label="Total hours" value={totalGroundHours} />
+              </div>
+            </div>
+          )}
         </>
       )}
 

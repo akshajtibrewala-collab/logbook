@@ -258,11 +258,19 @@ export function parseExpiration(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
-/** Validates a simple {effective_date, hourly_rate} rate row (instructor, ground, or simulator rate). */
+const parseCertificate = (b, v, errors) => {
+  const certificate = String(b.certificate ?? '').trim();
+  if (!certificate) errors.certificate = 'Choose a training phase';
+  else v.certificate = certificate;
+};
+
+/** Validates a simple {certificate, effective_date, hourly_rate} rate row (instructor, ground, or simulator rate) — belongs to one training phase's own rate history. */
 export function parseHourlyRate(body) {
   const b = body && typeof body === 'object' ? body : {};
   const errors = {};
   const v = {};
+
+  parseCertificate(b, v, errors);
 
   if (!isIsoDate(b.effective_date)) errors.effective_date = 'Date must be YYYY-MM-DD';
   else v.effective_date = b.effective_date;
@@ -274,11 +282,13 @@ export function parseHourlyRate(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
-/** Validates a per-aircraft rate row: {aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr}. */
+/** Validates a per-aircraft rate row: {certificate, aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr} — belongs to one training phase's own rate history. */
 export function parseAircraftRate(body) {
   const b = body && typeof body === 'object' ? body : {};
   const errors = {};
   const v = {};
+
+  parseCertificate(b, v, errors);
 
   const aircraftId = Number(b.aircraft_id);
   if (!Number.isInteger(aircraftId) || aircraftId <= 0) errors.aircraft_id = 'Choose an aircraft';
@@ -356,15 +366,13 @@ export function parseGroundSession(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
-/** Validates a certificate's training-phase date range: {certificate, start_date, end_date}. */
+/** Validates a certificate's training-phase date range: {certificate, start_date, end_date, track_costs}. */
 export function parseTrainingPhase(body) {
   const b = body && typeof body === 'object' ? body : {};
   const errors = {};
   const v = {};
 
-  const certificate = String(b.certificate ?? '').trim();
-  if (!certificate) errors.certificate = 'Choose a certificate';
-  else v.certificate = certificate;
+  parseCertificate(b, v, errors);
 
   if (!isIsoDate(b.start_date)) errors.start_date = 'Date must be YYYY-MM-DD';
   else v.start_date = b.start_date;
@@ -373,6 +381,8 @@ export function parseTrainingPhase(body) {
   else v.end_date = b.end_date || null;
 
   if (v.start_date && v.end_date && v.end_date < v.start_date) errors.end_date = 'Cannot be before the start date';
+
+  v.track_costs = b.track_costs === false ? 0 : 1;
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }

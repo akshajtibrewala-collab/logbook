@@ -46,6 +46,7 @@ export default function FlightDetail() {
   const [flight, setFlight] = useState(null);
   const [error, setError] = useState('');
   const [rates, setRates] = useState(null);
+  const [phases, setPhases] = useState(null);
 
   const load = useCallback(() => {
     setError('');
@@ -54,8 +55,9 @@ export default function FlightDetail() {
   }, [id]);
   useEffect(load, [load]);
   useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
+  useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
 
-  const cost = flight && rates ? computeFlightCost(flight, rates) : null;
+  const cost = flight && rates && phases ? computeFlightCost(flight, rates, phases) : null;
 
   const route = flight ? [flight.departure_airport, ...flight.stops.map((s) => s.airport_code), flight.arrival_airport].filter(Boolean) : [];
   const times = flight ? TIME_FIELDS.filter(([k]) => Number(flight[k]) > 0) : [];
@@ -119,7 +121,11 @@ export default function FlightDetail() {
             <Section title="Cost">
               <div className="flex items-baseline justify-between">
                 <span className="text-2xl font-semibold">{fmtMoney(cost.total)}</span>
-                {cost.override && <span className="text-xs text-slate-400">Manual override · calculated was {fmtMoney(cost.computedTotal)}</span>}
+                {cost.override && (
+                  <span className="text-xs text-slate-400">
+                    Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}
+                  </span>
+                )}
               </div>
               {cost.missingRate && <p className="mt-1 text-xs text-bad">A rate wasn't set for part of this flight — see Costs settings.</p>}
             </Section>

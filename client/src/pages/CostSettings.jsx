@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { fmtMoney } from '../lib/cost.js';
 import { certificateLabel } from '../lib/milestones.js';
 import { todayISO } from '../lib/calendar.js';
 import TextField from '../components/TextField.jsx';
 import DatePicker from '../components/DatePicker.jsx';
+import Toggle from '../components/Toggle.jsx';
 import Button from '../components/Button.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 
@@ -23,14 +24,14 @@ function Section({ title, description, children }) {
 }
 
 /** An effective-dated hourly-rate history (instructor/ground/simulator), with an inline add row. */
-function HourlyRateHistory({ rows, onCreate, onDelete }) {
+function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
   const [adding, setAdding] = useState(false);
   const [date, setDate] = useState(todayISO());
   const [rate, setRate] = useState('');
   const sorted = [...rows].sort((a, b) => b.effective_date.localeCompare(a.effective_date));
 
   const add = async () => {
-    await onCreate({ effective_date: date, hourly_rate: rate });
+    await onCreate({ certificate, effective_date: date, hourly_rate: rate });
     setAdding(false);
     setRate('');
   };
@@ -63,7 +64,7 @@ function HourlyRateHistory({ rows, onCreate, onDelete }) {
   );
 }
 
-function AircraftRateHistory({ aircraft, rows, onCreate, onDelete }) {
+function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }) {
   const [adding, setAdding] = useState(false);
   const [date, setDate] = useState(todayISO());
   const [rental, setRental] = useState('');
@@ -71,7 +72,7 @@ function AircraftRateHistory({ aircraft, rows, onCreate, onDelete }) {
   const sorted = [...rows].sort((a, b) => b.effective_date.localeCompare(a.effective_date));
 
   const add = async () => {
-    await onCreate({ aircraft_id: aircraft.id, effective_date: date, rental_rate_per_hr: rental, fuel_surcharge_per_hr: fuel });
+    await onCreate({ certificate, aircraft_id: aircraft.id, effective_date: date, rental_rate_per_hr: rental, fuel_surcharge_per_hr: fuel });
     setAdding(false);
     setRental('');
   };
@@ -106,30 +107,91 @@ function AircraftRateHistory({ aircraft, rows, onCreate, onDelete }) {
   );
 }
 
-function TrainingPhase({ certificate, phase, onSave, onDelete }) {
+/**
+ * One training phase: its own date range, a cost-tracking toggle, and its own complete rate history
+ * (instructor/ground/simulator/per-aircraft) — nothing here is shared with any other phase, which is what
+ * lets ending a phase (an end date) freeze its totals: a later rate change is always a *different*
+ * phase's row.
+ */
+function PhaseCard({
+  certificate, phase, aircraft, aircraftRates, instructorRates, groundRates, simulatorRates,
+  onSavePhase, onCreateRate, onDeleteRate, defaultOpen,
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const [start, setStart] = useState(phase?.start_date ?? todayISO());
   const [end, setEnd] = useState(phase?.end_date ?? '');
+  const [trackCosts, setTrackCosts] = useState(phase?.track_costs !== 0);
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
+  const savePhase = async () => {
     setSaving(true);
-    try { await onSave(certificate, { start_date: start, end_date: end || null }); } finally { setSaving(false); }
+    try { await onSavePhase(certificate, { start_date: start, end_date: end || null, track_costs: trackCosts }); } finally { setSaving(false); }
   };
 
   return (
-    <div className="space-y-2 border-t border-edge pt-3 first:border-t-0 first:pt-0">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">{certificateLabel(certificate)}</h3>
-        {phase && <button type="button" onClick={() => onDelete(certificate)} aria-label="Clear phase" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <DatePicker label="Start" value={start} onChange={setStart} />
-        <DatePicker label="End (blank = ongoing)" value={end} onChange={setEnd} clearable />
-      </div>
-      <Button size="sm" fullWidth={false} onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save phase'}</Button>
-    </div>
+    <section className="card p-0">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between p-4 text-left">
+        <div>
+          <h2 className="text-base font-semibold">{certificateLabel(certificate)}</h2>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {phase ? `${phase.start_date} – ${phase.end_date ?? 'ongoing'}${phase.track_costs ? '' : ' · costs not tracked'}` : 'Not started'}
+          </p>
+        </div>
+        <ChevronDown size={18} className={`shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="space-y-4 border-t border-edge p-4">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <DatePicker label="Start" value={start} onChange={setStart} />
+              <DatePicker label="End (blank = still in progress)" value={end} onChange={setEnd} clearable />
+            </div>
+            <Toggle label="Track costs for this phase" description="Flights and ground sessions in this date range get a calculated cost, using this phase's own rates below."
+              checked={trackCosts} onChange={setTrackCosts} />
+            <Button size="sm" fullWidth={false} onClick={savePhase} disabled={saving}>{saving ? 'Saving…' : 'Save phase'}</Button>
+          </div>
+
+          <div className="space-y-3 border-t border-edge pt-4">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Instructor rate</h3>
+            <HourlyRateHistory certificate={certificate} rows={instructorRates}
+              onCreate={(r) => onCreateRate('instructor', r)} onDelete={(id) => onDeleteRate('instructor', id)} />
+          </div>
+          <div className="space-y-3 border-t border-edge pt-4">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Ground instruction rate</h3>
+            <HourlyRateHistory certificate={certificate} rows={groundRates}
+              onCreate={(r) => onCreateRate('ground', r)} onDelete={(id) => onDeleteRate('ground', id)} />
+          </div>
+          <div className="space-y-3 border-t border-edge pt-4">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Simulator rate</h3>
+            <p className="text-xs text-slate-500">Leave blank if you don't fly a simulator in this phase.</p>
+            <HourlyRateHistory certificate={certificate} rows={simulatorRates}
+              onCreate={(r) => onCreateRate('simulator', r)} onDelete={(id) => onDeleteRate('simulator', id)} />
+          </div>
+          <div className="space-y-3 border-t border-edge pt-4">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Aircraft rental rates</h3>
+            {aircraft.length === 0 ? (
+              <p className="text-sm text-slate-500">Add an aircraft first, on the Aircraft screen.</p>
+            ) : (
+              aircraft.map((a) => (
+                <AircraftRateHistory key={a.id} certificate={certificate} aircraft={a}
+                  rows={aircraftRates.filter((r) => r.aircraft_id === a.id)}
+                  onCreate={(r) => onCreateRate('aircraft', r)} onDelete={(id) => onDeleteRate('aircraft', id)} />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
+
+const RATE_API = {
+  instructor: { create: api.createInstructorRate, delete: api.deleteInstructorRate },
+  ground: { create: api.createGroundRate, delete: api.deleteGroundRate },
+  simulator: { create: api.createSimulatorRate, delete: api.deleteSimulatorRate },
+  aircraft: { create: api.createAircraftRate, delete: api.deleteAircraftRate },
+};
 
 export default function CostSettings() {
   const navigate = useNavigate();
@@ -167,7 +229,9 @@ export default function CostSettings() {
 
   if (!data) return <><Skeleton className="h-8 w-40" /><Skeleton className="mt-4 h-64" /></>;
 
-  const certs = [...new Set(data.milestonesConfig.map((r) => r.certificate))];
+  // Every certificate a phase could exist for: ones with a milestone config (private/instrument/commercial)
+  // plus any certificate a phase already exists for (covers cfi/atp/etc. once those get milestones too).
+  const certs = [...new Set([...data.milestonesConfig.map((r) => r.certificate), ...data.phases.map((p) => p.certificate)])];
   const phaseByCert = Object.fromEntries(data.phases.map((p) => [p.certificate, p]));
 
   return (
@@ -179,36 +243,6 @@ export default function CostSettings() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <Section title="Instructor rate">
-        <HourlyRateHistory rows={data.instructorRates}
-          onCreate={async (r) => { await api.createInstructorRate(r); load(); }}
-          onDelete={async (id) => { await api.deleteInstructorRate(id); load(); }} />
-      </Section>
-
-      <Section title="Ground instruction rate">
-        <HourlyRateHistory rows={data.groundRates}
-          onCreate={async (r) => { await api.createGroundRate(r); load(); }}
-          onDelete={async (id) => { await api.deleteGroundRate(id); load(); }} />
-      </Section>
-
-      <Section title="Simulator rate" description="Leave blank if you don't fly a simulator yet.">
-        <HourlyRateHistory rows={data.simulatorRates}
-          onCreate={async (r) => { await api.createSimulatorRate(r); load(); }}
-          onDelete={async (id) => { await api.deleteSimulatorRate(id); load(); }} />
-      </Section>
-
-      <Section title="Aircraft rental rates" description="One rate history per aircraft — a new flight uses whichever rate is effective on its own date.">
-        {data.aircraft.length === 0 ? (
-          <p className="text-sm text-slate-500">Add an aircraft first, on the Aircraft screen.</p>
-        ) : (
-          data.aircraft.map((a) => (
-            <AircraftRateHistory key={a.id} aircraft={a} rows={data.aircraftRates.filter((r) => r.aircraft_id === a.id)}
-              onCreate={async (r) => { await api.createAircraftRate(r); load(); }}
-              onDelete={async (id) => { await api.deleteAircraftRate(id); load(); }} />
-          ))
-        )}
-      </Section>
-
       <Section title="Default settings">
         <TextField label="Default ground briefing time (hrs)" type="number" value={settingsForm.default_ground_time}
           onChange={(v) => setSettingsForm((f) => ({ ...f, default_ground_time: v }))} placeholder="Not set" />
@@ -217,13 +251,22 @@ export default function CostSettings() {
         <Button size="sm" fullWidth={false} onClick={saveSettings} disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save'}</Button>
       </Section>
 
-      <Section title="Training phases" description="Each certificate's own date range, used to split total spend per certificate. A blank end date means still in progress.">
-        {certs.map((c) => (
-          <TrainingPhase key={c} certificate={c} phase={phaseByCert[c]}
-            onSave={async (cert, phase) => { await api.setTrainingPhase(cert, phase); load(); }}
-            onDelete={async (cert) => { await api.deleteTrainingPhase(cert); load(); }} />
-        ))}
-      </Section>
+      <div>
+        <h2 className="mb-2 px-1 text-sm font-medium text-slate-400">Training phases & rates</h2>
+        <div className="space-y-3">
+          {certs.map((c, i) => (
+            <PhaseCard key={c} certificate={c} phase={phaseByCert[c]} defaultOpen={i === 0}
+              aircraft={data.aircraft}
+              aircraftRates={data.aircraftRates.filter((r) => r.certificate === c)}
+              instructorRates={data.instructorRates.filter((r) => r.certificate === c)}
+              groundRates={data.groundRates.filter((r) => r.certificate === c)}
+              simulatorRates={data.simulatorRates.filter((r) => r.certificate === c)}
+              onSavePhase={async (cert, phase) => { await api.setTrainingPhase(cert, phase); load(); }}
+              onCreateRate={async (kind, r) => { await RATE_API[kind].create(r); load(); }}
+              onDeleteRate={async (kind, id) => { await RATE_API[kind].delete(id); load(); }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

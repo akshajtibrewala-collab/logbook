@@ -66,6 +66,7 @@ export default function FlightForm() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [rates, setRates] = useState(null);
+  const [phases, setPhases] = useState(null);
   const [defaultGroundTime, setDefaultGroundTime] = useState(null);
   const [groundTouched, setGroundTouched] = useState(false);
 
@@ -74,6 +75,7 @@ export default function FlightForm() {
     api.getFlight(id).then((f) => setForm(fromFlight(f))).catch((e) => setMessage(e.message)).finally(() => setLoading(false));
   }, [id]);
   useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
+  useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
   useEffect(() => { api.getSettings().then((s) => setDefaultGroundTime(s.default_ground_time)).catch(() => {}); }, []);
 
   // Auto-fills the default ground briefing time once dual is logged on a *new* flight, only while the
@@ -91,12 +93,12 @@ export default function FlightForm() {
     setForm((f) => ({ ...f, [k]: v }));
   };
 
-  const previewCost = rates ? computeFlightCost({
+  const previewCost = rates && phases ? computeFlightCost({
     date: form.date, aircraft_id: form.aircraft_id,
     total_time: parseHours(form.total_time) || 0, simulator_time: parseHours(form.simulator_time) || 0,
     dual_received: parseHours(form.dual_received) || 0, ground_time: parseHours(form.ground_time) || 0,
     cost_override: form.cost_override.trim() === '' ? null : form.cost_override,
-  }, rates) : null;
+  }, rates, phases) : null;
 
   async function submit(e) {
     e.preventDefault();
@@ -193,19 +195,29 @@ export default function FlightForm() {
       </Section>
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Cost</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <span className="mb-1 block text-xs text-slate-400">Estimated</span>
-            <div className="flex h-12 items-center rounded-xl border border-edge bg-navy-800 px-3 text-base">
-              {previewCost ? fmtMoney(previewCost.computedTotal) : '—'}
-            </div>
-          </div>
-          <TextField label="Override (optional, e.g. from an invoice)" type="number" value={form.cost_override}
-            onChange={set('cost_override')} error={errors.cost_override} placeholder="Use estimated" />
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-accent">Cost</h2>
+          <span className="text-xl font-semibold">
+            {!previewCost ? '—'
+              : previewCost.total !== null ? fmtMoney(previewCost.total)
+              : <span className="text-sm font-normal text-slate-500">Not tracked</span>}
+          </span>
         </div>
-        {previewCost?.missingRate && <p className="mt-2 text-xs text-slate-500">A rate isn't set for part of this flight yet — set it on the Costs screen.</p>}
+        {previewCost?.total === null && (
+          <p className="mt-1 text-xs text-slate-500">This date isn't inside a cost-tracked training phase, so no cost is calculated — set an override below if you want to record one anyway.</p>
+        )}
+        {previewCost?.missingRate && <p className="mt-1 text-xs text-slate-500">A rate isn't set for part of this flight yet — set it on the Costs screen.</p>}
       </section>
+
+      <Disclosure title="Manual cost override" defaultOpen={Boolean(form.cost_override.trim())}>
+        <div className="col-span-2">
+          <TextField label="Override (optional, e.g. to match an invoice)" type="number" value={form.cost_override}
+            onChange={set('cost_override')} error={errors.cost_override} placeholder="Use calculated cost" />
+          {previewCost?.override && previewCost.computedTotal !== null && (
+            <p className="mt-1 text-xs text-slate-500">Calculated cost would be {fmtMoney(previewCost.computedTotal)}.</p>
+          )}
+        </div>
+      </Disclosure>
 
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-medium text-accent">Approaches</h2>

@@ -83,6 +83,7 @@ export const api = {
   updateExpense: (id, e) => request('PUT', `/costs/expenses/${id}`, e),
   deleteExpense: (id) => request('DELETE', `/costs/expenses/${id}`),
   listGroundSessions: () => request('GET', '/costs/ground-sessions'),
+  getGroundSession: (id) => request('GET', `/costs/ground-sessions/${id}`),
   createGroundSession: (s) => request('POST', '/costs/ground-sessions', s),
   updateGroundSession: (id, s) => request('PUT', `/costs/ground-sessions/${id}`, s),
   deleteGroundSession: (id) => request('DELETE', `/costs/ground-sessions/${id}`),

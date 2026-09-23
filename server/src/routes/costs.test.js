@@ -34,10 +34,10 @@ test('instructor rate CRUD (on top of the one row migration 013 already seeded)'
   assert.equal(seeded.length, 1);
   assert.equal(seeded[0].hourly_rate, 85);
 
-  const created = await (await call('POST', '/costs/rates/instructor', { effective_date: '2026-01-01', hourly_rate: 85 })).json();
+  const created = await (await call('POST', '/costs/rates/instructor', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 85 })).json();
   assert.equal(created.hourly_rate, 85);
 
-  const updated = await (await call('PUT', `/costs/rates/instructor/${created.id}`, { effective_date: '2026-06-01', hourly_rate: 95 })).json();
+  const updated = await (await call('PUT', `/costs/rates/instructor/${created.id}`, { certificate: 'private', effective_date: '2026-06-01', hourly_rate: 95 })).json();
   assert.equal(updated.hourly_rate, 95);
 
   const del = await call('DELETE', `/costs/rates/instructor/${created.id}`);
@@ -45,19 +45,21 @@ test('instructor rate CRUD (on top of the one row migration 013 already seeded)'
   assert.equal((await (await call('GET', '/costs/rates/instructor')).json()).length, 1); // back to just the seeded row
 });
 
-test('instructor rate rejects a bad date and a negative rate', async () => {
+test('instructor rate rejects a bad date, a negative rate, and a missing certificate', async () => {
   const res = await call('POST', '/costs/rates/instructor', { effective_date: 'not-a-date', hourly_rate: -5 });
   assert.equal(res.status, 400);
   const body = await res.json();
   assert.ok(body.errors.effective_date);
   assert.ok(body.errors.hourly_rate);
+  assert.ok(body.errors.certificate);
 });
 
-test('aircraft rate CRUD, linked to a real aircraft', async () => {
+test('aircraft rate CRUD, linked to a real aircraft and a training phase', async () => {
   const aircraft = await (await call('POST', '/aircraft', { tail_number: 'N123AB', model: '172S' })).json();
   const created = await (await call('POST', '/costs/rates/aircraft', {
-    aircraft_id: aircraft.id, effective_date: '2026-01-01', rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15,
+    certificate: 'private', aircraft_id: aircraft.id, effective_date: '2026-01-01', rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15,
   })).json();
+  assert.equal(created.certificate, 'private');
   assert.equal(created.rental_rate_per_hr, 195);
   assert.equal(created.fuel_surcharge_per_hr, 15);
 
@@ -69,7 +71,7 @@ test('aircraft rate CRUD, linked to a real aircraft', async () => {
 });
 
 test('aircraft rate requires a valid aircraft_id', async () => {
-  const res = await call('POST', '/costs/rates/aircraft', { aircraft_id: 0, effective_date: '2026-01-01', rental_rate_per_hr: 195 });
+  const res = await call('POST', '/costs/rates/aircraft', { certificate: 'private', aircraft_id: 0, effective_date: '2026-01-01', rental_rate_per_hr: 195 });
   assert.equal(res.status, 400);
   assert.ok((await res.json()).errors.aircraft_id);
 });
@@ -89,12 +91,19 @@ test('expenses CRUD, unknown category falls back to "other"', async () => {
   assert.equal(del.status, 204);
 });
 
-test('ground sessions CRUD', async () => {
+test('ground sessions CRUD, including GET /:id', async () => {
   const created = await (await call('POST', '/costs/ground-sessions', {
     date: '2026-05-01', hours: 1.5, instructor: 'Jane', topics: 'Weather, ADM', notes: 'Good session',
   })).json();
   assert.equal(created.hours, 1.5);
   assert.equal(created.instructor, 'Jane');
+
+  const fetched = await (await call('GET', `/costs/ground-sessions/${created.id}`)).json();
+  assert.equal(fetched.id, created.id);
+  assert.equal(fetched.hours, 1.5);
+
+  const notFound = await call('GET', '/costs/ground-sessions/999999');
+  assert.equal(notFound.status, 404);
 
   const updated = await (await call('PUT', `/costs/ground-sessions/${created.id}`, { date: '2026-05-01', hours: 2 })).json();
   assert.equal(updated.hours, 2);
@@ -110,13 +119,15 @@ test('ground session requires hours greater than 0', async () => {
   assert.ok((await res.json()).errors.hours);
 });
 
-test('training phases: PUT upserts by certificate, one row per certificate', async () => {
+test('training phases: PUT upserts by certificate, one row per certificate, track_costs defaults on', async () => {
   const created = await (await call('PUT', '/costs/phases/private', { start_date: '2026-01-01', end_date: null })).json();
   assert.equal(created.certificate, 'private');
   assert.equal(created.end_date, null);
+  assert.equal(created.track_costs, 1);
 
-  const updated = await (await call('PUT', '/costs/phases/private', { start_date: '2026-01-01', end_date: '2026-12-31' })).json();
+  const updated = await (await call('PUT', '/costs/phases/private', { start_date: '2026-01-01', end_date: '2026-12-31', track_costs: false })).json();
   assert.equal(updated.end_date, '2026-12-31');
+  assert.equal(updated.track_costs, 0);
 
   const list = await (await call('GET', '/costs/phases')).json();
   assert.equal(list.length, 1); // upsert, not a second row
