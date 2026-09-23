@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { all, batchAll } from '../db.js';
+import { tzForAirport } from '../lib/timezone.js';
 
 const router = Router();
 
 const COLUMNS = 'ident, icao, iata, local_code, name, city, country, lat, lon';
+const withTz = (row) => (row ? { ...row, tz: tzForAirport(row.lat, row.lon) } : row);
 // Larger airports win when a short code is ambiguous (e.g. a local code shared worldwide).
 const TYPE_RANK = "CASE type WHEN 'large_airport' THEN 0 WHEN 'medium_airport' THEN 1 WHEN 'small_airport' THEN 2 ELSE 3 END";
 
@@ -21,10 +23,10 @@ export async function resolveAirportRow(code) {
   const c = String(code ?? '').trim().toUpperCase();
   if (!c) return null;
   const [row] = await all(BY_CODE, { c });
-  if (row) return row;
+  if (row) return withTz(row);
   if (/^K[A-Z0-9]{3}$/.test(c)) {
     const [fallback] = await all(BY_US_LOCAL, { local: c.slice(1) });
-    return fallback || null;
+    return withTz(fallback) || null;
   }
   return null;
 }
@@ -39,12 +41,12 @@ router.get('/resolve', async (req, res) => {
   const first = await batchAll(codes.map((c) => ({ sql: BY_CODE, args: { c } })));
   const retry = [];
   codes.forEach((c, i) => {
-    if (first[i][0]) out[c] = first[i][0];
+    if (first[i][0]) out[c] = withTz(first[i][0]);
     else if (/^K[A-Z0-9]{3}$/.test(c)) retry.push(c);
   });
   if (retry.length) {
     const second = await batchAll(retry.map((c) => ({ sql: BY_US_LOCAL, args: { local: c.slice(1) } })));
-    retry.forEach((c, i) => { if (second[i][0]) out[c] = second[i][0]; });
+    retry.forEach((c, i) => { if (second[i][0]) out[c] = withTz(second[i][0]); });
   }
   res.json(out);
 });
@@ -54,13 +56,14 @@ router.get('/resolve', async (req, res) => {
 router.get('/search', async (req, res) => {
   const q = String(req.query.q ?? '').trim();
   if (q.length < 2) return res.json([]);
-  res.json(await all(
+  const rows = await all(
     `SELECT ${COLUMNS} FROM airports
       WHERE icao LIKE :prefix OR iata LIKE :prefix OR local_code LIKE :prefix OR name LIKE :like OR city LIKE :like
       ORDER BY CASE WHEN icao LIKE :prefix OR iata LIKE :prefix THEN 0 ELSE 1 END, ${TYPE_RANK}, name
       LIMIT 10`,
     { prefix: `${q}%`, like: `%${q}%` },
-  ));
+  );
+  res.json(rows.map(withTz));
 });
 
 export default router;

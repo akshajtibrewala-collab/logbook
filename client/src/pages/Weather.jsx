@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, Plus, X, CloudSun } from 'lucide-react';
 import { api } from '../lib/api.js';
-import { toDateTime, todayISO } from '../lib/calendar.js';
+import { parseDateTime, parseISO } from '../lib/calendar.js';
+import { localAndZulu, zonedToUtc } from '../lib/timezone.js';
 import AirportSearchField from '../components/AirportSearchField.jsx';
 import WeatherConditions from '../components/WeatherConditions.jsx';
 import DatePicker from '../components/DatePicker.jsx';
@@ -12,8 +13,13 @@ import ErrorNote from '../components/ErrorNote.jsx';
 
 const NOTE = 'A personal planning aid, not a substitute for an official weather briefing. Conditions are shown as within, near, or outside your minimums — never as "safe".';
 
-const fmtTime = (iso) => new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-const nowDateTime = () => { const n = new Date(); return toDateTime(todayISO(), n.getHours(), n.getMinutes()); };
+// Weekday + local/Zulu time at the airport, e.g. "Thu 15:00 MDT · 21:00Z" — never the device's own zone,
+// since a device in one time zone checking weather for an airport in another would otherwise mislabel it.
+function fmtZoned(iso, tz) {
+  const d = new Date(iso);
+  const weekday = tz ? new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(d) : d.toLocaleDateString(undefined, { weekday: 'short' });
+  return `${weekday} ${localAndZulu(d, tz)}`;
+}
 
 function AirportCheck() {
   const [ident, setIdent] = useState('');
@@ -54,7 +60,7 @@ function AirportCheck() {
               : (
                 <div className="space-y-2">
                   {data.forecast.periods.map((p) => (
-                    <WeatherConditions key={p.time} data={p} label={fmtTime(p.time)} />
+                    <WeatherConditions key={p.time} data={p} label={fmtZoned(p.time, data.airport.tz)} />
                   ))}
                 </div>
               )}
@@ -65,7 +71,7 @@ function AirportCheck() {
   );
 }
 
-function blankLeg() { return { ident: '', eta: '' }; }
+function blankLeg() { return { ident: '', eta: '', tz: null }; }
 
 function PlanFlight() {
   const [legs, setLegs] = useState([blankLeg(), blankLeg()]); // departure, destination
@@ -77,6 +83,23 @@ function PlanFlight() {
   const addStop = () => setLegs((ls) => [...ls.slice(0, -1), blankLeg(), ls[ls.length - 1]]);
   const removeStop = (i) => setLegs((ls) => ls.filter((_, idx) => idx !== i));
 
+  // Each leg's date/time is entered in ITS airport's local time (per the picker's `zone`), so the leg
+  // needs that airport's IANA zone resolved before its time can be shown or converted correctly — looked
+  // up as soon as the ident looks complete, and cleared if the ident is edited away from that.
+  useEffect(() => {
+    const idents = [...new Set(legs.map((l) => l.ident.trim().toUpperCase()).filter((c) => c.length >= 3))];
+    if (!idents.length) return undefined;
+    let cancelled = false;
+    api.resolveAirports(idents).then((found) => {
+      if (cancelled) return;
+      setLegs((ls) => ls.map((l) => {
+        const match = found[l.ident.trim().toUpperCase()];
+        return match ? { ...l, tz: match.tz } : (l.tz ? { ...l, tz: null } : l);
+      }));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [legs.map((l) => l.ident.trim().toUpperCase()).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function check(e) {
     e.preventDefault();
     setLoading(true);
@@ -85,7 +108,13 @@ function PlanFlight() {
     try {
       const valid = legs.filter((l) => l.ident.trim() && l.eta);
       if (!valid.length) { setError('Enter at least one airport and time.'); return; }
-      const res = await api.planWeather(valid.map((l) => ({ ident: l.ident.trim(), eta: new Date(l.eta).toISOString() })));
+      const missingTz = valid.find((l) => !l.tz);
+      if (missingTz) { setError(`Couldn't determine the time zone for ${missingTz.ident.trim().toUpperCase()} yet — try again in a moment.`); return; }
+      const res = await api.planWeather(valid.map((l) => {
+        const parsed = parseDateTime(l.eta);
+        const eta = zonedToUtc({ ...parseISO(parsed.date), hour: parsed.hour, minute: parsed.minute }, l.tz);
+        return { ident: l.ident.trim(), eta: eta.toISOString() };
+      }));
       setResults(res);
     } catch (err) {
       setError(err.message);
@@ -106,8 +135,12 @@ function PlanFlight() {
               <button type="button" onClick={() => removeStop(i)} aria-label="Remove stop" className="text-slate-500 active:text-bad"><X size={16} /></button>
             )}
           </div>
-          <AirportSearchField value={leg.ident} onChange={(v) => setLeg(i, { ident: v })} />
-          <DatePicker label="Arrival date & time (local)" withTime min={nowDateTime()} value={leg.eta} onChange={(v) => setLeg(i, { eta: v })} />
+          <AirportSearchField value={leg.ident} onChange={(v) => setLeg(i, { ident: v, tz: null })} />
+          {/* Falls back to the device's own zone until the airport's tz resolves, so `min` (a real UTC
+              instant) is always interpreted consistently rather than compared against a naive string. */}
+          <DatePicker label="Arrival date & time (airport local)" withTime
+            zone={leg.tz || Intl.DateTimeFormat().resolvedOptions().timeZone} min={new Date().toISOString()}
+            value={leg.eta} onChange={(v) => setLeg(i, { eta: v })} />
         </div>
       ))}
 
@@ -122,7 +155,7 @@ function PlanFlight() {
             const period = leg.forecast?.periods?.[0];
             return (
               <WeatherConditions key={i} data={period ?? leg.forecast}
-                label={`${leg.airport?.ident ?? leg.ident} — ${fmtTime(leg.eta)}`} />
+                label={`${leg.airport?.ident ?? leg.ident} — ${fmtZoned(leg.eta, leg.airport?.tz)}`} />
             );
           })}
         </div>

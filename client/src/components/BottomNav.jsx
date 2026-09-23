@@ -1,20 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, GraduationCap, Map, PieChart, CloudSun } from 'lucide-react';
+import { NAV_TABS } from '../lib/nav.js';
 
-const tabs = [
-  { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
-  { to: '/logbook', label: 'Logbook', Icon: BookOpen },
-  { to: '/milestones', label: 'Milestones', Icon: GraduationCap },
-  { to: '/weather', label: 'Weather', Icon: CloudSun },
-  { to: '/map', label: 'Map', Icon: Map },
-  { to: '/stats', label: 'Stats', Icon: PieChart },
-];
-
+// Phone-width chrome; SideNav.jsx takes over as a rail from the md breakpoint up.
 export default function BottomNav() {
   return (
-    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-50 border-t border-edge bg-navy-950/80 backdrop-blur-xl">
+    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-50 border-t border-edge bg-navy-950/80 backdrop-blur-xl md:hidden">
       <div className="mx-auto flex max-w-lg">
-        {tabs.map(({ to, label, Icon }) => (
+        {NAV_TABS.map(({ to, label, Icon }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) =>
               `flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-medium transition-colors ${isActive ? 'text-accent' : 'text-slate-500'}`}>

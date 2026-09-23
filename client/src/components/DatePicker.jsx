@@ -4,6 +4,7 @@ import { Calendar, CalendarClock, ChevronLeft, ChevronRight, ChevronUp, ChevronD
 import {
   MONTHS, WEEKDAYS, formatDate, formatDateTime, monthGrid, parseDateTime, parseISO, shiftMonth, toDateTime, toISO, todayISO,
 } from '../lib/calendar.js';
+import { localAndZulu, utcToZonedParts, zonedToUtc, zoneAbbreviation } from '../lib/timezone.js';
 import Button from './Button.jsx';
 
 const navBtn = 'flex h-10 w-10 items-center justify-center rounded-full text-slate-300 active:bg-navy-800 active:text-accent';
@@ -39,9 +40,14 @@ function TimeStepper({ label, value, mod, onCommit, onInc, onDec }) {
   );
 }
 
-function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
+function Sheet({ value, onPick, onClose, clearable, withTime, min, zone }) {
   const today = todayISO();
   const now = new Date();
+  // With a `zone`, every wall-clock value in this sheet (the "today" it opens to, the default/"Now" time,
+  // and `min`) is read in that airport's local time instead of the device's — `min` becomes a real UTC
+  // instant (e.g. `new Date().toISOString()`) rather than a naive "YYYY-MM-DDTHH:mm" string, since "don't
+  // let me pick a time that's already passed" is a real-world, zone-independent question.
+  const nowInZone = zone ? utcToZonedParts(now, zone) : null;
   const picked = withTime ? (parseDateTime(value) ? parseISO(parseDateTime(value).date) : null) : parseISO(value);
   const start = picked ?? parseISO(today);
   const [view, setView] = useState('days'); // 'days' | 'months' | 'years'
@@ -53,8 +59,8 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
   // immediately close the sheet when there's still a time to set.
   const initialTime = parseDateTime(value);
   const [pendingDate, setPendingDate] = useState(picked ? toISO(picked.y, picked.m, picked.d) : '');
-  const [hour, setHour] = useState(initialTime?.hour ?? now.getHours());
-  const [minute, setMinute] = useState(initialTime?.minute ?? Math.round(now.getMinutes() / 5) * 5 % 60);
+  const [hour, setHour] = useState(initialTime?.hour ?? nowInZone?.hour ?? now.getHours());
+  const [minute, setMinute] = useState(initialTime?.minute ?? Math.round((nowInZone?.minute ?? now.getMinutes()) / 5) * 5 % 60);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -70,18 +76,31 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
   // date the user is still assembling (confirmed only on "Done"), which starts equal to `value`'s date.
   const effectiveDate = withTime ? pendingDate : value;
   const effectivePicked = withTime ? parseISO(pendingDate) : picked;
-  const minDatePart = min ? (withTime ? (parseDateTime(min)?.date ?? min.slice(0, 10)) : min) : null;
+  const minDatePart = min
+    ? (zone ? (({ y, m, d }) => toISO(y, m, d))(utcToZonedParts(new Date(min), zone)) : (withTime ? (parseDateTime(min)?.date ?? min.slice(0, 10)) : min))
+    : null;
   const selectDay = (iso) => {
     if (minDatePart && iso < minDatePart) return;
     if (withTime) setPendingDate(iso); else onPick(iso);
   };
   const combined = pendingDate ? toDateTime(pendingDate, hour, minute) : '';
-  const tooEarly = withTime && min && combined && combined < min;
+  const combinedInstant = zone && pendingDate ? zonedToUtc({ ...parseISO(pendingDate), hour, minute }, zone) : null;
+  const tooEarly = withTime && min && combined
+    && (zone ? combinedInstant.getTime() < new Date(min).getTime() : combined < min);
   const confirmDone = () => { if (!tooEarly) { onPick(combined); onClose(); } };
   const pickNow = () => {
     // Rounds up (never down) so "Now" can't land a few minutes before an active `min`, which is
     // typically "now" itself — using a real Date so rounding 23:58 up correctly rolls onto tomorrow
-    // instead of wrapping back to 00:00 the same day.
+    // instead of wrapping back to 00:00 the same day. In zone mode, rounding happens on the airport's
+    // own wall clock, not the device's.
+    if (zone) {
+      const rounded = new Date(now.getTime() + 5 * 60000); // round up to the next 5-minute mark below
+      const p = utcToZonedParts(rounded, zone);
+      const minute5 = Math.floor(p.minute / 5) * 5;
+      onPick(toDateTime(toISO(p.y, p.m, p.d), p.hour, minute5));
+      onClose();
+      return;
+    }
     const rounded = new Date(now);
     rounded.setSeconds(0, 0);
     rounded.setMinutes(Math.ceil(rounded.getMinutes() / 5) * 5);
@@ -104,8 +123,15 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
 
   // Local vs. Zulu preview for the time being assembled, so the picker is never ambiguous about which
   // clock it's showing — computed even before a day is confirmed, using the pending (or today's) date.
+  // With a `zone`, "local" means that airport's local time (labeled with its real abbreviation, e.g.
+  // "MDT"); without one, it's the device's own clock, labeled plainly as "local".
   const previewDay = effectivePicked ?? parseISO(today);
-  const zuluHHMM = new Date(previewDay.y, previewDay.m - 1, previewDay.d, hour, minute).toISOString().slice(11, 16);
+  const previewInstant = zone
+    ? zonedToUtc({ y: previewDay.y, m: previewDay.m, d: previewDay.d, hour, minute }, zone)
+    : new Date(previewDay.y, previewDay.m - 1, previewDay.d, hour, minute);
+  const previewLabel = zone
+    ? localAndZulu(previewInstant, zone)
+    : `${pad2(hour)}:${pad2(minute)} local · ${previewInstant.toISOString().slice(11, 16)}Z`;
 
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Choose a date">
@@ -178,9 +204,7 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
               <TimeStepper label="Minute" value={minute} mod={60} onCommit={setMinute}
                 onInc={() => setMinute((m) => wrap(m + 5, 60))} onDec={() => setMinute((m) => wrap(m - 5, 60))} />
             </div>
-            <p className="mt-2 text-center text-xs text-slate-500">
-              {pad2(hour)}:{pad2(minute)} local · {zuluHHMM}Z
-            </p>
+            <p className="mt-2 text-center text-xs text-slate-500">{previewLabel}</p>
             {tooEarly && <p className="mt-1 text-center text-xs text-bad">Choose a time that hasn't already passed.</p>}
           </div>
         )}
@@ -216,24 +240,30 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min }) {
  * Zulu preview, a "Now" quick action, and a "Done" button (picking a day no longer closes the sheet
  * immediately, since there's still a time to set). `min` (same shape as `value`) disables earlier days
  * and, in withTime mode, blocks confirming a time that's already passed — leave it unset to allow any
- * date, past included (flight dates, expirations, ...).
+ * date, past included (flight dates, expirations, ...). With `zone` (an IANA name, e.g. "America/
+ * Denver"), the picker's time is that airport's local time rather than the device's: the field's shown
+ * value, the "Now" default, and `min` (which then must be a real UTC instant/ISO string, not a naive
+ * "YYYY-MM-DDTHH:mm") are all interpreted in `zone`, and its abbreviation is shown alongside Zulu.
  */
-export default function DatePicker({ label, value, onChange, error, clearable = false, placeholder, withTime = false, min }) {
+export default function DatePicker({ label, value, onChange, error, clearable = false, placeholder, withTime = false, min, zone }) {
   const [open, setOpen] = useState(false);
   const shown = withTime ? formatDateTime(value) : formatDate(value);
+  const shownWithZone = shown && zone && parseDateTime(value)
+    ? `${shown} ${zoneAbbreviation(zonedToUtc({ ...parseISO(parseDateTime(value).date), ...parseDateTime(value) }, zone), zone)}`
+    : shown;
   const shownPlaceholder = placeholder ?? (withTime ? 'Select a date and time' : 'Select a date');
   const Icon = withTime ? CalendarClock : Calendar;
   return (
     <div>
       {label && <span className="mb-1 block text-xs text-slate-400">{label}</span>}
-      <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`${label || 'Date'}: ${shown || 'not set'}`}
+      <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`${label || 'Date'}: ${shownWithZone || 'not set'}`}
         className={`flex h-12 w-full items-center justify-between gap-2 rounded-xl border bg-navy-800 px-3 text-left text-base outline-none focus-visible:border-accent ${error ? 'border-bad' : open ? 'border-accent' : 'border-edge'}`}>
-        <span className={shown ? '' : 'text-slate-500'}>{shown || shownPlaceholder}</span>
+        <span className={shown ? '' : 'text-slate-500'}>{shownWithZone || shownPlaceholder}</span>
         <Icon size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
       </button>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}
       {open && (
-        <Sheet value={value} clearable={clearable} withTime={withTime} min={min} onClose={() => setOpen(false)}
+        <Sheet value={value} clearable={clearable} withTime={withTime} min={min} zone={zone} onClose={() => setOpen(false)}
           onPick={(v) => { onChange(v); setOpen(false); }} />
       )}
     </div>

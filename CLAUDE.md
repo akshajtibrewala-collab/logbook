@@ -79,6 +79,8 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
 
 ## Status
 
-Phase 1 is complete. Phase 2's manual milestone completions and weather go/no-go checker are complete,
-merged to `main`, and deployed to production. See `docs/ROADMAP.md` for what was delivered, known
-follow-ups, and further Phase 2 ideas.
+Phase 1 is complete. Phase 2's manual milestone completions, weather go/no-go checker, and the
+time-zone/date-picker/tablet-layout UX pass are all complete, merged to `main`, and deployed to
+production. See `docs/ROADMAP.md` for what was delivered, known follow-ups (including two open UX gaps —
+no on-screen-keyboard-covers-Save-button handling, and no broader hover-state/focus-ring audit), and
+further Phase 2 ideas.

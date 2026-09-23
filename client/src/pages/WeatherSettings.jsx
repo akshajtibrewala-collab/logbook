@@ -55,7 +55,7 @@ export default function WeatherSettings() {
   if (loading) return <><Skeleton className="h-8 w-40" /><Skeleton className="mt-4 h-64" /></>;
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => navigate('/weather')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Weather settings</h1>

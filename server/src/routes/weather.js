@@ -105,7 +105,7 @@ async function checkAirport(code, at) {
   }
 
   return {
-    airport: { ident: airport.ident, icao: airport.icao, name: airport.name, lat: airport.lat, lon: airport.lon },
+    airport: { ident: airport.ident, icao: airport.icao, name: airport.name, lat: airport.lat, lon: airport.lon, tz: airport.tz },
     current, forecast, note: PERSONAL_MINIMUMS_NOTE,
   };
 }

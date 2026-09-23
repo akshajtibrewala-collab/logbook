@@ -220,11 +220,13 @@ export default function Milestones() {
         <EmptyState icon={ListChecks} title="No milestones configured yet" description="Requirements are seeded as editable data — see server/src/migrations." />
       )}
 
-      {grouped && [...grouped.entries()].map(([certificate, requirements]) => (
-        <CertificateCard key={certificate} certificate={certificate} requirements={requirements}
-          expanded={expanded.has(certificate)} onToggle={() => toggle(certificate)} hideCompleted={hideCompleted}
-          onComplete={setCompletingReq} onUndo={undoCompletion} />
-      ))}
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+        {grouped && [...grouped.entries()].map(([certificate, requirements]) => (
+          <CertificateCard key={certificate} certificate={certificate} requirements={requirements}
+            expanded={expanded.has(certificate)} onToggle={() => toggle(certificate)} hideCompleted={hideCompleted}
+            onComplete={setCompletingReq} onUndo={undoCompletion} />
+        ))}
+      </div>
 
       {grouped && grouped.size > 0 && (
         <p className="px-1 text-xs text-slate-500">Approximate 14 CFR Part 61 totals, not certified — verify with your instructor.</p>

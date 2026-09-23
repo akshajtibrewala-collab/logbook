@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff } from 'lucide-react';
+import { Link, Outlet, useMatch, useNavigate } from 'react-router-dom';
+import { Plus, Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import AirlineBadge from '../components/AirlineBadge.jsx';
@@ -28,6 +28,8 @@ const selectCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 te
 
 export default function Logbook() {
   const navigate = useNavigate();
+  const detailMatch = useMatch('/logbook/:id');
+  const selectedId = detailMatch?.params?.id ?? null;
   const [flights, setFlights] = useState(null);
   const [error, setError] = useState('');
   const [sort, setSort] = useState('newest');
@@ -55,7 +57,8 @@ export default function Logbook() {
   const setFilter = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value }));
 
   return (
-    <div>
+    <div className="lg:flex lg:items-start lg:gap-6">
+    <div className={`${selectedId ? 'hidden lg:block' : 'block'} lg:w-[380px] lg:shrink-0`}>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Logbook</h1>
         <div className="flex gap-2">
@@ -111,8 +114,8 @@ export default function Logbook() {
       <ul className="stagger mt-2 space-y-2">
         {visible.map((f) => (
           <li key={f.id}>
-            <Card as="button" onClick={() => navigate(`/logbook/${f.id}`)}
-              className="w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800">
+            <Card as="button" onClick={() => navigate(`/logbook/${f.id}`)} aria-current={String(f.id) === selectedId ? 'true' : undefined}
+              className={`w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800 ${String(f.id) === selectedId ? 'lg:border-accent' : ''}`}>
               <div className="flex items-baseline justify-between">
                 <span className="text-base font-medium">{f.departure_airport || '—'} → {f.arrival_airport || '—'}</span>
                 <span className="text-lg font-semibold text-accent">{fmtHours(f.total_time)}</span>
@@ -138,9 +141,21 @@ export default function Logbook() {
 
       <Link to="/logbook/new" aria-label="Add flight"
         style={{ bottom: 'calc(var(--bottom-nav-h) + 1rem)' }}
-        className="fixed right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink shadow-lg shadow-accent/30 active:scale-95 active:bg-accent-dark">
+        className="fixed right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink shadow-lg shadow-accent/30 active:scale-95 active:bg-accent-dark md:bottom-6">
         <Plus size={28} strokeWidth={2.25} />
       </Link>
+    </div>
+
+    {/* Detail pane: full-screen (via the nested /logbook/:id route) below lg, a persistent side panel
+        with a placeholder when nothing's selected from lg up — never just a stretched phone layout. */}
+    <div className={`${selectedId ? 'block' : 'hidden lg:block'} min-w-0 flex-1`}>
+      {selectedId ? <Outlet /> : (
+        <div className="sticky top-10 hidden flex-col items-center justify-center rounded-2xl border border-dashed border-edge p-12 text-center text-slate-500 lg:flex">
+          <BookOpen size={32} strokeWidth={1.5} className="mb-3 text-slate-600" />
+          <p className="text-sm">Select a flight to see its details here.</p>
+        </div>
+      )}
+    </div>
     </div>
   );
 }
