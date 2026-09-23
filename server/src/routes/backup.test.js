@@ -54,6 +54,7 @@ test('round trip: export -> restore into an empty database -> export again match
   await call('POST', '/reviews', { date: '2026-05-01' });
   await call('POST', '/expirations', { kind: 'medical', label: '3rd Class', expires_date: '2027-01-01' });
   await call('PUT', '/milestone-completions/private/solo_xc_150nm', { completed_at: '2026-04-01', note: 'KPAO-KSNS-KWVI-KPAO' });
+  await call('PUT', '/settings', { home_airport_ident: 'KPAO', min_ceiling_ft: 1000, max_crosswind_kt: 10 });
 
   const before = await (await call('GET', '/backup/export')).json();
   assert.equal(before.tables.flights.length, 2); // the one from the previous test plus this one
@@ -63,6 +64,8 @@ test('round trip: export -> restore into an empty database -> export again match
   assert.equal(before.tables.flight_reviews.length, 1);
   assert.equal(before.tables.expirations.length, 1);
   assert.equal(before.tables.milestone_completions.length, 1);
+  assert.equal(before.tables.pilot_settings.length, 1);
+  assert.equal(before.tables.pilot_settings[0].home_airport_ident, 'KPAO');
 
   const restore = await call('POST', '/backup/restore', { ...before, mode: 'replace' });
   assert.equal(restore.status, 200);

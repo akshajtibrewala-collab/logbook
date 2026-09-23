@@ -8,6 +8,7 @@ import milestones from './routes/milestones.js';
 import milestoneCompletions from './routes/milestone-completions.js';
 import expirations from './routes/expirations.js';
 import backup from './routes/backup.js';
+import settings from './routes/settings.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -27,6 +28,7 @@ app.use('/api/milestones', milestones);
 app.use('/api/milestone-completions', milestoneCompletions);
 app.use('/api/expirations', expirations);
 app.use('/api/backup', backup);
+app.use('/api/settings', settings);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });
