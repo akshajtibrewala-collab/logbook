@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import BottomNav from './components/BottomNav.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Logbook from './pages/Logbook.jsx';
@@ -48,6 +49,7 @@ export default function App() {
         </Suspense>
       </main>
       <BottomNav />
+      <Analytics />
     </div>
   );
 }
