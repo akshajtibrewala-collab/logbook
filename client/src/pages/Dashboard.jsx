@@ -98,14 +98,16 @@ export default function Dashboard() {
       { label: 'Medical certificate', result: data.medical },
       ...customExpirations(expirations, now).map((r) => ({ label: r.item.label, result: r })),
     ];
-    const dates = flights.map((f) => f.date).sort();
-    const lastDate = dates[dates.length - 1] ?? null;
+    const lastFlight = flights.length
+      ? [...flights].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0]
+      : null;
     const reviewCount = flights.filter((f) => f.aircraft_id == null && daysBetween(f.date, now) >= 0 && daysBetween(f.date, now) <= 14).length;
     return pickSubline({
       currencyItems,
       hasFlights: flights.length > 0,
-      daysSinceLastFlight: lastDate ? daysBetween(lastDate, now) : null,
+      daysSinceLastFlight: lastFlight ? daysBetween(lastFlight.date, now) : null,
       reviewCount,
+      lastFlightWorkOn: lastFlight?.debrief_work_on?.trim() || null,
       closestMilestone,
       totalHoursThisYear: data.stats.year,
     });

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { timeBucket, candidateHeadlines, pickHeadline, pickSubline } from './greeting.js';
+import { timeBucket, candidateHeadlines, pickHeadline, pickSubline, SUBLINE_MAX_LENGTH } from './greeting.js';
 import { HEADLINES, PILOT_NAME, MAX_HEADLINE_LENGTH } from './greetings.js';
 
 const at = (h, m = 0) => new Date(2026, 8, 21, h, m);
@@ -106,6 +106,28 @@ test('subline tier 3: a logging gap, only once tiers 1–2 are clear, and only w
   assert.notEqual(pickSubline({ hasFlights: true, daysSinceLastFlight: 2 }).text, r.text);
   // No flights ever: the Dashboard's own empty state covers this, so the picker must not claim a "gap".
   assert.notEqual(pickSubline({ hasFlights: false, daysSinceLastFlight: 400 }).text, 'It’s been 400 days since your last flight. Log it?');
+});
+
+test('subline tier 4: last flight\'s debrief note, only once tiers 1–3 are clear', () => {
+  const r = pickSubline({ lastFlightWorkOn: 'crosswind landings' });
+  assert.equal(r.text, 'Last time: work on crosswind landings');
+  assert.equal(r.action, null);
+  // A logging gap (tier 3) still outranks a debrief note.
+  const gapWins = pickSubline({ hasFlights: true, daysSinceLastFlight: 10, lastFlightWorkOn: 'crosswind landings' });
+  assert.equal(/crosswind/.test(gapWins.text), false);
+});
+
+test('subline tier 4: a long note is truncated with an ellipsis, never wraps or exceeds the budget', () => {
+  const longNote = 'holding altitude better on instrument approaches in gusty crosswinds near the coast';
+  const r = pickSubline({ lastFlightWorkOn: longNote });
+  assert.ok(r.text.length <= SUBLINE_MAX_LENGTH);
+  assert.ok(r.text.endsWith('…'));
+  assert.ok(r.text.startsWith('Last time: work on holding'));
+});
+
+test('subline tier 4: no note on the last flight falls through to the next tier', () => {
+  const r = pickSubline({ lastFlightWorkOn: null, closestMilestone: { label: 'Total time', certificateLabel: 'Private Pilot', percent: 50 } });
+  assert.match(r.text, /Total time/);
 });
 
 test('subline tier 5: closest milestone, only once tiers 1–3 are clear', () => {

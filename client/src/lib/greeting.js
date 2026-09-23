@@ -36,6 +36,14 @@ export function pickHeadline({ date = new Date(), name = PILOT_NAME, previous = 
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+// Keeps the subline to one line on a phone (the same reason greetings.js caps headline length), but
+// unlike a headline a debrief note is arbitrary free text a pilot typed, so it's truncated with an
+// ellipsis rather than shrunk to fit — there's no length budget that makes every note readable otherwise.
+export const SUBLINE_MAX_LENGTH = 60;
+function truncate(text, max) {
+  return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
+}
+
 /**
  * Picks the Dashboard subline: one short, data-driven line with an optional action, tried in priority
  * order and stopping at the first that applies. Always returns something (the last tier is an
@@ -52,6 +60,8 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
  *   - daysSinceLastFlight: number | null
  *   - reviewCount: number of recently-logged flights missing an aircraft link (so aircraft-specific
  *     milestones can't count them yet)
+ *   - lastFlightWorkOn: string | null, the most recent flight's own debrief_work_on note (not scanned
+ *     back through older flights — if the last flight didn't leave one, this tier just doesn't apply)
  *   - closestMilestone: { label, certificateLabel, percent } | null, the nearest-to-complete requirement
  *     that isn't met yet
  *   - totalHoursThisYear: number
@@ -59,7 +69,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 export function pickSubline(facts) {
   const {
     currencyItems = [], hasFlights = false, daysSinceLastFlight = null,
-    reviewCount = 0, closestMilestone = null, totalHoursThisYear = 0,
+    reviewCount = 0, lastFlightWorkOn = null, closestMilestone = null, totalHoursThisYear = 0,
   } = facts;
 
   // 1. Expiring or expired items — the only tier allowed alarming wording, and only for items with a
@@ -86,8 +96,10 @@ export function pickSubline(facts) {
     return { text: `It’s been ${plural(daysSinceLastFlight, 'day')} since your last flight. Log it?`, action: { label: 'Add flight', to: '/logbook/new' } };
   }
 
-  // (4. Last flight's "what to work on" note — no such field exists in the data model yet, so this tier
-  // is skipped rather than guessed at. See the debrief field noted as future work.)
+  // 4. Last flight's own "what to work on" note, if it left one.
+  if (lastFlightWorkOn) {
+    return { text: truncate(`Last time: work on ${lastFlightWorkOn}`, SUBLINE_MAX_LENGTH), action: null };
+  }
 
   // 5. Closest milestone progress.
   if (closestMilestone) {
