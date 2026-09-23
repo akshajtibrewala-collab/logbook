@@ -68,6 +68,23 @@ if a button is worded differently, look for the closest match.
    ```
 4. In the Turso dashboard's data browser, check that `flights` has your rows.
 
+### Adding runways later (weather go/no-go checker)
+
+`npm run db:setup` (step 2 above) already includes `npm run seed:runways`, so a fresh Turso setup gets
+runway data automatically. If you're adding the weather checker to a **database that's already in
+production** (an existing Turso instance from before this feature), `runways` is empty until you seed it
+once, by hand, pointed at Turso:
+
+```bash
+npm run db:backup          # back up first — see "Branch and deploy safety" in CLAUDE.md
+npm run migrate -w server  # applies 011_pilot_settings and 012_runways if not already applied
+npm run seed:runways -w server
+```
+
+This is a separate, explicit step — it is **not** run automatically by `build:vercel` on every deploy
+(same as the existing airports seed), so it only touches production when you choose to run it. Skipping
+it isn't harmful: crosswind checks just report "no runway data for this airport" until you do.
+
 ### 4. Vercel (hosting)
 
 1. Sign up at **vercel.com** with GitHub, on the free **Hobby** plan.

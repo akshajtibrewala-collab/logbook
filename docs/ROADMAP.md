@@ -23,14 +23,25 @@ The core lifelong-logbook app, complete:
 - **Branding**: AeroTrail name, icon, PWA install.
 - Full test suite (`node:test`), mobile-first UI with light/dark mode, a bottom-nav-aware layout.
 
+## Phase 2 — in progress
+
+- **Manual milestone completions**, delivered: "Track manually" requirements can be checked off with a
+  date and optional note (tap to complete, tap again to undo), stored in `milestone_completions`
+  (010), counted toward each certificate's "X of Y met" progress, and included in JSON backup/restore.
+- **Weather go/no-go checker**, delivered: personal minimums (day and night ceiling/visibility/wind/
+  gust/crosswind) and a home airport (`pilot_settings`, 011), current METAR + TAF forecast for any
+  airport fetched server-side from aviationweather.gov with a short cache, decoded conditions compared
+  against those minimums (TAF TEMPO/PROB merged as worst-case and attributed by name), crosswind
+  computed per runway (`runways`, 012, seeded from OurAirports — see docs/DEPLOY.md for adding it to an
+  existing production database) with magnetic variation via NOAA's WMM, day/night minimums chosen by
+  real sunrise/sunset at the airport, a "Plan a flight" multi-leg forecast-at-ETA check, and a Dashboard
+  card for the home airport. See `server/src/lib/weather.js`, `server/src/lib/magvar.js`, and
+  `server/src/lib/daynight.js` for the pure logic, and `client/src/pages/Weather.jsx` /
+  `WeatherSettings.jsx` for the UI. Not yet verified in the browser by a human — the person building this
+  should click through it before relying on it.
+
 ## Known follow-ups
 
-- **"Track manually" milestone requirements have no completion tracking.** Requirements the data model
-  can't compute (single-flight geometry, recency windows — e.g. a solo 150nm cross-country) show a
-  "Track manually" badge with nothing behind it: no checkbox, no persisted state, nothing in the
-  per-certificate "X of Y met" count. Building this needs a small new table (something like
-  `milestone_completions(certificate, requirement_key, completed_at)`) plus UI to check them off. Not
-  built yet — mentioned once in a request but never scoped as its own task.
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,
   `custom_expirations`, `pilot_profile` are left over from the incident in `TURSO_RECONCILE.md` — created
   by another branch outside the migrations system, unused by current code. `pilot_profile` has one real
@@ -51,8 +62,6 @@ The core lifelong-logbook app, complete:
 
 ## Phase 2 ideas
 
-- **Weather go/no-go checker** against personal minimums (ceiling, visibility, crosswind, ...), pulling
-  current/forecast conditions for a route or airport.
 - **Oral exam study mode** with spaced repetition, tied to certificate/rating progress.
 - **Training cost tracker**: money spent per certificate/rating, cost per hour trends.
 - **Document vault**: medical certificate, pilot certificate, endorsements — scanned/photographed and
