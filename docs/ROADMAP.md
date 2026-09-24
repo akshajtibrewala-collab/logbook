@@ -65,9 +65,12 @@ Merged to `main` (2026-09-23). No migrations — nothing to back up before this 
   since it's the same `md`/`lg` breakpoints, not separate device logic. ("Costs" two-column treatment from
   the original request doesn't apply — there's no Costs page yet, see the Phase 2 idea below.)
 
-## Phase 2b — training cost tracker — delivered, not yet merged
+## Phase 2b — training cost tracker and weekly backups — delivered and deployed
 
-On branch `phase2b`. The Logbook is now the single place flights *and* ground-only sessions get logged:
+Merged to `main` and live in production (2026-09-23): migrations 013–017 applied and verified against a
+backup-first baseline (20 flights, 29.90 h, 134 day landings, 8 aircraft unchanged), then the pilot's invoice
+cost data applied by an idempotent atomic import; production shows $10,736.42 total spent and 14.40 ground
+hours. The Logbook is now the single place flights *and* ground-only sessions get logged:
 the + button offers "Log flight" or "Log ground session", both entry kinds show together in one date-
 ordered list (a filter narrows to All/Flights/Ground), and tapping either opens a matching detail/edit view
 (`GroundSessionForm.jsx`, `GroundSessionDetail.jsx`). `FlightForm`'s ground-instruction-hours field lives in
@@ -92,9 +95,19 @@ unit-tested against the plan's own worked examples ($442.50 for a 1.5hr dual les
 realistic-hours-target settings) are reached from Logbook's header icon row. CSV, JSON backup/restore, and
 their tests cover every new field/table.
 
-Locally imported the pilot's Elite Aviation invoice history into the Private phase (effective 2026-07-10,
+Imported the pilot's Elite Aviation invoice history into the Private phase (effective 2026-07-10,
 matching the phase's start) — 20 flights, 6 ground-only sessions, 6 expenses, matched idempotently by
-invoice number. That data lives only in the local database, never in this repo.
+invoice number (locally first, then production). That data lives only in the databases, never in this
+repo.
+
+Also delivered: the Costs page fixes (spending chart, total spent per flight hour = total ÷ all flight hours,
+a data-driven projection — remaining hours from Milestones, current-phase rates, average lesson length and
+ground time, a 50 h realistic target that auto-raises, an estimated finish date, and a "how this is
+calculated" breakdown — with one-time planned costs as the only manual input, migration 016); ground-only
+sessions in the CSV export/import (`entry_type` column); a default aircraft rate applied when a flight is
+logged in an aircraft with none; MM/DD/YYYY date display everywhere (storage/CSV/backup unchanged); and the
+automatic weekly backup (Vercel Cron + Resend email, `backup_runs` log from migration 017, status card,
+"Run backup now", Dashboard warning when failed or over 8 days old). Verified end to end on production.
 
 ## Known follow-ups
 
@@ -124,7 +137,7 @@ invoice number. That data lives only in the local database, never in this repo.
   still only style `active:` (touch), not `hover:`/`focus-visible:`, so trackpad users get little visual
   feedback pointing at a control before clicking it.
 
-## Phase 2b ideas (remaining)
+## Ideas (remaining)
 
 - **Oral exam study mode** with spaced repetition, tied to certificate/rating progress.
 - **Document vault**: medical certificate, pilot certificate, endorsements — scanned/photographed and

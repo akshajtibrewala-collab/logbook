@@ -2,8 +2,9 @@
 
 A personal pilot flight logbook and career-tracking app: flights (with structured stops and typed
 approaches), aircraft, currency/expirations, milestone progress toward certificates, a map and stats,
-manual milestone completions, and a weather go/no-go checker against personal minimums. Phase 1 and the
-first two Phase 2 features are complete and live — see `docs/ROADMAP.md` for what's next.
+manual milestone completions, a weather go/no-go checker against personal minimums, and a training cost
+tracker (per-phase rates, ground-only sessions, expenses, projections). Phase 1, Phase 2 and Phase 2b's
+cost tracker plus weekly backups are complete and live — see `docs/ROADMAP.md` for what's next.
 
 ## Stack
 
@@ -57,6 +58,15 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
   `server/backups/`. **Always run `npm run db:backup:prod` before any migration or schema change touches
   Turso** — see `docs/DEPLOY.md`.
 
+- **Automatic weekly backup (production):** a Vercel Cron Job (`vercel.json`, Mondays 12:00 UTC) calls
+  `/api/cron/backup`, which emails the same JSON as "Export everything" (never airports/runways; gzipped
+  only at 1 MB+) via Resend to `BACKUP_EMAIL_TO`. That route is guarded by `CRON_SECRET` (`Bearer`, fails
+  closed if unset), not the app passcode. Runs are logged in `backup_runs` (last 12 kept); Import & export
+  shows the status and a **Run backup now** button, and the Dashboard warns if the last run failed or is
+  over 8 days old. Production-only env vars: `RESEND_API_KEY`, `BACKUP_EMAIL_TO`, `CRON_SECRET`
+  (optional `BACKUP_EMAIL_FROM`; default sender is `onboarding@resend.dev`, which only delivers to the
+  Resend account owner's address).
+
 ## Branch and deploy safety
 
 - **Never work directly on `main`.** Create a feature branch, do the work there, merge to `main` only
@@ -71,16 +81,29 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
   -w server`), verify the backup file, and say so explicitly — don't just merge silently.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
   recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
-  was reconciled and is current as of this writing: migrations 001–012 applied and verified (flights,
+  was reconciled and is current as of this writing: migrations 001–017 applied and verified (flights,
   hours, landings, and aircraft counts checked unchanged before/after each deploy), runways seeded
-  (39,566 rows).
+  (39,566 rows). Production's Phase 2b cost data (20 invoiced flights, 6 ground sessions, expenses) was
+  applied once with a separate, idempotent, atomic import (keyed on `invoice_ref`); that data is personal and
+  lives only in the databases, never in the repo.
 - Only commit when asked. Run the full test suite once before each commit; otherwise run just the tests
   for what changed.
+
+## Conventions worth knowing
+
+- **Dates display as MM/DD/YYYY** everywhere, via the one string-based `formatDate` in
+  `client/src/lib/calendar.js` (never a `Date` conversion that could shift a day). Storage, the JSON backup
+  and CSV exports stay `YYYY-MM-DD`.
+- **Costs are per training phase.** A flight/ground session only gets a calculated cost inside a phase with
+  cost tracking on, using that phase's own rates (`client/src/lib/cost.js`); outside one, cost is `null`
+  ("Not tracked"), never $0. Ending a phase freezes its totals. A manual cost override applies anywhere.
+- Hours always display with two decimals (`fmtHours`).
 
 ## Status
 
 Phase 1 is complete. Phase 2's manual milestone completions, weather go/no-go checker, and the
-time-zone/date-picker/tablet-layout UX pass are all complete, merged to `main`, and deployed to
+time-zone/date-picker/tablet-layout UX pass, plus Phase 2b's training cost tracker, unified logbook (flights
+and ground sessions), and weekly email backups, are all complete, merged to `main`, and deployed to
 production. See `docs/ROADMAP.md` for what was delivered, known follow-ups (including two open UX gaps —
 no on-screen-keyboard-covers-Save-button handling, and no broader hover-state/focus-ring audit), and
-further Phase 2 ideas.
+further ideas (study mode and the document vault, with the auth hardening the vault needs, are next).
