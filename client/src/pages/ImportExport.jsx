@@ -7,6 +7,7 @@ import { fmtHours } from '../lib/hours.js';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { formatDate, formatInstant } from '../lib/calendar.js';
+import BackupStatus from '../components/BackupStatus.jsx';
 
 function download(filename, text) {
   const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }); // BOM so Excel reads UTF-8
@@ -216,6 +217,7 @@ export default function ImportExport() {
 
       <section className="card space-y-3 p-4">
         <h2 className="text-sm font-medium text-slate-300">Full backup</h2>
+        <BackupStatus />
         <p className="text-sm text-slate-400">
           Everything in one file — flights, stops, approaches, aircraft, flight reviews and expirations —
           for your own lifetime backup. Marked with a format version so a future version of the app can always read it back.

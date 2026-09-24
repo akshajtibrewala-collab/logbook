@@ -59,6 +59,8 @@ export const api = {
   updateSettings: (s) => request('PUT', '/settings', s),
   checkWeather: (ident) => request('GET', `/weather/${encodeURIComponent(ident)}`),
   planWeather: (legs) => request('POST', '/weather/plan', { legs }),
+  backupJobStatus: () => request('GET', '/backup-job/status'),
+  runBackupNow: () => request('POST', '/backup-job/run'),
   exportBackup: () => request('GET', '/backup/export'),
   restoreBackup: (backup, mode) => request('POST', '/backup/restore', mode ? { ...backup, mode } : backup),
 

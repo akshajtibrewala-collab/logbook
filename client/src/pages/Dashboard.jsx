@@ -11,6 +11,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import CurrencyStatusCard, { TONE } from '../components/CurrencyStatusCard.jsx';
 import WeatherDashboardCard from '../components/WeatherDashboardCard.jsx';
 import { fmtHours } from '../lib/hours.js';
+import BackupStatus from '../components/BackupStatus.jsx';
 import { pickHeadline, pickSubline } from '../lib/greeting.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations, daysBetween, summarize } from '../lib/currency.js';
 import { computeMilestones, certificateLabel } from '../lib/milestones.js';
@@ -198,6 +199,8 @@ export default function Dashboard() {
 
       {data && (
         <>
+          <BackupStatus compact />
+
           <div className="grid gap-4 md:grid-cols-2 md:items-start">
             <WeatherDashboardCard />
 

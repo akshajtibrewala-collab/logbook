@@ -11,6 +11,7 @@ import backup from './routes/backup.js';
 import settings from './routes/settings.js';
 import weather from './routes/weather.js';
 import costs from './routes/costs.js';
+import { cronRouter, backupJobRouter } from './routes/backup-job.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -20,6 +21,9 @@ app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); nex
 // Public: liveness, and whether the client needs to ask for a passcode.
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.get('/api/session', (req, res) => res.json({ required: passcodeRequired(), ok: passcodeOk(req) }));
+
+// The scheduled backup authenticates with its own CRON_SECRET (Vercel Cron sends it), not the app passcode.
+app.use('/api/cron', cronRouter);
 
 app.use('/api', requirePasscode);
 app.use('/api/flights', flights);
@@ -33,6 +37,7 @@ app.use('/api/backup', backup);
 app.use('/api/settings', settings);
 app.use('/api/weather', weather);
 app.use('/api/costs', costs);
+app.use('/api/backup-job', backupJobRouter);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });

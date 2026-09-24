@@ -25,10 +25,15 @@ const DELETE_ORDER = [...TABLES].reverse();
 
 const router = Router();
 
-router.get('/export', async (_req, res) => {
+/** The full backup object (personal tables only — never airports/runways/reference data). Shared by the export route and the scheduled job. */
+export async function buildBackup() {
   const tables = {};
   for (const t of TABLES) tables[t] = await all(`SELECT * FROM "${t}"`);
-  res.json({ format_version: FORMAT_VERSION, app: 'AeroTrail', exported_at: new Date().toISOString(), tables });
+  return { format_version: FORMAT_VERSION, app: 'AeroTrail', exported_at: new Date().toISOString(), tables };
+}
+
+router.get('/export', async (_req, res) => {
+  res.json(await buildBackup());
 });
 
 router.post('/restore', async (req, res) => {
