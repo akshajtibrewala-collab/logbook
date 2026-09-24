@@ -1,39 +1,10 @@
-// Pure map helpers: route colouring (by year or by aircraft) with a matching legend, the counters
-// ("airports visited", "states visited") and a per-airport summary. The map component only renders this.
+// Pure map helpers: the route colour, the counters ("airports visited", "states visited"), a per-airport
+// summary, and the animation preference. The map component only renders this.
 
-export const ROUTE_PALETTE = ['#38bdf8', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#2dd4bf', '#fb923c', '#94a3b8', '#f472b6', '#84cc16'];
-export const NEUTRAL_ROUTE = '#38bdf8';
-
-const yearOf = (date) => String(date).slice(0, 4);
-const aircraftOf = (flight) => (flight.aircraft || '').trim() || 'Unknown';
-
-/** The key a route is coloured by: its most recent flight's year, or its most recent flight's aircraft. */
-export function routeKey(route, mode) {
-  const latest = route.flights[0]; // buildMapData keeps route.flights newest-first
-  if (!latest) return null;
-  return mode === 'year' ? yearOf(latest.date) : mode === 'aircraft' ? aircraftOf(latest) : null;
-}
-
-/**
- * Assigns each distinct key a stable colour and returns { colorOf(route), legend: [{key, color, count}] }.
- * Years are ordered newest first; aircraft by number of routes. `mode: 'none'` colours everything alike.
- */
-export function buildRouteColors(routes, mode) {
-  if (mode !== 'year' && mode !== 'aircraft') return { colorOf: () => NEUTRAL_ROUTE, legend: [] };
-  const counts = new Map();
-  for (const r of routes) {
-    const k = routeKey(r, mode);
-    if (k !== null) counts.set(k, (counts.get(k) ?? 0) + 1);
-  }
-  const keys = [...counts.keys()].sort(mode === 'year'
-    ? (a, b) => b.localeCompare(a)
-    : (a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b));
-  const colors = new Map(keys.map((k, i) => [k, ROUTE_PALETTE[i % ROUTE_PALETTE.length]]));
-  return {
-    colorOf: (route) => colors.get(routeKey(route, mode)) ?? NEUTRAL_ROUTE,
-    legend: keys.map((key) => ({ key, color: colors.get(key), count: counts.get(key) })),
-  };
-}
+// One route colour, tuned per theme: the dark map tiles want a bright sky blue; the light-gray tiles need
+// a deeper blue or the line washes out (this is the app's own accent in each theme).
+const ROUTE_COLORS = { dark: '#38bdf8', light: '#0369a1' };
+export const routeColorFor = (theme) => (theme === 'light' ? ROUTE_COLORS.light : ROUTE_COLORS.dark);
 
 /** US state / country region code of an airport ("US-CA" -> "CA"); null when unknown or outside the US. */
 export function usState(airport) {
