@@ -7,7 +7,7 @@ import { flightCodes, airportCode } from '../lib/flightpath.js';
 import { useTheme } from '../lib/theme.js';
 import { greatCircle } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
-import { airportSummary, buildRouteColors, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
+import { airportSummary, routeColorFor, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
@@ -109,7 +109,6 @@ const prefersReducedMotion = () => {
   try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
 };
 
-const COLOR_MODES = [['none', 'Single'], ['year', 'By year'], ['aircraft', 'By aircraft']];
 const HIT_LINE_LIMIT = 300; // above this many routes, skip the extra invisible tap-target line per route
 
 /**
@@ -177,22 +176,6 @@ function PinSummary({ stop, photoCounts }) {
   );
 }
 
-function Legend({ legend, mode }) {
-  if (!legend.length) return null;
-  return (
-    <ul aria-label={mode === 'year' ? 'Route colours by year' : 'Route colours by aircraft'}
-      className="max-h-32 w-44 space-y-1 overflow-y-auto rounded-xl border border-edge-strong bg-navy-900/90 p-2.5 text-xs text-slate-300 backdrop-blur">
-      {legend.map((l) => (
-        <li key={l.key} className="flex items-center gap-2">
-          <span className="h-1 w-5 shrink-0 rounded-full" style={{ background: l.color }} />
-          <span className="min-w-0 flex-1 truncate">{l.key}</span>
-          <span className="text-slate-500">{l.count}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 const Stat = ({ label, value }) => (
   <div><div className="text-base font-semibold leading-tight">{value}</div><div className="text-[11px] text-slate-400">{label}</div></div>
 );
@@ -202,7 +185,6 @@ export default function MapPage() {
   const [airports, setAirports] = useState({});
   const [photoCounts, setPhotoCounts] = useState({});
   const [error, setError] = useState('');
-  const [mode, setMode] = useState('none');
   const [animate, setAnimate] = useState(() => loadAnimatePref(prefersReducedMotion()));
   const [plays, setPlays] = useState(0); // bumped by the replay button; also re-runs the draw-in
   const [playOnce, setPlayOnce] = useState(false); // a replay while "Animate routes" is off
@@ -230,7 +212,7 @@ export default function MapPage() {
   const points = useMemo(() => data?.stops.map((s) => [s.lat, s.lon]) ?? [], [data]);
   const counts = useMemo(() => visitedCounts(data?.stops ?? []), [data]);
   const totalHours = useMemo(() => (flights ?? []).reduce((s, f) => s + (Number(f.total_time) || 0), 0), [flights]);
-  const { colorOf, legend } = useMemo(() => buildRouteColors(data?.routes ?? [], mode), [data, mode]);
+  const routeColor = routeColorFor(theme); // one route colour, tuned for the current map tiles
   // Great-circle geometry, oriented along the flight direction, computed once per route set (not on
   // every colour/animation change).
   const lines = useMemo(() => (data?.routes ?? []).map((r) => ({
@@ -261,7 +243,7 @@ export default function MapPage() {
         <FitBounds points={points} />
 
         {lines.map(({ route: r, key, positions, label }, i) => {
-          const stroke = colorOf(r);
+          const stroke = routeColor;
           const weight = 1.5 + 2.5 * (r.count / maxRoute);
           const popup = (
             <Popup>
@@ -323,14 +305,8 @@ export default function MapPage() {
               )}
               {!counts.regionsKnown && <p className="mt-2 text-[11px] text-slate-500">States visited appears once the airport database is re-seeded (npm run seed).</p>}
 
-              <div className="mt-3 border-t border-edge pt-3">
-                <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Colour routes">
-                  {COLOR_MODES.map(([k, l]) => (
-                    <button key={k} type="button" onClick={() => setMode(k)} aria-pressed={mode === k}
-                      className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${mode === k ? 'bg-accent text-ink' : 'text-slate-300'}`}>{l}</button>
-                  ))}
-                </div>
-                <label className="mt-2 flex min-h-11 items-center justify-between gap-2 text-xs text-slate-300">
+              <div className="mt-3 border-t border-edge pt-1">
+                <label className="flex min-h-11 items-center justify-between gap-2 text-xs text-slate-300">
                   <span>Animate routes{!affordable && lines.length > ANIMATE_ROUTE_LIMIT ? ' (off: many routes)' : ''}</span>
                   <input type="checkbox" checked={animate} onChange={(e) => toggleAnimate(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />
                 </label>
@@ -342,16 +318,11 @@ export default function MapPage() {
 
       <AttributionToggle />
 
-      {(legend.length > 0 || (data && data.unresolved.length > 0)) && (
-        <div className="absolute bottom-3 left-3 right-16 z-[1000] flex flex-col items-start gap-2">
-          <Legend legend={legend} mode={mode} />
-          {data && data.unresolved.length > 0 && (
-            <p className="rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">
-              Couldn’t place {data.unresolved.join(', ')} — check the airport code
-              {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.
-            </p>
-          )}
-        </div>
+      {data && data.unresolved.length > 0 && (
+        <p className="absolute bottom-3 left-3 right-16 z-[1000] rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">
+          Couldn’t place {data.unresolved.join(', ')} — check the airport code
+          {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.
+        </p>
       )}
 
       {error && <p role="alert" className="absolute left-4 right-4 top-4 z-[1000] rounded-xl bg-bad/90 p-3 text-sm text-white">{error}</p>}

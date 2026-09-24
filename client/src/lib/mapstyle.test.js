@@ -1,36 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRouteColors, routeKey, usState, visitedCounts, airportSummary, shouldAnimateRoutes, loadAnimatePref, saveAnimatePref, orientedPositions, ROUTE_PALETTE, NEUTRAL_ROUTE } from './mapstyle.js';
+import { routeColorFor, usState, visitedCounts, airportSummary, shouldAnimateRoutes, loadAnimatePref, saveAnimatePref, orientedPositions } from './mapstyle.js';
 
-const route = (aircraft, date) => ({ flights: [{ aircraft, date, hours: 1 }] });
-
-test('colouring by year: newest year first, stable palette order', () => {
-  const routes = [route('C172', '2025-06-01'), route('C172', '2026-01-01'), route('PA28', '2026-02-01')];
-  const { colorOf, legend } = buildRouteColors(routes, 'year');
-  assert.deepEqual(legend.map((l) => [l.key, l.count]), [['2026', 2], ['2025', 1]]);
-  assert.equal(colorOf(routes[1]), ROUTE_PALETTE[0]);
-  assert.equal(colorOf(routes[0]), ROUTE_PALETTE[1]);
+test('routes use one colour per theme: a bright blue on dark tiles, a deeper blue on light tiles', () => {
+  assert.equal(routeColorFor('dark'), '#38bdf8');
+  assert.equal(routeColorFor('light'), '#0369a1');
+  assert.equal(routeColorFor(undefined), '#38bdf8'); // anything unexpected falls back to the dark colour
+  assert.notEqual(routeColorFor('dark'), routeColorFor('light'));
 });
 
-test('colouring by aircraft: most routes first, blank grouped as Unknown', () => {
-  const routes = [route('C172 · N1', '2026-01-01'), route('C172 · N1', '2026-01-02'), route('', '2026-01-03')];
-  const { legend } = buildRouteColors(routes, 'aircraft');
-  assert.deepEqual(legend.map((l) => l.key), ['C172 · N1', 'Unknown']);
-  assert.equal(routeKey(routes[2], 'aircraft'), 'Unknown');
-});
-
-test('no colouring mode or no routes gives one neutral colour and no legend', () => {
-  const r = buildRouteColors([route('a', '2026-01-01')], 'none');
-  assert.equal(r.colorOf({}), NEUTRAL_ROUTE);
-  assert.deepEqual(r.legend, []);
-  assert.deepEqual(buildRouteColors([], 'year').legend, []);
-});
-
-test('more keys than palette colours wraps instead of failing', () => {
-  const routes = Array.from({ length: 14 }, (_, i) => route('', `${2000 + i}-01-01`));
-  const { legend } = buildRouteColors(routes, 'year');
-  assert.equal(legend.length, 14);
-  assert.ok(legend.every((l) => typeof l.color === 'string'));
+test('a leftover colour-mode value in storage is simply never read (no such preference exists any more)', () => {
+  const s = { getItem: (k) => (k === 'aerotrail-map-color-mode' ? 'year' : null), setItem: () => {} };
+  assert.equal(loadAnimatePref(false, s), true); // unaffected by an old saved colour mode
 });
 
 test('usState only reads US regions', () => {

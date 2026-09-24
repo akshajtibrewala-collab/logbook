@@ -119,8 +119,12 @@ automatic weekly backup (Vercel Cron + Resend email, `backup_runs` log from migr
   not rendered from `md`); Logbook and Aircraft headers carry the Add action on desktop.
 - **Stats**: hours by month, by tail number, cumulative line with a target (`lib/charts.js`, tested;
   target stored in `pilot_settings.hours_target` / `hours_target_label`, migration 018).
-- **Map**: animated routes (skipped for reduced motion and above 120 routes), colour by year/aircraft
-  with legend, pin mini-summary, counters (`lib/mapstyle.js`, tested), tile cache (`public/sw.js`).
+- **Map**: animated routes (draw-in, then flowing dashes; off by default under reduced motion and above
+  120 routes), one theme-aware route colour (a by-year / by-aircraft colour mode was built and later
+  removed), pin mini-summary, counters (`lib/mapstyle.js`, tested), tile cache (`public/sw.js`).
+- **Weather planning time zones**: a leg's time is stored as a UTC instant (`lib/planlegs.js`, tested); the
+  airport's zone only reads/displays it, so changing the airport never moves the moment. Missing zones
+  fall back to UTC with a message.
   States visited needs `airports.region` (migration 018 adds the column; the seed script fills it — re-seed).
 - **Photos**: `flight_photos` (migration 019), `routes/photos.js`, client-side compression
   (`lib/image.js`). Stored as base64 in the database rather than Vercel Blob so no extra service or token
