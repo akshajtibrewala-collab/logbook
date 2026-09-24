@@ -38,7 +38,10 @@ export function buildMapData(flights, airports) {
       const key = `${x}|${y}`;
       if (legs.has(key)) continue;
       legs.add(key);
-      const r = routes.get(key) ?? { a: touched.get(x), b: touched.get(y), count: 0, hours: 0, flights: [] };
+      const r = routes.get(key) ?? { a: touched.get(x), b: touched.get(y), count: 0, hours: 0, flights: [], origin: null, originDate: '' };
+      // Direction: which end the most recent flight on this leg started from (used to animate the line
+      // departure -> destination). Ties keep the first seen.
+      if (f.date > r.originDate) { r.origin = path[i - 1].ident; r.originDate = f.date; }
       r.count++;
       r.hours += Number(f.total_time) || 0;
       r.flights.push({ id: f.id, date: f.date, aircraft: [f.aircraft_type, f.tail_number].filter(Boolean).join(' · '), hours: Number(f.total_time) || 0 });
