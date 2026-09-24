@@ -8,10 +8,9 @@ import ErrorNote from '../components/ErrorNote.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Card from '../components/Card.jsx';
 import CurrencyStatusCard, { TONE, daysText } from '../components/CurrencyStatusCard.jsx';
+import { formatDate as fmtDate } from '../lib/calendar.js';
 
 const today = () => new Date().toLocaleDateString('en-CA');
-const fmtDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function Currency() {
   const navigate = useNavigate();

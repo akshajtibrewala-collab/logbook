@@ -8,9 +8,8 @@ import { useTheme } from '../lib/theme.js';
 import { greatCircle } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
 import { fmtHours } from '../lib/hours.js';
+import { formatDate as fmtDate } from '../lib/calendar.js';
 
-const fmtDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Frequency -> size and color (cool sky for one-offs, warming to amber for home bases).
 const diameter = (visits, max) => Math.round(18 + 18 * Math.sqrt(visits / max));

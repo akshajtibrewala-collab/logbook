@@ -11,6 +11,7 @@ import ErrorNote from '../components/ErrorNote.jsx';
 import Card from '../components/Card.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Modal from '../components/Modal.jsx';
+import { formatDate as fmtDate } from '../lib/calendar.js';
 
 const CATEGORIES = [
   ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual'], ['solo_time', 'Solo'],
@@ -24,8 +25,6 @@ const SORTS = {
   longest: (a, b) => b.hours - a.hours,
 };
 
-const fmtDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 const selectCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent';
 

@@ -14,6 +14,7 @@ import { fmtHours } from '../lib/hours.js';
 import { pickHeadline, pickSubline } from '../lib/greeting.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations, daysBetween, summarize } from '../lib/currency.js';
 import { computeMilestones, certificateLabel } from '../lib/milestones.js';
+import { formatDate as fmtDate } from '../lib/calendar.js';
 
 const LAST_GREETING_KEY = 'aerotrail-last-greeting';
 const getLastGreeting = () => { try { return localStorage.getItem(LAST_GREETING_KEY); } catch { return null; } };
@@ -21,8 +22,6 @@ const setLastGreeting = (template) => { try { localStorage.setItem(LAST_GREETING
 
 const today = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
 
-const fmtDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 const StatusCard = CurrencyStatusCard;
 

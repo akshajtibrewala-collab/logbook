@@ -7,7 +7,7 @@ import {
   buildCertificateProjection, fmtMoney, pickRate,
 } from '../lib/cost.js';
 import { certificateLabel, computeMilestones, completionsByKey } from '../lib/milestones.js';
-import { todayISO } from '../lib/calendar.js';
+import { todayISO, formatDate } from '../lib/calendar.js';
 import Card from '../components/Card.jsx';
 import Select from '../components/Select.jsx';
 import DatePicker from '../components/DatePicker.jsx';
@@ -213,7 +213,7 @@ export default function Costs() {
                     <div>
                       <div className="font-medium">{certificateLabel(p.certificate)}</div>
                       <div className="text-xs text-slate-500">
-                        {p.start_date} – {p.end_date ?? 'ongoing'}{p.end_date ? ' · closed' : ''}{!p.track_costs ? ' · not tracked' : ''}
+                        {formatDate(p.start_date)} – {p.end_date ? formatDate(p.end_date) : 'ongoing'}{p.end_date ? ' · closed' : ''}{!p.track_costs ? ' · not tracked' : ''}
                       </div>
                     </div>
                     <span className="text-base font-semibold">{fmtMoney(computed.perCert[p.certificate] ?? 0)}</span>
@@ -261,7 +261,7 @@ export default function Costs() {
                     </div>
                   </div>
                   {p.finishDate && (
-                    <p className="text-sm text-slate-300">Estimated finish: <span className="font-medium">{p.finishDate}</span>
+                    <p className="text-sm text-slate-300">Estimated finish: <span className="font-medium">{formatDate(p.finishDate)}</span>
                       <span className="text-xs text-slate-500"> (at your recent pace of {bd.frequency.lessonsPerWeek} flights/week)</span></p>
                   )}
                   <details className="text-xs text-slate-400">
@@ -296,7 +296,7 @@ export default function Costs() {
                   <li key={e.id} className="flex items-center justify-between gap-3 py-3">
                     <button type="button" onClick={() => setExpenseModal({ ...e, amount: String(e.amount) })} className="min-w-0 flex-1 text-left">
                       <div className="text-sm">{categoryLabel(e.category)}{e.note ? ` — ${e.note}` : ''}</div>
-                      <div className="text-xs text-slate-500">{e.date}</div>
+                      <div className="text-xs text-slate-500">{formatDate(e.date)}</div>
                     </button>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{fmtMoney(e.amount)}</span>

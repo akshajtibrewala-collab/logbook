@@ -178,3 +178,26 @@ test('planned cost requires a label and a certificate', async () => {
   assert.ok(body.errors.certificate);
   assert.ok(body.errors.label);
 });
+
+test('logging a flight in an aircraft with no rate gives it the phase default rate, effective from the phase start', async () => {
+  await call('PUT', '/costs/phases/private', { start_date: '2026-07-10', end_date: null, track_costs: true });
+  const aircraft = await (await call('POST', '/aircraft', { tail_number: 'N999ZZ', model: '172S' })).json();
+  await call('POST', '/flights', { date: '2026-08-01', total_time: 1, aircraft_id: aircraft.id });
+  let rates = (await (await call('GET', '/costs/rates/aircraft')).json()).filter((r) => r.aircraft_id === aircraft.id);
+  assert.equal(rates.length, 1);
+  assert.equal(rates[0].certificate, 'private');
+  assert.equal(rates[0].effective_date, '2026-07-10');
+  assert.equal(rates[0].rental_rate_per_hr, 195);
+  assert.equal(rates[0].fuel_surcharge_per_hr, 15);
+
+  await call('POST', '/flights', { date: '2026-08-02', total_time: 1, aircraft_id: aircraft.id }); // second flight: no duplicate
+  rates = (await (await call('GET', '/costs/rates/aircraft')).json()).filter((r) => r.aircraft_id === aircraft.id);
+  assert.equal(rates.length, 1);
+});
+
+test('a flight outside any cost-tracked phase does not create a default rate', async () => {
+  const aircraft = await (await call('POST', '/aircraft', { tail_number: 'N888YY', model: '172S' })).json();
+  await call('POST', '/flights', { date: '2020-01-01', total_time: 1, aircraft_id: aircraft.id });
+  const rates = (await (await call('GET', '/costs/rates/aircraft')).json()).filter((r) => r.aircraft_id === aircraft.id);
+  assert.equal(rates.length, 0);
+});

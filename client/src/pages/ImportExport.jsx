@@ -6,6 +6,7 @@ import { flightsToCsv, parseImport, TEMPLATE_CSV } from '../lib/csv.js';
 import { fmtHours } from '../lib/hours.js';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { formatDate, formatInstant } from '../lib/calendar.js';
 
 function download(filename, text) {
   const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }); // BOM so Excel reads UTF-8
@@ -52,11 +53,11 @@ export default function ImportExport() {
     setBusy(true);
     setMessage(null);
     try {
-      const flights = await api.listFlights();
-      if (!flights.length) return setMessage({ kind: 'error', text: 'Your logbook is empty, nothing to export.' });
+      const [flights, sessions] = await Promise.all([api.listFlights(), api.listGroundSessions()]);
+      if (!flights.length && !sessions.length) return setMessage({ kind: 'error', text: 'Your logbook is empty, nothing to export.' });
       const rows = [...flights].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
-      download(`logbook-${new Date().toLocaleDateString('en-CA')}.csv`, flightsToCsv(rows));
-      setMessage({ kind: 'ok', text: `Exported ${flights.length} flight${flights.length === 1 ? '' : 's'}.` });
+      download(`logbook-${new Date().toLocaleDateString('en-CA')}.csv`, flightsToCsv(rows, [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)));
+      setMessage({ kind: 'ok', text: `Exported ${flights.length} flight${flights.length === 1 ? '' : 's'} and ${sessions.length} ground session${sessions.length === 1 ? '' : 's'}.` });
     } catch (e) {
       setMessage({ kind: 'error', text: e.message });
     } finally {
@@ -73,7 +74,8 @@ export default function ImportExport() {
     try {
       const flights = existing ?? (await api.listFlights());
       setExisting(flights);
-      const result = parseImport(await file.text(), flights);
+      const sessions = await api.listGroundSessions();
+      const result = parseImport(await file.text(), flights, sessions);
       setPreview({ name: file.name, result });
       setIncludeDupes(false);
     } catch (err) {
@@ -86,17 +88,21 @@ export default function ImportExport() {
   const summary = useMemo(() => {
     const rows = preview?.result.rows ?? [];
     const count = (s) => rows.filter((r) => r.status === s).length;
-    return { ready: count('ready'), duplicate: count('duplicate'), error: count('error') };
+    const gCount = (st) => (preview?.result.ground ?? []).filter((r) => r.status === st).length;
+    return { ready: count('ready'), duplicate: count('duplicate'), error: count('error'), gReady: gCount('ready'), gDuplicate: gCount('duplicate'), gError: gCount('error') };
   }, [preview]);
   const toImport = summary.ready + (includeDupes ? summary.duplicate : 0);
+  const groundToImport = summary.gReady + (includeDupes ? summary.gDuplicate : 0);
 
   async function runImport() {
-    const { rows, reviews } = preview.result;
+    const { rows, reviews, ground } = preview.result;
+    const chosenGround = (ground ?? []).filter((r) => r.status === 'ready' || (includeDupes && r.status === 'duplicate'));
     const chosen = rows.filter((r) => r.status === 'ready' || (includeDupes && r.status === 'duplicate'));
     setBusy(true);
     setMessage(null);
     try {
-      const { inserted, failed } = await api.bulkCreateFlights(chosen.map((r) => r.flight));
+      const { inserted, failed } = chosen.length ? await api.bulkCreateFlights(chosen.map((r) => r.flight)) : { inserted: 0, failed: [] };
+      for (const g of chosenGround) await api.createGroundSession(g.session);
       const known = new Set((await api.listReviews()).map((r) => r.date));
       const newReviews = reviews.filter((d) => !known.has(d));
       for (const d of newReviews) await api.addReview(d);
@@ -106,7 +112,7 @@ export default function ImportExport() {
         newReviews.length && `${newReviews.length} flight review${newReviews.length === 1 ? '' : 's'} logged`,
         failed.length && `${failed.length} rejected by the server`,
       ].filter(Boolean);
-      setMessage({ kind: failed.length ? 'error' : 'ok', text: `Imported ${inserted} flight${inserted === 1 ? '' : 's'}${extra.length ? ` · ${extra.join(' · ')}` : ''}.` });
+      setMessage({ kind: failed.length ? 'error' : 'ok', text: `Imported ${inserted} flight${inserted === 1 ? '' : 's'}${chosenGround.length ? ` and ${chosenGround.length} ground session${chosenGround.length === 1 ? '' : 's'}` : ''}${extra.length ? ` · ${extra.join(' · ')}` : ''}.` });
     } catch (err) {
       setMessage({ kind: 'error', text: err.message });
     } finally {
@@ -227,7 +233,7 @@ export default function ImportExport() {
         <section className="card space-y-3 p-4">
           <h2 className="text-sm font-medium text-slate-300">Restore preview — {restorePreview.name}</h2>
           <p className="text-xs text-slate-500">
-            Exported {restorePreview.data.exported_at ? new Date(restorePreview.data.exported_at).toLocaleString() : 'unknown date'}
+            Exported {restorePreview.data.exported_at ? formatInstant(restorePreview.data.exported_at) : 'unknown date'}
             {' · '}format v{restorePreview.data.format_version ?? '?'}
           </p>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -241,7 +247,7 @@ export default function ImportExport() {
           {sampleFlights.length > 0 && (
             <ul className="space-y-1 border-t border-edge pt-2 text-sm text-slate-300">
               {sampleFlights.map((f) => (
-                <li key={f.id}>{f.date} · {f.departure_airport || '—'} → {f.arrival_airport || '—'} · {fmtHours(f.total_time)} h</li>
+                <li key={f.id}>{formatDate(f.date)} · {f.departure_airport || '—'} → {f.arrival_airport || '—'} · {fmtHours(f.total_time)} h</li>
               ))}
             </ul>
           )}
@@ -287,7 +293,7 @@ export default function ImportExport() {
                 <li key={r.row} className="card flex gap-3 p-3 text-sm">
                   <Icon size={18} className={`mt-0.5 shrink-0 ${cls}`} />
                   <div className="min-w-0">
-                    <div className="font-medium">Row {r.row}{r.flight?.date ? ` · ${r.flight.date}` : ''}{r.flight?.departure_airport ? ` · ${r.flight.departure_airport} → ${r.flight.arrival_airport || '—'}` : ''}</div>
+                    <div className="font-medium">Row {r.row}{r.flight?.date ? ` · ${formatDate(r.flight.date)}` : ''}{r.flight?.departure_airport ? ` · ${r.flight.departure_airport} → ${r.flight.arrival_airport || '—'}` : ''}</div>
                     <div className="text-slate-400">
                       {r.status === 'duplicate' ? `Already ${r.duplicateOf === 'logbook' ? 'in your logbook' : 'earlier in this file'}` : r.errors.join('; ')}
                     </div>
@@ -296,10 +302,13 @@ export default function ImportExport() {
               );
             })}
           </ul>
+          {summary.gReady + summary.gDuplicate + summary.gError > 0 && (
+            <p className="text-sm text-slate-300">Ground sessions: {summary.gReady} ready{summary.gDuplicate ? `, ${summary.gDuplicate} duplicate` : ''}{summary.gError ? `, ${summary.gError} with errors (skipped)` : ''}.</p>
+          )}
           {summary.duplicate + summary.error > 100 && <p className="text-xs text-slate-500">Showing the first 100 problem rows.</p>}
 
-          <button onClick={runImport} disabled={busy || toImport === 0} className={`${btn} bg-accent text-ink active:bg-accent-dark`}>
-            {busy ? 'Importing…' : toImport === 0 ? 'Nothing to import' : `Import ${toImport} flight${toImport === 1 ? '' : 's'}`}
+          <button onClick={runImport} disabled={busy || toImport + groundToImport === 0} className={`${btn} bg-accent text-ink active:bg-accent-dark`}>
+            {busy ? 'Importing…' : toImport + groundToImport === 0 ? 'Nothing to import' : `Import ${toImport} flight${toImport === 1 ? '' : 's'}${groundToImport ? ` + ${groundToImport} ground session${groundToImport === 1 ? '' : 's'}` : ''}`}
           </button>
           <button onClick={() => setPreview(null)} className="h-10 w-full text-sm text-slate-400">Cancel</button>
         </section>

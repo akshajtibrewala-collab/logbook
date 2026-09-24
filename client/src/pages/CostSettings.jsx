@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { fmtMoney } from '../lib/cost.js';
 import { certificateLabel } from '../lib/milestones.js';
-import { todayISO } from '../lib/calendar.js';
+import { todayISO, formatDate } from '../lib/calendar.js';
 import TextField from '../components/TextField.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import Toggle from '../components/Toggle.jsx';
@@ -41,7 +41,7 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
       {sorted.length === 0 && !adding && <p className="text-sm text-slate-500">No rate set yet.</p>}
       {sorted.map((r) => (
         <div key={r.id} className="flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm">
-          <span className="text-slate-400">Effective {r.effective_date}</span>
+          <span className="text-slate-400">Effective {formatDate(r.effective_date)}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.hourly_rate)}/hr</span>
             <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
@@ -119,7 +119,7 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
       {sorted.length === 0 && !adding && <p className="text-xs text-slate-500">No rate set yet.</p>}
       {sorted.map((r) => (
         <div key={r.id} className="flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm">
-          <span className="text-slate-400">Effective {r.effective_date}</span>
+          <span className="text-slate-400">Effective {formatDate(r.effective_date)}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.rental_rate_per_hr)}/hr + {fmtMoney(r.fuel_surcharge_per_hr)}/hr fuel</span>
             <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
@@ -170,7 +170,7 @@ function PhaseCard({
         <div>
           <h2 className="text-base font-semibold">{certificateLabel(certificate)}</h2>
           <p className="mt-0.5 text-xs text-slate-400">
-            {phase ? `${phase.start_date} – ${phase.end_date ?? 'ongoing'}${phase.track_costs ? '' : ' · costs not tracked'}` : 'Not started'}
+            {phase ? `${formatDate(phase.start_date)} – ${phase.end_date ? formatDate(phase.end_date) : 'ongoing'}${phase.track_costs ? '' : ' · costs not tracked'}` : 'Not started'}
           </p>
         </div>
         <ChevronDown size={18} className={`shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />

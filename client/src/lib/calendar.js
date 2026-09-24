@@ -31,10 +31,25 @@ export function shiftMonth(y, m, delta) {
   return { y: Math.floor(idx / 12), m: (idx % 12) + 1 };
 }
 
-/** "Sep 4, 2026" (locale-aware); blank or invalid input gives "". */
+/** "09/04/2026" — pure string formatting of the calendar date, so no time zone can shift it; blank or invalid input gives "". */
 export function formatDate(iso) {
   const p = parseISO(iso);
-  return p ? new Date(Date.UTC(p.y, p.m - 1, p.d)).toLocaleDateString(undefined, { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  return p ? `${pad(p.m)}/${pad(p.d)}/${p.y}` : '';
+}
+
+/** "Fri 09/04/2026" — same, with the weekday of that calendar date (computed in UTC so it can't drift). */
+export function formatDateWithWeekday(iso) {
+  const p = parseISO(iso);
+  if (!p) return '';
+  const wd = new Date(Date.UTC(p.y, p.m - 1, p.d)).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short' });
+  return `${wd} ${formatDate(iso)}`;
+}
+
+/** "09/04/2026, 2:30 PM" for a real instant (e.g. a backup timestamp), in the viewer's local time. */
+export function formatInstant(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 // Date+time values use "YYYY-MM-DDTHH:mm" — the same shape a native <input type="datetime-local">
@@ -51,11 +66,10 @@ export function parseDateTime(s) {
   return parseISO(date) && hour <= 23 && minute <= 59 ? { date, hour, minute } : null;
 }
 
-/** "Sep 4, 2026, 2:30 PM" (locale-aware, local wall-clock time); blank or invalid input gives "". */
+/** "09/04/2026, 2:30 PM" (local wall-clock time, no zone conversion); blank or invalid input gives "". */
 export function formatDateTime(s) {
   const p = parseDateTime(s);
   if (!p) return '';
-  const { y, m, d } = parseISO(p.date);
-  return new Date(y, m - 1, d, p.hour, p.minute)
-    .toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const h12 = p.hour % 12 || 12;
+  return `${formatDate(p.date)}, ${h12}:${pad(p.minute)} ${p.hour < 12 ? 'AM' : 'PM'}`;
 }

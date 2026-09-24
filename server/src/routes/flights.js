@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { all, batchRun, get, run } from '../db.js';
+import { ensureAircraftRate } from '../lib/default-rate.js';
 import { parseFlight, parseStops, parseApproaches, FLIGHT_FIELDS } from '../validate.js';
 
 const STOPS_SELECT = 'SELECT airport_code, stop_type FROM flight_stops WHERE flight_id = ? ORDER BY sequence';
@@ -89,6 +90,7 @@ router.post('/', async (req, res) => {
   }
   if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
   const { lastId } = await run(INSERT, value);
+  await ensureAircraftRate(value.aircraft_id, value.date);
   if (stops) await saveStops(lastId, stops);
   if (approachTypes) await saveApproaches(lastId, approachTypes);
   const created = await get('SELECT * FROM flights WHERE id = ?', [lastId]);
@@ -118,6 +120,7 @@ router.post('/bulk', async (req, res) => {
     }
     if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : value.route;
     const { lastId } = await run(INSERT, value);
+    await ensureAircraftRate(value.aircraft_id, value.date);
     if (stops) await saveStops(lastId, stops);
     if (approachTypes) await saveApproaches(lastId, approachTypes);
     inserted++;
@@ -136,6 +139,7 @@ router.put('/:id', async (req, res) => {
   const set = FLIGHT_FIELDS.map((c) => `${c} = :${c}`).join(', ');
   const { changes } = await run(`UPDATE flights SET ${set}, updated_at = datetime('now') WHERE id = :id`, { ...value, id: req.params.id });
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
+  await ensureAircraftRate(value.aircraft_id, value.date);
   if (stops) await saveStops(req.params.id, stops);
   if (approachTypes) await saveApproaches(req.params.id, approachTypes);
   const updated = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);

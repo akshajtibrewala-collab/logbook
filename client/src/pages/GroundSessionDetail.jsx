@@ -6,9 +6,8 @@ import { fmtHours } from '../lib/hours.js';
 import { computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
+import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
 
-const fmtDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 function Section({ title, children }) {
   return (

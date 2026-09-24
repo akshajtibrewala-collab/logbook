@@ -8,6 +8,7 @@ import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Badge from '../components/Badge.jsx';
+import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
 
 const TIME_FIELDS = [
   ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
@@ -19,8 +20,6 @@ const COUNT_FIELDS = [
   ['approaches', 'Approaches'], ['holds', 'Holds'],
 ];
 
-const fmtDate = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 function Section({ title, children }) {
   return (

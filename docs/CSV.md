@@ -4,7 +4,7 @@ Open **Logbook → the swap icon (top right) → Import & export**.
 
 ## Export
 
-Writes every flight to `logbook-YYYY-MM-DD.csv`, oldest first, using the template columns below. Times are decimal hours
+Writes every flight and every ground-only session (`entry_type` = `ground`) to `logbook-YYYY-MM-DD.csv`, oldest first, using the template columns below. Times are decimal hours
 with two decimals. The file can be imported back unchanged.
 
 ## Import
@@ -24,6 +24,8 @@ missing is treated as 0 or blank.
 
 | Column | Notes |
 | --- | --- |
+| `entry_type` | `flight` (default when blank or absent) or `ground` for a ground-only session. A ground row uses only `date`, `ground_time` (its hours), `instructor`, `topics` and `remarks` (its notes) |
+| `instructor`, `topics` | who taught the flight or ground session, and what a ground session covered |
 | `date` | `YYYY-MM-DD` (also `M/D/YYYY`; `D/M/YYYY` when the first number is over 12) |
 | `departure_airport`, `arrival_airport` | 3–4 character ICAO/IATA codes |
 | `route` | the flight's stops, space separated (e.g. `KCOU KJEF`). Each becomes a structured stop, imported as a **full stop** — CSV can't express touch-and-go, so change any that were touch-and-gos in the flight's edit form |
@@ -49,3 +51,5 @@ column set add a flight review on that date to the Dashboard. LogTen-style heade
 `Day Landings`, …) are matched by name. Columns this app has no field for are listed in the preview as not imported.
 
 If a column you expected isn't picked up, rename its header to the template name above.
+
+Dates in the CSV are always `YYYY-MM-DD` on export (the app displays them as MM/DD/YYYY, but files stay unambiguous). Import also accepts `M/D/YYYY`.
