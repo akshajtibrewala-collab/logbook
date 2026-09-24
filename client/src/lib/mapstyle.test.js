@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRouteColors, routeKey, usState, visitedCounts, airportSummary, shouldAnimateRoutes, ROUTE_PALETTE, NEUTRAL_ROUTE } from './mapstyle.js';
+import { buildRouteColors, routeKey, usState, visitedCounts, airportSummary, shouldAnimateRoutes, loadAnimatePref, saveAnimatePref, orientedPositions, ROUTE_PALETTE, NEUTRAL_ROUTE } from './mapstyle.js';
 
 const route = (aircraft, date) => ({ flights: [{ aircraft, date, hours: 1 }] });
 
@@ -51,9 +51,34 @@ test('airportSummary totals hours and reports first/last visit', () => {
   assert.deepEqual(s, { visits: 2, hours: 1.75, last: '2026-02-01', first: '2026-01-01' });
 });
 
-test('animation is skipped for reduced motion and for very many routes', () => {
-  assert.equal(shouldAnimateRoutes(10, false), true);
-  assert.equal(shouldAnimateRoutes(10, true), false);
-  assert.equal(shouldAnimateRoutes(500, false), false);
-  assert.equal(shouldAnimateRoutes(0, false), false);
+test('animation runs only when enabled and the route count is affordable', () => {
+  assert.equal(shouldAnimateRoutes(21, true), true);
+  assert.equal(shouldAnimateRoutes(21, false), false);
+  assert.equal(shouldAnimateRoutes(500, true), false);
+  assert.equal(shouldAnimateRoutes(0, true), false);
+});
+
+const fakeStorage = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) }; };
+
+test('animate preference: default on, default off for reduced motion, a saved choice always wins', () => {
+  const s = fakeStorage();
+  assert.equal(loadAnimatePref(false, s), true);
+  assert.equal(loadAnimatePref(true, s), false);
+  saveAnimatePref(true, s); // switched on manually despite reduced motion
+  assert.equal(loadAnimatePref(true, s), true);
+  saveAnimatePref(false, s);
+  assert.equal(loadAnimatePref(false, s), false);
+});
+
+test('animate preference tolerates blocked storage', () => {
+  const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+  assert.equal(loadAnimatePref(false, blocked), true);
+  assert.doesNotThrow(() => saveAnimatePref(true, blocked));
+});
+
+test('orientedPositions flips a line so it runs from the route origin', () => {
+  const pts = [[0, 0], [1, 1], [2, 2]];
+  assert.deepEqual(orientedPositions({ origin: 'A', b: { ident: 'B' } }, pts), pts);
+  assert.deepEqual(orientedPositions({ origin: 'B', b: { ident: 'B' } }, pts), [[2, 2], [1, 1], [0, 0]]);
+  assert.deepEqual(orientedPositions({ origin: null, b: { ident: 'B' } }, pts), pts);
 });

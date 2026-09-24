@@ -63,10 +63,16 @@ body {
 /* Space to scroll the last row fully clear of the button: its 4rem height + 1rem gap + breathing room. */
 .fab-clearance { height: calc(4rem + 2rem); }
 
-/* Animated route lines: dashes flow from departure to arrival. Skipped for reduced-motion users (below)
-   and, in Map.jsx, when there are so many routes that animating them would cost frame rate. */
-@keyframes route-flow { to { stroke-dashoffset: -24; } }
-.route-flow { stroke-dasharray: 6 6; animation: route-flow 1.6s linear infinite; }
+/* Animated route lines (see RouteLine in Map.jsx). Two phases, applied to the route's own SVG path:
+     1. .route-draw  the line draws itself from departure to destination. Map.jsx sets pathLength="100"
+                     on the path for this phase so the dash maths is the same for a short hop and a long leg.
+     2. .route-flow  when the draw ends, faint dashes drift along the flight direction, forever.
+   The .route-anim rules opt these out of the blanket reduced-motion clamp below: whether they run is the
+   map's own "Animate routes" switch (which defaults to off when the device asks for reduced motion). */
+@keyframes route-draw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes route-flow { to { stroke-dashoffset: -28; } }
+.route-draw { stroke-dasharray: 100; stroke-dashoffset: 100; animation: route-draw 1.8s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.route-flow { stroke-dasharray: 7 9; animation: route-flow 2.4s linear infinite; }
 
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes sheet-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
@@ -95,7 +101,7 @@ body {
 .leaflet-container a.leaflet-popup-close-button { color: rgb(var(--slate-400)); }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *:not(.route-draw):not(.route-flow), *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* Airport markers. --z is the map's live zoom (kept in sync with Leaflet's own zoom animation by

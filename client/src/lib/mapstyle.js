@@ -64,6 +64,37 @@ export function airportSummary(stop) {
   return { visits: stop.visits, hours, last: stop.last, first: stop.first };
 }
 
-/** Whether animated dashed routes are affordable: many routes get a cheap static style instead. */
+/** Animating hundreds of SVG lines costs frame rate, so above this many routes they stay static. */
 export const ANIMATE_ROUTE_LIMIT = 120;
-export const shouldAnimateRoutes = (routeCount, reducedMotion) => !reducedMotion && routeCount > 0 && routeCount <= ANIMATE_ROUTE_LIMIT;
+
+/** Whether route animation runs: the pilot's setting is on and the route count is affordable. */
+export const shouldAnimateRoutes = (routeCount, enabled) => Boolean(enabled) && routeCount > 0 && routeCount <= ANIMATE_ROUTE_LIMIT;
+
+const ANIMATE_KEY = 'aerotrail-map-animate';
+const defaultStorage = () => { try { return globalThis.localStorage ?? null; } catch { return null; } };
+
+/**
+ * The remembered "Animate routes" choice. A saved choice always wins (so someone with reduced motion on
+ * can still switch it on and have that stick); with nothing saved it defaults to on, or off when the
+ * device asks for reduced motion.
+ */
+export function loadAnimatePref(reducedMotion, storage = defaultStorage()) {
+  try {
+    const saved = storage?.getItem(ANIMATE_KEY);
+    if (saved === '1') return true;
+    if (saved === '0') return false;
+  } catch { /* storage blocked: use the default */ }
+  return !reducedMotion;
+}
+
+export function saveAnimatePref(enabled, storage = defaultStorage()) {
+  try { storage?.setItem(ANIMATE_KEY, enabled ? '1' : '0'); } catch { /* remembering is a nicety */ }
+}
+
+/**
+ * Orients a route's points along the direction it was most recently flown, so animated dashes travel
+ * departure -> destination. `route.origin` is the ident it started from on that flight.
+ */
+export function orientedPositions(route, positions) {
+  return route.origin && route.origin === route.b.ident ? [...positions].reverse() : positions;
+}

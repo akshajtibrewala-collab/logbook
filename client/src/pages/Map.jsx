@@ -1,13 +1,13 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Plane, Info, X, Layers } from 'lucide-react';
+import { Plane, Info, X, ChevronDown, RotateCcw } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flightCodes, airportCode } from '../lib/flightpath.js';
 import { useTheme } from '../lib/theme.js';
 import { greatCircle } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
-import { airportSummary, buildRouteColors, shouldAnimateRoutes, visitedCounts, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
+import { airportSummary, buildRouteColors, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
@@ -112,6 +112,43 @@ const prefersReducedMotion = () => {
 const COLOR_MODES = [['none', 'Single'], ['year', 'By year'], ['aircraft', 'By aircraft']];
 const HIT_LINE_LIMIT = 300; // above this many routes, skip the extra invisible tap-target line per route
 
+/**
+ * One route's animated line. The animation classes are put on the line's own SVG <path> imperatively:
+ * react-leaflet applies `pathOptions` *after* the Leaflet layer is created, and Leaflet reads `className`
+ * only at creation, so a className passed through pathOptions never reaches the element (which is why
+ * the earlier version never animated).
+ *
+ * mode: 'loop'  draw in from departure, then dashes flow along the flight direction, forever
+ *       'once'  draw in, then settle (the replay button while "Animate routes" is off)
+ *       null    a plain static line
+ * `playKey` re-runs the draw-in; `delay` staggers routes so they don't all start in the same instant.
+ */
+function RouteLine({ positions, pathOptions, mode, playKey, delay, children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current?.getElement?.();
+    if (!el) return undefined;
+    const reset = () => { el.classList.remove('route-draw', 'route-flow'); el.removeAttribute('pathLength'); el.style.animationDelay = ''; };
+    reset();
+    if (!mode) return reset;
+    el.setAttribute('pathLength', '100');
+    el.style.animationDelay = `${delay}ms`;
+    void el.getBoundingClientRect(); // commit the reset so the draw-in restarts from the start
+    el.classList.add('route-draw');
+    const onEnd = (e) => {
+      if (e.animationName !== 'route-draw') return;
+      el.classList.remove('route-draw');
+      el.removeAttribute('pathLength'); // the dashes flow in real pixels, not path-length units
+      el.style.animationDelay = '';
+      if (mode === 'loop') el.classList.add('route-flow');
+      else { el.style.strokeDasharray = 'none'; el.style.strokeDashoffset = '0'; }
+    };
+    el.addEventListener('animationend', onEnd);
+    return () => { el.removeEventListener('animationend', onEnd); reset(); el.style.strokeDasharray = ''; el.style.strokeDashoffset = ''; };
+  }, [mode, playKey, delay, positions]);
+  return <Polyline ref={ref} positions={positions} interactive={false} pathOptions={pathOptions}>{children}</Polyline>;
+}
+
 // Mini-summary shown when an airport pin is tapped: visits, total hours, last visit, and (when the most
 // recent flights there have them) a note snippet and a photo, fetched only when the popup is open.
 function PinSummary({ stop, photoCounts }) {
@@ -144,7 +181,7 @@ function Legend({ legend, mode }) {
   if (!legend.length) return null;
   return (
     <ul aria-label={mode === 'year' ? 'Route colours by year' : 'Route colours by aircraft'}
-      className="mt-2 max-h-32 space-y-1 overflow-y-auto border-t border-edge pt-2 text-xs text-slate-300">
+      className="max-h-32 w-44 space-y-1 overflow-y-auto rounded-xl border border-edge-strong bg-navy-900/90 p-2.5 text-xs text-slate-300 backdrop-blur">
       {legend.map((l) => (
         <li key={l.key} className="flex items-center gap-2">
           <span className="h-1 w-5 shrink-0 rounded-full" style={{ background: l.color }} />
@@ -156,14 +193,20 @@ function Legend({ legend, mode }) {
   );
 }
 
+const Stat = ({ label, value }) => (
+  <div><div className="text-base font-semibold leading-tight">{value}</div><div className="text-[11px] text-slate-400">{label}</div></div>
+);
+
 export default function MapPage() {
   const [flights, setFlights] = useState(null);
   const [airports, setAirports] = useState({});
   const [photoCounts, setPhotoCounts] = useState({});
   const [error, setError] = useState('');
   const [mode, setMode] = useState('none');
-  const [animate, setAnimate] = useState(() => !prefersReducedMotion());
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [animate, setAnimate] = useState(() => loadAnimatePref(prefersReducedMotion()));
+  const [plays, setPlays] = useState(0); // bumped by the replay button; also re-runs the draw-in
+  const [playOnce, setPlayOnce] = useState(false); // a replay while "Animate routes" is off
+  const [open, setOpen] = useState(false);
   const theme = useTheme();
   const tileSet = theme === 'light' ? 'World_Light_Gray' : 'World_Dark_Gray'; // both are keyless Esri canvases
 
@@ -186,16 +229,22 @@ export default function MapPage() {
   );
   const points = useMemo(() => data?.stops.map((s) => [s.lat, s.lon]) ?? [], [data]);
   const counts = useMemo(() => visitedCounts(data?.stops ?? []), [data]);
+  const totalHours = useMemo(() => (flights ?? []).reduce((s, f) => s + (Number(f.total_time) || 0), 0), [flights]);
   const { colorOf, legend } = useMemo(() => buildRouteColors(data?.routes ?? [], mode), [data, mode]);
-  // Great-circle geometry is computed once per route set, not on every colour/animation toggle.
+  // Great-circle geometry, oriented along the flight direction, computed once per route set (not on
+  // every colour/animation change).
   const lines = useMemo(() => (data?.routes ?? []).map((r) => ({
     route: r,
     key: `${r.a.ident}-${r.b.ident}`,
-    positions: greatCircle([r.a.lat, r.a.lon], [r.b.lat, r.b.lon]),
+    positions: orientedPositions(r, greatCircle([r.a.lat, r.a.lon], [r.b.lat, r.b.lon])),
     label: `${airportCode(r.a)} ↔ ${airportCode(r.b)}`,
   })), [data]);
-  const animated = shouldAnimateRoutes(lines.length, !animate);
+  const affordable = shouldAnimateRoutes(lines.length, true);
+  const animMode = affordable ? (animate ? 'loop' : playOnce ? 'once' : null) : null;
   const manyRoutes = lines.length > HIT_LINE_LIMIT;
+
+  const toggleAnimate = (on) => { setAnimate(on); setPlayOnce(false); saveAnimatePref(on); if (on) setPlays((n) => n + 1); };
+  const replay = () => { if (!animate) setPlayOnce(true); setPlays((n) => n + 1); };
 
   return (
     <div className="relative isolate -mx-4 -mt-6 h-[calc(100dvh-var(--bottom-nav-h))] mb-[calc(-1*(var(--bottom-nav-h)+2rem))]">
@@ -211,8 +260,9 @@ export default function MapPage() {
         <ZoomTracker />
         <FitBounds points={points} />
 
-        {lines.map(({ route: r, key, positions, label }) => {
+        {lines.map(({ route: r, key, positions, label }, i) => {
           const stroke = colorOf(r);
+          const weight = 1.5 + 2.5 * (r.count / maxRoute);
           const popup = (
             <Popup>
               <div className="min-w-[11rem]">
@@ -226,12 +276,12 @@ export default function MapPage() {
           );
           return (
             <Fragment key={key}>
-              <Polyline positions={positions} interactive={manyRoutes}
-                pathOptions={{ color: stroke, weight: 1.5 + 2.5 * (r.count / maxRoute), opacity: 0.7, className: animated ? 'route-flow' : '' }}>
-                {manyRoutes && popup}
-              </Polyline>
+              {/* While animating, a faint full line underneath keeps the route readable as it draws in above it. */}
+              {animMode && <Polyline positions={positions} interactive={false} pathOptions={{ color: stroke, weight, opacity: 0.2 }} />}
+              <RouteLine positions={positions} mode={animMode} playKey={plays} delay={Math.min(i * 70, 1200)}
+                pathOptions={{ color: stroke, weight, opacity: animMode ? 0.85 : 0.7 }} />
               {/* Wide invisible line so thin routes are easy to tap */}
-              {!manyRoutes && <Polyline positions={positions} pathOptions={{ color: stroke, weight: 18, opacity: 0.01 }}>{popup}</Polyline>}
+              <Polyline positions={positions} pathOptions={{ color: stroke, weight: manyRoutes ? weight : 18, opacity: manyRoutes ? 0.01 : 0.01 }}>{popup}</Polyline>
             </Fragment>
           );
         })}
@@ -244,37 +294,65 @@ export default function MapPage() {
       </MapContainer>
 
       {data && data.stops.length > 0 && (
-        <section aria-label="Map summary and options" className="absolute left-3 top-3 z-[1000] w-56 rounded-2xl border border-edge-strong bg-navy-900/90 p-3 text-sm backdrop-blur">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-4">
-              <div><div className="text-lg font-semibold leading-none">{counts.airports}</div><div className="mt-1 text-[11px] text-slate-400">airports</div></div>
-              {counts.regionsKnown && <div><div className="text-lg font-semibold leading-none">{counts.states}</div><div className="mt-1 text-[11px] text-slate-400">{counts.states === 1 ? 'state' : 'states'}</div></div>}
-            </div>
-            <button type="button" onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen} aria-label={panelOpen ? 'Hide map options' : 'Show map options'}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-slate-300 active:text-accent">
-              <Layers size={18} />
+        <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-stats"
+              className="flex h-10 items-center gap-1.5 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 text-xs font-medium text-slate-100 backdrop-blur active:bg-navy-800">
+              <span>{counts.airports} airport{counts.airports === 1 ? '' : 's'}</span>
+              {counts.regionsKnown && <><span aria-hidden="true" className="text-slate-500">·</span><span>{counts.states} state{counts.states === 1 ? '' : 's'}</span></>}
+              <ChevronDown size={14} aria-hidden="true" className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            <button type="button" onClick={replay} aria-label="Replay route animation" disabled={!affordable}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent disabled:opacity-40">
+              <RotateCcw size={16} />
             </button>
           </div>
-          {panelOpen && (
-            <div className="mt-2 border-t border-edge pt-2">
-              <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Colour routes">
-                {COLOR_MODES.map(([k, l]) => (
-                  <button key={k} type="button" onClick={() => setMode(k)} aria-pressed={mode === k}
-                    className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${mode === k ? 'bg-accent text-ink' : 'text-slate-300'}`}>{l}</button>
-                ))}
+
+          {open && (
+            <section id="map-stats" aria-label="Map details and options" className="w-64 max-w-full rounded-2xl border border-edge-strong bg-navy-900/95 p-3 text-sm backdrop-blur">
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                <Stat label={counts.airports === 1 ? 'airport' : 'airports'} value={counts.airports} />
+                {counts.regionsKnown && <Stat label={counts.states === 1 ? 'state' : 'states'} value={counts.states} />}
+                {counts.countries > 1 && <Stat label="countries" value={counts.countries} />}
+                <Stat label="routes" value={lines.length} />
+                <Stat label="flights" value={flights.length} />
+                <Stat label="hours" value={fmtHours(totalHours)} />
               </div>
-              <label className="mt-2 flex min-h-11 items-center justify-between gap-2 text-xs text-slate-300">
-                Animate routes{lines.length > ANIMATE_ROUTE_LIMIT ? ' (off: many routes)' : ''}
-                <input type="checkbox" checked={animate} onChange={(e) => setAnimate(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />
-              </label>
-              <Legend legend={legend} mode={mode} />
+              {counts.regionsKnown && counts.stateCodes.length > 0 && (
+                <p className="mt-2 text-[11px] leading-snug text-slate-400">States: {counts.stateCodes.join(', ')}</p>
+              )}
               {!counts.regionsKnown && <p className="mt-2 text-[11px] text-slate-500">States visited appears once the airport database is re-seeded (npm run seed).</p>}
-            </div>
+
+              <div className="mt-3 border-t border-edge pt-3">
+                <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Colour routes">
+                  {COLOR_MODES.map(([k, l]) => (
+                    <button key={k} type="button" onClick={() => setMode(k)} aria-pressed={mode === k}
+                      className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${mode === k ? 'bg-accent text-ink' : 'text-slate-300'}`}>{l}</button>
+                  ))}
+                </div>
+                <label className="mt-2 flex min-h-11 items-center justify-between gap-2 text-xs text-slate-300">
+                  <span>Animate routes{!affordable && lines.length > ANIMATE_ROUTE_LIMIT ? ' (off: many routes)' : ''}</span>
+                  <input type="checkbox" checked={animate} onChange={(e) => toggleAnimate(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />
+                </label>
+              </div>
+            </section>
           )}
-        </section>
+        </div>
       )}
 
       <AttributionToggle />
+
+      {(legend.length > 0 || (data && data.unresolved.length > 0)) && (
+        <div className="absolute bottom-3 left-3 right-16 z-[1000] flex flex-col items-start gap-2">
+          <Legend legend={legend} mode={mode} />
+          {data && data.unresolved.length > 0 && (
+            <p className="rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">
+              Couldn’t place {data.unresolved.join(', ')} — check the airport code
+              {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.
+            </p>
+          )}
+        </div>
+      )}
 
       {error && <p role="alert" className="absolute left-4 right-4 top-4 z-[1000] rounded-xl bg-bad/90 p-3 text-sm text-white">{error}</p>}
 
@@ -285,13 +363,6 @@ export default function MapPage() {
             <p className="mt-3 font-medium">Loading your flights…</p>
           </div>
         </div>
-      )}
-
-      {data && data.unresolved.length > 0 && (
-        <p className="absolute bottom-3 left-3 right-16 z-[1000] rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">
-          Couldn’t place {data.unresolved.join(', ')} — check the airport code
-          {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.
-        </p>
       )}
 
       {data && data.stops.length === 0 && !error && (
