@@ -3,8 +3,9 @@
 A personal pilot flight logbook and career-tracking app: flights (with structured stops and typed
 approaches), aircraft, currency/expirations, milestone progress toward certificates, a map and stats,
 manual milestone completions, a weather go/no-go checker against personal minimums, and a training cost
-tracker (per-phase rates, ground-only sessions, expenses, projections). Phase 1, Phase 2 and Phase 2b's
-cost tracker plus weekly backups are complete and live — see `docs/ROADMAP.md` for what's next.
+tracker (per-phase rates, ground-only sessions, expenses, projections), plus fast logging (Quick log, copy last
+flight, offline retry), photos/notes, stats charts, an animated map, and a read-only share link/print view.
+Everything through migration 021 is merged and live — see `docs/ROADMAP.md` for details and what's next.
 
 ## Stack
 
@@ -31,8 +32,11 @@ cost tracker plus weekly backups are complete and live — see `docs/ROADMAP.md`
 
 ```bash
 npm run dev     # both workspaces; server on :3001, client on :5173 (proxies /api)
-npm test         # server tests, then client tests
+npm test         # server tests, then client tests (currently 156 server + 196 client, all passing)
 ```
+
+There is no DOM/component testing: put logic in pure `client/src/lib/*.js` functions and test those. UI changes
+are checked by hand or with a real headed browser (Playwright), never assumed.
 
 Local dev **never touches Turso** — `npm run dev` loads no `.env` file at all. Every plain `db:*`/
 `migrate`/`seed*` npm script (`npm run migrate -w server`, `npm run db:backup`, ...) also never loads any
@@ -77,11 +81,13 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
   `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` are scoped to Preview in Vercel project settings. `TURSO_*`
   should stay **Production-only**; check that scoping before assuming a preview build is safe, and never
   change it yourself without being asked.
-- Before merging a branch that adds new migrations: back up production Turso (`npm run db:backup:prod
-  -w server`), verify the backup file, and say so explicitly — don't just merge silently.
+- Migrations run on **every** Vercel build (previews too). The latest is **021**. Before merging a branch that
+  adds one: back up production Turso (`npm run db:backup:prod -w server`), verify the backup file, and say so
+  explicitly — don't just merge silently. Don't push a migration branch unless the Turso env vars are confirmed
+  Production-only, since a preview build would run it against the real database.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
   recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
-  was reconciled and is current as of this writing: migrations 001–017 applied and verified (flights,
+  was reconciled and is current as of this writing: migrations 001–021 applied and verified (flights,
   hours, landings, and aircraft counts checked unchanged before/after each deploy), runways seeded
   (39,566 rows). Production's Phase 2b cost data (20 invoiced flights, 6 ground sessions, expenses) was
   applied once with a separate, idempotent, atomic import (keyed on `invoice_ref`); that data is personal and
@@ -101,16 +107,38 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
 
 ## Status
 
-**In progress (branch `feature/logbook-upgrades`, not merged):** Phase 3 — Quick log / Copy last / drafts and
-offline outbox, charts with a goal line, map polish, photos, and the read-only share link + printable
-summary. Adds migrations 018 (`pilot_settings.hours_target*`, `airports.region`), 019 (`flight_photos`), 020
-(`share_settings`). Before merging: back up production Turso, and re-seed airports afterwards for "states
-visited". Details in `docs/ROADMAP.md`. Photos and the share link are deliberately excluded from the JSON
-backup.
+All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details in `docs/ROADMAP.md`.
 
-Phase 1 is complete. Phase 2's manual milestone completions, weather go/no-go checker, and the
-time-zone/date-picker/tablet-layout UX pass, plus Phase 2b's training cost tracker, unified logbook (flights
-and ground sessions), and weekly email backups, are all complete, merged to `main`, and deployed to
-production. See `docs/ROADMAP.md` for what was delivered, known follow-ups (including two open UX gaps —
-no on-screen-keyboard-covers-Save-button handling, and no broader hover-state/focus-ring audit), and
-further ideas (study mode and the document vault, with the auth hardening the vault needs, are next).
+**Recent features**
+- **Logging:** Quick log (`/logbook/quick`), copy last flight, airport autocomplete with remembered airports, draft
+  autosave, and an offline retry queue (`lib/outbox.js`) so a failed save never loses an entry.
+- **Stats:** hours by month / aircraft type or tail / category, and a cumulative-hours line toward a goal you set.
+- **Map:** one theme-aware route colour (the by-year/aircraft colour modes were removed); routes draw in then flow
+  along the flight direction, with an "Animate routes" toggle (remembered; off by default under reduced motion)
+  and a replay button; a compact "airports · states" chip that expands to fuller stats; pin popups with visits,
+  hours, last visit, note and photo; tile-caching service worker (`public/sw.js`, tiles only).
+- **Photos and notes:** up to 8 photos per flight, resized in the browser (EXIF rotation applied), stored in the
+  database (`flight_photos`) at their natural orientation; the note is the flight's existing remarks field.
+- **Sharing:** a revocable read-only public link (`/share/:token`, unguessable token, notes/photos off by default,
+  never costs or debriefs) and a printable/PDF summary (`/logbook/print`). Dark by default, follows the device
+  setting until the toggle is used.
+
+**Behaviours to preserve**
+- **Weather planning:** each leg stores a UTC instant (`lib/planlegs.js`); the airport's time zone only reads and
+  displays it. Changing an airport keeps the same moment and clears stale results; a missing zone falls back to UTC
+  with a message.
+- **Cost cutoff:** the optional "Commercial certificate date" setting (`pilot_settings.cost_cutoff_date`) excludes
+  flights and ground sessions on or after that calendar day from every cost total, average, chart and projection.
+  Stored cost data is untouched; other expenses still count. It travels on `rates.cost_cutoff_date` from
+  `fetchAllRates`.
+- **Settings:** the settings endpoint replaces the whole row, so pages save via `saveSettingsMerged` (merged into
+  the current settings) — never send a partial form, or one page blanks another's fields.
+
+**Manual steps after deploys that need them:** `npm run seed:prod -w server` (back up first) fills airport regions
+for the states counter; the public link is turned on from Logbook → share icon.
+
+**Known gaps:** the public share page shows square photo thumbnails (it only receives photo ids, not sizes); the
+logbook list shows only a camera icon, not photo thumbnails; photos and the share link are left out of the JSON and
+weekly backups (size, and so a restore can't revive a revoked link); older photos saved without a size are measured
+on load. Also open: no on-screen-keyboard-covers-Save handling and no broader hover/focus audit; study mode and the
+document vault (with auth hardening) are next.
