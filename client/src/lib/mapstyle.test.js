@@ -22,7 +22,7 @@ test('usState only reads US regions', () => {
 
 test('visitedCounts counts distinct states and flags missing region data', () => {
   const stops = [{ region: 'US-CA', country: 'US' }, { region: 'US-CA', country: 'US' }, { region: 'US-NV', country: 'US' }, { region: 'CA-ON', country: 'CA' }];
-  assert.deepEqual(visitedCounts(stops), { airports: 4, states: 2, stateCodes: ['CA', 'NV'], countries: 2, regionsKnown: true });
+  assert.deepEqual(visitedCounts(stops), { airports: 4, states: 2, countries: 2, regionsKnown: true });
   assert.equal(visitedCounts([{ country: 'US' }]).regionsKnown, false);
   assert.equal(visitedCounts([]).airports, 0);
 });

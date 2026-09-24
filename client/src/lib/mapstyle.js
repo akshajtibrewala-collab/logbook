@@ -26,7 +26,7 @@ export function visitedCounts(stops) {
     if (st) states.add(st);
     if (s.country) countries.add(s.country);
   }
-  return { airports: stops.length, states: states.size, stateCodes: [...states].sort(), countries: countries.size, regionsKnown };
+  return { airports: stops.length, states: states.size, countries: countries.size, regionsKnown };
 }
 
 /** Mini-summary for an airport pin: visits, total hours (of flights touching it), last visit. */
