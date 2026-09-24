@@ -93,8 +93,10 @@ database — no setup needed.
 - **Public link**: turn it on from Logbook → share icon. It works on Vercel with no extra setup.
 - **Map tile cache**: a small service worker (`client/public/sw.js`) caches map tiles in production
   builds only. It never touches `/api` or the app's own files.
-- **New migrations** 018 (goal target + airport region), 019 (photos), 020 (share link) are additive
-  and run automatically on every build like the others.
+- **Migrations** 018 (goal target + airport region), 019 (photos), 020 (share link) and 021 (cost cutoff date) are
+  additive and run automatically on every build like the others. Back up production first (`npm run db:backup:prod -w server`).
+- **Cost cutoff:** set an optional "Commercial certificate date" on Cost settings; flights and ground sessions on or
+  after it stop counting toward cost totals (their data is kept).
 
 ## Deploying
 

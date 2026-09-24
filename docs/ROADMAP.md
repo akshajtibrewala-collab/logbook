@@ -109,7 +109,7 @@ logged in an aircraft with none; MM/DD/YYYY date display everywhere (storage/CSV
 automatic weekly backup (Vercel Cron + Resend email, `backup_runs` log from migration 017, status card,
 "Run backup now", Dashboard warning when failed or over 8 days old). Verified end to end on production.
 
-## Phase 3 — faster logging, charts, map polish, photos, sharing — built on a branch (not yet merged)
+## Phase 3 — faster logging, charts, map polish, photos, sharing — delivered and deployed
 
 - **Logging**: `/logbook/quick` (Quick log), Copy last flight (`/logbook/new?copy=last`), airport
   autocomplete with remembered airports (`AirportSearchField`), recent-first aircraft, client-side
@@ -149,6 +149,10 @@ Also fixed: the weather and cost settings pages each sent only their own fields 
 settings; both now save via `saveSettingsMerged`.
 
 ## Known follow-ups
+
+- **Photo and share gaps.** The public share page shows square photo thumbnails (it only gets photo ids); the logbook
+  list shows just a camera icon; photos and the share link are excluded from backups; photos saved before sizes were
+  recorded are measured on load.
 
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,
   `custom_expirations`, `pilot_profile` are left over from the incident in `TURSO_RECONCILE.md` — created
