@@ -138,6 +138,16 @@ automatic weekly backup (Vercel Cron + Resend email, `backup_runs` log from migr
 - **Design/a11y**: system light/dark preference until the toggle is used, Space Grotesk headings, global
   focus ring, skip link, higher-contrast secondary text in dark mode, pagination ("Show more") in the logbook.
 
+## Cost cutoff date
+
+`pilot_settings.cost_cutoff_date` (migration 021; "Commercial certificate date" on Cost settings, optional). Flights and ground
+sessions dated on or after it are excluded from every cost total, average, chart and projection, compared by
+calendar day (`isPastCostCutoff` in `lib/cost.js`, tested). It rides on the rates object from `fetchAllRates` so every
+cost function honours it. Stored cost fields are never changed; the flight/ground forms hide the cost fields past
+the cutoff with a note. Hours, currency, stats, map and the logbook are unaffected. Other expenses are still counted.
+Also fixed: the weather and cost settings pages each sent only their own fields and could blank the other's
+settings; both now save via `saveSettingsMerged`.
+
 ## Known follow-ups
 
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,

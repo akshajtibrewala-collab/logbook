@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { api } from '../lib/api.js';
+import { api, saveSettingsMerged } from '../lib/api.js';
 import TextField from '../components/TextField.jsx';
 import Button from '../components/Button.jsx';
 import Skeleton from '../components/Skeleton.jsx';
@@ -41,7 +41,7 @@ export default function WeatherSettings() {
     setErrors({});
     setMessage('');
     try {
-      const saved = await api.updateSettings(form);
+      const saved = await saveSettingsMerged(form);
       setForm(toForm(saved));
       navigate('/weather');
     } catch (err) {

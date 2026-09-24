@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Settings, Plus, Trash2, DollarSign, AlertTriangle, GraduationCap } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import {
-  computeFlightCost, totalSpent, spentPerCertificate, spentPerFlightHour,
+  computeFlightCost, totalSpent, entriesCountedForCost, costCutoffNote, spentPerCertificate, spentPerFlightHour,
   buildCertificateProjection, fmtMoney, pickRate,
 } from '../lib/cost.js';
 import { certificateLabel, computeMilestones, completionsByKey } from '../lib/milestones.js';
@@ -115,10 +115,12 @@ export default function Costs() {
     if (!data) return null;
     const { flights, groundSessions, expenses, rates, phases, milestonesConfig, settings } = data;
     const today = todayISO();
+    const cutoff = rates.cost_cutoff_date;
+    const { flights: costFlights, groundSessions: costGround } = entriesCountedForCost(flights, groundSessions, cutoff);
     const total = totalSpent(flights, groundSessions, expenses, rates, phases);
     const perCert = spentPerCertificate(phases, flights, groundSessions, expenses, rates, today);
-    const perHour = spentPerFlightHour(total, flights);
-    const groundHours = flights.reduce((sum, f) => sum + (Number(f.ground_time) || 0), 0) + groundSessions.reduce((sum, g) => sum + (Number(g.hours) || 0), 0);
+    const perHour = spentPerFlightHour(total, costFlights);
+    const groundHours = costFlights.reduce((sum, f) => sum + (Number(f.ground_time) || 0), 0) + costGround.reduce((sum, g) => sum + (Number(g.hours) || 0), 0);
     const chart = monthlySpend(flights, groundSessions, expenses, rates, phases);
 
     const { plannedCosts, aircraft, completions } = data;
@@ -128,10 +130,10 @@ export default function Costs() {
     if (requirements.length) {
       // Rates come from the phase being projected; the most recently flown aircraft stands in for the one
       // you'll keep training in (a simplification, labeled as an estimate).
-      const mostRecentAircraftId = [...flights].sort((x, y) => y.date.localeCompare(x.date)).find((f) => f.aircraft_id)?.aircraft_id;
+      const mostRecentAircraftId = [...costFlights].sort((x, y) => y.date.localeCompare(x.date)).find((f) => f.aircraft_id)?.aircraft_id;
       const certAircraftRates = rates.aircraft_rates.filter((r) => r.certificate === projectCert);
       projection = buildCertificateProjection({
-        requirements, flights,
+        requirements, flights: costFlights,
         aircraftRate: pickRate(mostRecentAircraftId ? certAircraftRates.filter((r) => r.aircraft_id === mostRecentAircraftId) : certAircraftRates, today),
         instructorRate: pickRate(rates.instructor_rates.filter((r) => r.certificate === projectCert), today),
         groundRate: pickRate(rates.ground_rates.filter((r) => r.certificate === projectCert), today),
@@ -141,11 +143,11 @@ export default function Costs() {
       });
     }
 
-    const missingRateFlights = flights.filter((f) => {
+    const missingRateFlights = costFlights.filter((f) => {
       const c = computeFlightCost(f, rates, phases);
       return c.tracked && c.missingRate;
     });
-    return { total, perCert, perHour, groundHours, chart, projection, missingRateFlights };
+    return { total, perCert, perHour, groundHours, chart, projection, missingRateFlights, cutoffNote: costCutoffNote(cutoff) };
   }, [data, projectCert]);
 
   const certOptions = useMemo(() => {
@@ -190,6 +192,7 @@ export default function Costs() {
             <Card>
               <div className="text-xs text-slate-400">Total spent</div>
               <div className="mt-1 text-xl font-semibold">{fmtMoney(computed.total)}</div>
+              {computed.cutoffNote && <div className="mt-1 text-[11px] leading-snug text-slate-500">{computed.cutoffNote}</div>}
             </Card>
             <Card>
               <div className="text-xs text-slate-400">Cost per flight hour</div>

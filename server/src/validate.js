@@ -192,7 +192,7 @@ export const PILOT_SETTINGS_REAL_FIELDS = ['min_visibility_sm', 'night_min_visib
 export const PILOT_SETTINGS_HOURS_TARGET_FIELDS = ['private_realistic_total_hours'];
 export const PILOT_SETTINGS_FIELDS = [
   'home_airport_ident', ...PILOT_SETTINGS_CEILING_FIELDS, ...PILOT_SETTINGS_WIND_FIELDS,
-  ...PILOT_SETTINGS_REAL_FIELDS, ...PILOT_SETTINGS_HOURS_TARGET_FIELDS, 'hours_target', 'hours_target_label',
+  ...PILOT_SETTINGS_REAL_FIELDS, ...PILOT_SETTINGS_HOURS_TARGET_FIELDS, 'hours_target', 'hours_target_label', 'cost_cutoff_date',
 ];
 
 /**
@@ -240,6 +240,11 @@ export function parsePilotSettings(body) {
   const targetLabel = String(b.hours_target_label ?? '').trim();
   if (targetLabel.length > 40) errors.hours_target_label = 'Keep it under 40 characters';
   v.hours_target_label = targetLabel || null;
+
+  // Optional calendar day (e.g. the commercial certificate date) from which flights stop counting toward costs.
+  const cutoff = String(b.cost_cutoff_date ?? '').trim();
+  if (cutoff && !isIsoDate(cutoff)) errors.cost_cutoff_date = 'Date must be YYYY-MM-DD';
+  v.cost_cutoff_date = cutoff || null;
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
