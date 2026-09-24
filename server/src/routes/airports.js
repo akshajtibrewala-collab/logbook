@@ -4,7 +4,7 @@ import { tzForAirport } from '../lib/timezone.js';
 
 const router = Router();
 
-const COLUMNS = 'ident, icao, iata, local_code, name, city, country, lat, lon';
+const COLUMNS = 'ident, icao, iata, local_code, name, city, country, region, lat, lon';
 const withTz = (row) => (row ? { ...row, tz: tzForAirport(row.lat, row.lon) } : row);
 // Larger airports win when a short code is ambiguous (e.g. a local code shared worldwide).
 const TYPE_RANK = "CASE type WHEN 'large_airport' THEN 0 WHEN 'medium_airport' THEN 1 WHEN 'small_airport' THEN 2 ELSE 3 END";

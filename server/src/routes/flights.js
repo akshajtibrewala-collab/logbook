@@ -153,6 +153,7 @@ router.delete('/:id', async (req, res) => {
   // "PRAGMA foreign_keys = ON" is set on the connection — not guaranteed across every environment.
   await run('DELETE FROM flight_stops WHERE flight_id = ?', [req.params.id]);
   await run('DELETE FROM flight_approaches WHERE flight_id = ?', [req.params.id]);
+  await run('DELETE FROM flight_photos WHERE flight_id = ?', [req.params.id]);
   const { changes } = await run('DELETE FROM flights WHERE id = ?', [req.params.id]);
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
   res.status(204).end();
