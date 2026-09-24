@@ -21,7 +21,7 @@
     <meta name="application-name" content="AeroTrail" />
   </head>
   <body>
-    <script>try{if(localStorage.getItem('logbook-theme')==='light')document.documentElement.classList.add('light')}catch(e){}</script>
+    <script>try{var t=localStorage.getItem('logbook-theme');if(t==='light'||(t!=='dark'&&window.matchMedia('(prefers-color-scheme: light)').matches))document.documentElement.classList.add('light')}catch(e){}</script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

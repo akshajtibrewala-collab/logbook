@@ -101,6 +101,13 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
 
 ## Status
 
+**In progress (branch `feature/logbook-upgrades`, not merged):** Phase 3 — Quick log / Copy last / drafts and
+offline outbox, charts with a goal line, map polish, photos, and the read-only share link + printable
+summary. Adds migrations 018 (`pilot_settings.hours_target*`, `airports.region`), 019 (`flight_photos`), 020
+(`share_settings`). Before merging: back up production Turso, and re-seed airports afterwards for "states
+visited". Details in `docs/ROADMAP.md`. Photos and the share link are deliberately excluded from the JSON
+backup.
+
 Phase 1 is complete. Phase 2's manual milestone completions, weather go/no-go checker, and the
 time-zone/date-picker/tablet-layout UX pass, plus Phase 2b's training cost tracker, unified logbook (flights
 and ground sessions), and weekly email backups, are all complete, merged to `main`, and deployed to

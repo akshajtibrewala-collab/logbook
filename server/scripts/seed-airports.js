@@ -54,6 +54,7 @@ export function toAirports(rows) {
       name: r[col.name],
       city: r[col.municipality] || null,
       country: r[col.iso_country] || null,
+      region: r[col.iso_region] || null,
       type,
       lat,
       lon,
@@ -62,7 +63,7 @@ export function toAirports(rows) {
   return out;
 }
 
-const COLUMNS = ['ident', 'icao', 'iata', 'local_code', 'name', 'city', 'country', 'type', 'lat', 'lon'];
+const COLUMNS = ['ident', 'icao', 'iata', 'local_code', 'name', 'city', 'country', 'region', 'type', 'lat', 'lon'];
 const ROWS_PER_STATEMENT = 400;
 const STATEMENTS_PER_BATCH = 5;
 

@@ -192,7 +192,7 @@ export const PILOT_SETTINGS_REAL_FIELDS = ['min_visibility_sm', 'night_min_visib
 export const PILOT_SETTINGS_HOURS_TARGET_FIELDS = ['private_realistic_total_hours'];
 export const PILOT_SETTINGS_FIELDS = [
   'home_airport_ident', ...PILOT_SETTINGS_CEILING_FIELDS, ...PILOT_SETTINGS_WIND_FIELDS,
-  ...PILOT_SETTINGS_REAL_FIELDS, ...PILOT_SETTINGS_HOURS_TARGET_FIELDS,
+  ...PILOT_SETTINGS_REAL_FIELDS, ...PILOT_SETTINGS_HOURS_TARGET_FIELDS, 'hours_target', 'hours_target_label',
 ];
 
 /**
@@ -229,6 +229,17 @@ export function parsePilotSettings(body) {
     if (!Number.isFinite(n) || n < 1 || n > 500) errors[f] = 'Must be a number from 1 to 500';
     else v[f] = round2(n);
   }
+
+  // The cumulative-hours chart's goal line: any total from 1 up to an ATP-scale 10,000, with an optional name.
+  if (isBlank(b.hours_target)) v.hours_target = null;
+  else {
+    const n = Number(b.hours_target);
+    if (!Number.isFinite(n) || n < 1 || n > 10000) errors.hours_target = 'Must be a number from 1 to 10000';
+    else v.hours_target = round2(n);
+  }
+  const targetLabel = String(b.hours_target_label ?? '').trim();
+  if (targetLabel.length > 40) errors.hours_target_label = 'Keep it under 40 characters';
+  v.hours_target_label = targetLabel || null;
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }

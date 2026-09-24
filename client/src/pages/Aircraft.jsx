@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, PlaneTakeoff, Archive } from 'lucide-react';
+import AddFab from '../components/AddFab.jsx';
 import { api } from '../lib/api.js';
 import Card from '../components/Card.jsx';
 import Badge from '../components/Badge.jsx';
@@ -37,7 +38,10 @@ export default function Aircraft() {
     <div>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">Aircraft</h1>
+        <h1 className="min-w-0 flex-1 text-2xl font-semibold">Aircraft</h1>
+        <button type="button" onClick={() => navigate('/aircraft/new')} className="hidden h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">
+          <Plus size={16} />Add aircraft
+        </button>
       </div>
 
       <div className="mt-4 flex items-center justify-between">
@@ -74,11 +78,7 @@ export default function Aircraft() {
           description="Add the aircraft you fly, or add one straight from the flight form." />
       )}
 
-      <button onClick={() => navigate('/aircraft/new')} aria-label="Add aircraft"
-        style={{ bottom: 'calc(var(--bottom-nav-h) + 1rem)' }}
-        className="fixed right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink shadow-lg shadow-accent/30 active:scale-95 active:bg-accent-dark">
-        <Plus size={28} strokeWidth={2.25} />
-      </button>
+      <AddFab onClick={() => navigate('/aircraft/new')} label="Add aircraft" />
     </div>
   );
 }
