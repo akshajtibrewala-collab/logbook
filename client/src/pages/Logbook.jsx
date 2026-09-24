@@ -137,8 +137,6 @@ export default function Logbook() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Logbook</h1>
         <div className="flex gap-2">
-          <Link to="/logbook/new" className="hidden h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">Add flight</Link>
-          <Link to="/logbook/quick" className="hidden h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 md:flex"><Zap size={16} />Quick log</Link>
           <Link to="/logbook/share" aria-label="Share and print" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Share2 size={20} />
           </Link>
@@ -152,6 +150,13 @@ export default function Logbook() {
             <ArrowLeftRight size={20} />
           </Link>
         </div>
+      </div>
+
+      {/* Tablet/desktop only: on phones these live behind the floating + button. Its own row so the
+          title and icon buttons above never have to share width with them. */}
+      <div className="mt-3 hidden gap-2 md:flex">
+        <Link to="/logbook/new" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
+        <Link to="/logbook/quick" className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300"><Zap size={16} />Quick log</Link>
       </div>
 
       <div className="mt-4 flex gap-1 rounded-xl bg-navy-800 p-1">
