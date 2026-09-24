@@ -27,7 +27,7 @@ export function buildMapData(flights, airports) {
       if (!stops.has(ap.ident)) stops.set(ap.ident, { ...ap, visits: 0, flights: [] });
       const s = stops.get(ap.ident);
       s.visits++;
-      s.flights.push({ id: f.id, date: f.date, from: f.departure_airport || '—', to: f.arrival_airport || '—' });
+      s.flights.push({ id: f.id, date: f.date, from: f.departure_airport || '—', to: f.arrival_airport || '—', hours: Number(f.total_time) || 0, note: f.remarks || null });
     }
 
     // Each leg between consecutive stops; a leg flown out and back on one flight counts once for that flight.

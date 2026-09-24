@@ -9,7 +9,17 @@ async function request(method, path, body) {
   if (body) headers['content-type'] = 'application/json';
   const pass = getPasscode();
   if (pass) headers['x-app-passcode'] = pass;
-  const res = await fetch(`/api${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  } catch (cause) {
+    // fetch rejects only when the request never completed (offline, dropped connection): callers can
+    // queue the entry for retry instead of losing it (see lib/outbox.js).
+    const err = new Error('You appear to be offline — check your connection.');
+    err.network = true;
+    err.cause = cause;
+    throw err;
+  }
   if (res.status === 204) return null;
   if (res.status === 401) {
     setPasscode('');
@@ -59,6 +69,16 @@ export const api = {
   updateSettings: (s) => request('PUT', '/settings', s),
   checkWeather: (ident) => request('GET', `/weather/${encodeURIComponent(ident)}`),
   planWeather: (legs) => request('POST', '/weather/plan', { legs }),
+  listPhotos: (flightId) => request('GET', `/photos/flight/${flightId}`),
+  photoCounts: () => request('GET', '/photos/counts'),
+  addPhoto: (flightId, photo) => request('POST', `/photos/flight/${flightId}`, photo),
+  deletePhoto: (id) => request('DELETE', `/photos/${id}`),
+  getShare: () => request('GET', '/share'),
+  getShareSummary: (notes = true) => request('GET', `/share/summary?limit=25${notes ? '' : '&notes=0'}`),
+  enableShare: () => request('POST', '/share'),
+  updateShare: (flags) => request('PUT', '/share', flags),
+  regenerateShare: () => request('POST', '/share/regenerate'),
+  revokeShare: () => request('DELETE', '/share'),
   backupJobStatus: () => request('GET', '/backup-job/status'),
   runBackupNow: () => request('POST', '/backup-job/run'),
   exportBackup: () => request('GET', '/backup/export'),

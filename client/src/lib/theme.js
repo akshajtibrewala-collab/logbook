@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
-// Dark is the default. The choice is remembered in localStorage (which can be unavailable, so it is optional).
+// A saved choice (from the toggle) wins; otherwise the device's light/dark preference decides, and dark
+// is the fallback. Remembered in localStorage, which can be unavailable, so it is optional.
 const KEY = 'logbook-theme';
 const listeners = new Set();
 
@@ -8,7 +9,10 @@ export function currentTheme() {
   try {
     const saved = localStorage.getItem(KEY);
     if (saved === 'light' || saved === 'dark') return saved;
-  } catch { /* storage blocked: fall through to the default */ }
+  } catch { /* storage blocked: fall through to the system preference */ }
+  try {
+    if (globalThis.matchMedia?.('(prefers-color-scheme: light)').matches) return 'light';
+  } catch { /* no matchMedia: default below */ }
   return 'dark';
 }
 
