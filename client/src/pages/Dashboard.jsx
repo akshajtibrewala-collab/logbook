@@ -28,8 +28,8 @@ const StatusCard = CurrencyStatusCard;
 
 function Stat({ label, value }) {
   return (
-    <div className="card p-3 text-center">
-      <div className="text-xl font-semibold">{fmtHours(value)}</div>
+    <div className="card p-3 text-center md:p-4">
+      <div className="text-xl font-semibold md:text-2xl">{fmtHours(value)}</div>
       <div className="mt-0.5 text-xs text-slate-400">{label}</div>
     </div>
   );
@@ -202,7 +202,7 @@ export default function Dashboard() {
           <BackupStatus compact />
 
           <div className="grid gap-4 md:grid-cols-2 md:items-start">
-            <WeatherDashboardCard />
+            <div className="md:col-span-2"><WeatherDashboardCard /></div>
 
             <StatusCard title="Passenger currency" Icon={Plane} result={data.pax.day}
               detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`}>
@@ -250,7 +250,7 @@ export default function Dashboard() {
 
           <div>
             <h2 className="mb-2 text-sm font-medium text-slate-400">Hours flown</h2>
-            <div className="grid grid-cols-3 gap-3 md:max-w-md">
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
               <Stat label="This month" value={data.stats.month} />
               <Stat label="This year" value={data.stats.year} />
               <Stat label="Total" value={data.stats.total} />
@@ -260,7 +260,7 @@ export default function Dashboard() {
           {totalGroundHours > 0 && (
             <div>
               <h2 className="mb-2 text-sm font-medium text-slate-400">Ground training</h2>
-              <div className="grid grid-cols-3 gap-3 md:max-w-md">
+              <div className="grid grid-cols-3 gap-3 md:gap-4">
                 <Stat label="Total hours" value={totalGroundHours} />
               </div>
             </div>
