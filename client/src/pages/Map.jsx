@@ -300,9 +300,6 @@ export default function MapPage() {
                 <Stat label="flights" value={flights.length} />
                 <Stat label="hours" value={fmtHours(totalHours)} />
               </div>
-              {counts.regionsKnown && counts.stateCodes.length > 0 && (
-                <p className="mt-2 text-[11px] leading-snug text-slate-400">States: {counts.stateCodes.join(', ')}</p>
-              )}
               {!counts.regionsKnown && <p className="mt-2 text-[11px] text-slate-500">States visited appears once the airport database is re-seeded (npm run seed).</p>}
 
               <div className="mt-3 border-t border-edge pt-1">
