@@ -13,7 +13,10 @@ export function fitWithin(w, h, max = MAX_EDGE) {
 /** Reads an image File, returns { data_url, width, height } as a resized JPEG. Browser only. */
 export async function compressImage(file, { max = MAX_EDGE, quality = JPEG_QUALITY } = {}) {
   if (!file || !/^image\//.test(file.type)) throw new Error('That file isn’t an image.');
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  // 'from-image' applies the EXIF orientation flag (phones store portrait shots as sideways pixels plus a
+  // flag), so the bitmap, the canvas and the stored width/height all describe the photo as it is seen.
+  // Browsers too old to know the option fall back to their default, which also honours it.
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file)).catch(() => null);
   if (!bitmap) throw new Error('Couldn’t read that image.');
   const { width, height } = fitWithin(bitmap.width, bitmap.height, max);
   const canvas = document.createElement('canvas');

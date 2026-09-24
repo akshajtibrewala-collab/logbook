@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, X } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { compressImage } from '../lib/image.js';
+import PhotoGrid from './PhotoGrid.jsx';
 
 const MAX_PHOTOS = 8;
 
@@ -57,23 +58,16 @@ export default function PhotoPicker({ flightId, pending, onPendingChange }) {
   return (
     <div>
       {total > 0 && (
-        <ul className="mb-3 grid grid-cols-3 gap-2">
-          {existing.map((p) => (
-            <li key={p.id} className="relative aspect-square overflow-hidden rounded-xl bg-navy-800">
-              <img src={p.data_url} alt="Attached to this flight" className="h-full w-full object-cover" />
-              <button type="button" onClick={() => removeExisting(p.id)} aria-label="Delete photo"
+        <PhotoGrid className="mb-3" photos={[...existing, ...pending.map((p, i) => ({ ...p, pendingIndex: i, alt: 'New photo, not yet saved' }))]}
+          renderTile={(p, image) => (
+            <div className="relative h-full w-full">
+              {image}
+              {p.pendingIndex !== undefined && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">Will save with flight</span>}
+              <button type="button" aria-label={p.pendingIndex !== undefined ? 'Remove photo' : 'Delete photo'}
+                onClick={() => (p.pendingIndex !== undefined ? onPendingChange(pending.filter((_, j) => j !== p.pendingIndex)) : removeExisting(p.id))}
                 className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white"><X size={16} /></button>
-            </li>
-          ))}
-          {pending.map((p, i) => (
-            <li key={i} className="relative aspect-square overflow-hidden rounded-xl bg-navy-800">
-              <img src={p.data_url} alt="New photo, not yet saved" className="h-full w-full object-cover" />
-              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">Will save with flight</span>
-              <button type="button" onClick={() => onPendingChange(pending.filter((_, j) => j !== i))} aria-label="Remove photo"
-                className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white"><X size={16} /></button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )} />
       )}
       <input ref={input} type="file" accept="image/*" multiple onChange={onFiles} className="sr-only" aria-label="Choose photos" tabIndex={-1} />
       <button type="button" onClick={() => input.current?.click()} disabled={busy || total >= MAX_PHOTOS}

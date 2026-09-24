@@ -9,6 +9,7 @@ import { greatCircle } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
 import { airportSummary, routeColorFor, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
+import { PhotoImage } from '../components/PhotoGrid.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
 
@@ -154,11 +155,11 @@ function PinSummary({ stop, photoCounts }) {
   const s = airportSummary(stop);
   const withNote = stop.flights.find((f) => f.note);
   const withPhoto = stop.flights.find((f) => photoCounts[f.id] > 0);
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState(null); // { data_url, width, height }
   useEffect(() => {
     if (!withPhoto) return undefined;
     let cancelled = false;
-    api.listPhotos(withPhoto.id).then((p) => { if (!cancelled && p[0]) setPhoto(p[0].data_url); }).catch(() => {});
+    api.listPhotos(withPhoto.id).then((p) => { if (!cancelled && p[0]) setPhoto(p[0]); }).catch(() => {});
     return () => { cancelled = true; };
   }, [withPhoto?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -171,7 +172,7 @@ function PinSummary({ stop, photoCounts }) {
         <div><dt className="text-[10px] uppercase tracking-wide text-slate-500">Last</dt><dd className="text-sm font-semibold">{fmtDate(s.last)}</dd></div>
       </dl>
       {withNote && <p className="mt-2 line-clamp-3 text-xs text-slate-300">“{withNote.note}”</p>}
-      {photo && <img src={photo} alt="From a flight here" className="mt-2 h-24 w-full rounded-lg object-cover" />}
+      {photo && <PhotoImage className="mt-2" src={photo.data_url} width={photo.width} height={photo.height} alt="From a flight here" maxHeight={140} />}
     </div>
   );
 }
