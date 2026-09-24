@@ -31,9 +31,10 @@ and CSV import/export so your logbook is never locked into one tool.
   is kept on the device and retried automatically — a failed save never loses an entry.
 - **Notes & photos**: every flight has a note, and up to 8 photos (resized in the browser before upload,
   stored in the database so they work on serverless hosting). Shown on the flight and on its map pin.
-- **Map**: every airport you've visited and every route you've flown, with animated route lines, colouring
-  by year or by aircraft (with a legend), a tap-for-summary pin (visits, total hours, last visit, latest
-  note and photo), airports / states-visited counters, and cached map tiles for speed and offline use.
+- **Map**: every airport you've visited and every route you've flown, with routes that draw in and then
+  flow along the flight direction (toggle and replay button), a compact airports / states chip that expands
+  to fuller stats, tap-for-summary pins (visits, total hours, last visit, latest note and photo), and
+  cached map tiles for speed and offline use.
 - **Stats**: hours by month, by aircraft type or tail number, by category, and a cumulative-hours line
   toward a goal you set (with a projected date at your recent pace).
 - **Share & print**: a printable / save-as-PDF summary (totals, goal and certificate progress, recent
