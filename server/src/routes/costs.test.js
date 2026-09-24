@@ -155,3 +155,26 @@ test('flights: ground_time and cost_override round-trip, and ground_time is not 
   assert.equal(cleared.ground_time, 0.5);
   assert.equal(cleared.cost_override, null); // omitted on update, clears back to null like other optional fields
 });
+
+test('planned costs CRUD', async () => {
+  const created = await (await call('POST', '/costs/planned-costs', { certificate: 'private', label: 'Checkride examiner fee', amount: 700 })).json();
+  assert.equal(created.label, 'Checkride examiner fee');
+  assert.equal(created.amount, 700);
+
+  const updated = await (await call('PUT', `/costs/planned-costs/${created.id}`, { certificate: 'private', label: 'Checkride examiner fee', amount: 750 })).json();
+  assert.equal(updated.amount, 750);
+
+  const list = await (await call('GET', '/costs/planned-costs')).json();
+  assert.equal(list.length, 1);
+
+  const del = await call('DELETE', `/costs/planned-costs/${created.id}`);
+  assert.equal(del.status, 204);
+});
+
+test('planned cost requires a label and a certificate', async () => {
+  const res = await call('POST', '/costs/planned-costs', { certificate: '', label: '', amount: 10 });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.ok(body.errors.certificate);
+  assert.ok(body.errors.label);
+});

@@ -90,6 +90,10 @@ export const api = {
   listTrainingPhases: () => request('GET', '/costs/phases'),
   setTrainingPhase: (certificate, phase) => request('PUT', `/costs/phases/${certificate}`, phase),
   deleteTrainingPhase: (certificate) => request('DELETE', `/costs/phases/${certificate}`),
+  listPlannedCosts: () => request('GET', '/costs/planned-costs'),
+  createPlannedCost: (c) => request('POST', '/costs/planned-costs', c),
+  updatePlannedCost: (id, c) => request('PUT', `/costs/planned-costs/${id}`, c),
+  deletePlannedCost: (id) => request('DELETE', `/costs/planned-costs/${id}`),
 };
 
 /** Fetches all four rate tables in one round trip, in the shape client/src/lib/cost.js expects. */

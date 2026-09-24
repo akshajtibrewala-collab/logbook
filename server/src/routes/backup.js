@@ -19,7 +19,7 @@ export const FORMAT_VERSION = 1;
 const TABLES = [
   'aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations',
   'milestone_completions', 'pilot_settings', 'aircraft_rates', 'instructor_rates', 'ground_rates',
-  'simulator_rates', 'other_expenses', 'ground_sessions', 'training_phases',
+  'simulator_rates', 'other_expenses', 'ground_sessions', 'training_phases', 'planned_costs',
 ];
 const DELETE_ORDER = [...TABLES].reverse();
 

@@ -386,3 +386,22 @@ export function parseTrainingPhase(body) {
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
+
+/** Validates a one-time planned cost still ahead for a certificate: {certificate, label, amount}. */
+export function parsePlannedCost(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const errors = {};
+  const v = {};
+
+  parseCertificate(b, v, errors);
+
+  const label = String(b.label ?? '').trim();
+  if (!label) errors.label = 'Enter a label';
+  else v.label = label;
+
+  const amount = Number(b.amount);
+  if (!Number.isFinite(amount) || amount < 0 || amount > 999999) errors.amount = 'Must be a number, 0 or more';
+  else v.amount = round2(amount);
+
+  return { value: v, errors: Object.keys(errors).length ? errors : null };
+}

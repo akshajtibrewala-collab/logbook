@@ -7,6 +7,8 @@
 // later rate change is a new row under a different phase's certificate and can never reach into a phase
 // that's already closed. Nothing here talks to the API.
 
+import { addDays, daysBetween } from './currency.js';
+
 const round2 = (n) => Math.round(n * 100) / 100;
 
 export const fmtMoney = (n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -162,59 +164,120 @@ export function spentPerCertificate(phases, flights, groundSessions, expenses, r
   return out;
 }
 
-/** Average cost per logged hour of flight, over tracked flights only (aircraft + simulator time). */
-export function averageCostPerFlightHour(flights, rates, phases) {
-  let cost = 0;
-  let hours = 0;
-  for (const f of flights) {
-    const c = computeFlightCost(f, rates, phases);
-    if (c.total === null) continue;
-    cost += c.total;
-    hours += (Number(f.total_time) || 0) + (Number(f.simulator_time) || 0);
-  }
-  return hours > 0 ? round2(cost / hours) : 0;
+/**
+ * Total spent (everything: lessons, ground sessions, expenses) divided by every flight hour logged —
+ * a physical measure, so it counts all flights regardless of cost tracking.
+ */
+export function spentPerFlightHour(total, flights) {
+  const hours = flights.reduce((s, f) => s + (Number(f.total_time) || 0) + (Number(f.simulator_time) || 0), 0);
+  return hours > 0 ? round2(total / hours) : 0;
 }
 
-/**
- * Two remaining-cost estimates for finishing a certificate, both explicitly estimates (label them as such
- * in the UI, not here): one at the regulatory minimum remaining dual/solo hours, one at a "realistic"
- * total hour count the pilot sets themselves (most private pilots fly well past the 40-hour minimum).
- * Both split remaining hours into dual vs. solo since they cost differently. Modeling choice: the
- * realistic estimate's hours beyond the regulatory-minimum remaining total are assumed solo, since extra
- * hours beyond minimums are typically flown solo, not with an instructor; hours at or under that minimum
- * are split in the same dual:solo proportion as the regulatory minimum itself.
- */
-export function projectRemainingCost({
-  faaMinDualHours, faaMinSoloHours, flownDualHours, flownSoloHours, flownTotalHours,
-  realisticTotalHours, currentAircraftRate, currentInstructorRate,
-}) {
-  const remainingDualFaaMin = Math.max(0, faaMinDualHours - flownDualHours);
-  const remainingSoloFaaMin = Math.max(0, faaMinSoloHours - flownSoloHours);
+// The one manual/count requirement with an hour amount in its own wording ("3 hours of flight training
+// within 2 calendar months before the checkride", 14 CFR 61.109(a)(4)); milestones_config carries no
+// structured hours for manual items, so it's the one regulatory constant here.
+const CHECKRIDE_PREP_HOURS = 3;
 
-  const estimate = (dualHours, soloHours) => {
-    const aircraftHours = dualHours + soloHours;
-    const rentalPlusFuel = currentAircraftRate
-      ? aircraftHours * (currentAircraftRate.rental_rate_per_hr + currentAircraftRate.fuel_surcharge_per_hr)
-      : 0;
-    const instructorCost = currentInstructorRate ? dualHours * currentInstructorRate.hourly_rate : 0;
-    return { dualHours: round2(dualHours), soloHours: round2(soloHours), cost: round2(rentalPlusFuel + instructorCost) };
+/**
+ * Remaining hours to finish a certificate, split dual vs. solo, from computed milestone requirements
+ * (computeRequirement output for one certificate). Sub-requirements (dual_xc, dual_night, solo_xc...) are
+ * subsets of the parent hours, not extra on top, so each bucket takes its single largest remaining value
+ * (the binding constraint) rather than a sum. A dual requirement is one whose sum_field/flight_filter
+ * mentions dual; solo is one summing solo_time. Any gap between the total-time minimum and dual+solo is
+ * folded into solo (extra hours past minimums are typically flown solo). checkride_prep, if not yet done,
+ * adds its 3 hours as dual. Other manual/count requirements have no hours and are not costed.
+ */
+export function remainingHoursByType(requirements) {
+  let dual = 0;
+  let solo = 0;
+  let total = 0;
+  let prep = 0;
+  for (const r of requirements) {
+    if (r.requirement_key === 'checkride_prep') { if (!r.met) prep = CHECKRIDE_PREP_HOURS; continue; }
+    if (r.manual || r.current == null) continue;
+    const remaining = Math.max(0, r.min_value - r.current);
+    if (r.requirement_key === 'total_time') total = remaining;
+    else if (`${r.sum_field ?? ''} ${r.flight_filter ?? ''}`.includes('dual')) dual = Math.max(dual, remaining);
+    else if ((r.sum_field ?? '').includes('solo_time')) solo = Math.max(solo, remaining);
+  }
+  dual += prep;
+  const extra = Math.max(0, total - dual - solo);
+  return { dualHours: round2(dual), soloHours: round2(solo + extra) };
+}
+
+/** Actual averages per logged flight: lesson length (total_time) and ground instruction hours. */
+export function lessonAverages(flights) {
+  const n = flights.length;
+  if (!n) return { avgLessonLength: 0, avgGroundPerLesson: 0 };
+  const hours = flights.reduce((s, f) => s + (Number(f.total_time) || 0), 0);
+  const ground = flights.reduce((s, f) => s + (Number(f.ground_time) || 0), 0);
+  return { avgLessonLength: hours / n, avgGroundPerLesson: ground / n };
+}
+
+/** Flights per week over the last `windowDays`, or null with fewer than two flights to judge a pace from. */
+export function recentFlyingFrequency(flights, today, windowDays = 90) {
+  const cutoff = addDays(today, -windowDays);
+  const dates = flights.filter((f) => f.date >= cutoff && f.date <= today).map((f) => f.date).sort();
+  if (dates.length < 2) return null;
+  const spanDays = Math.max(7, daysBetween(dates[0], today));
+  return { lessonsPerWeek: round2(dates.length / (spanDays / 7)), sampleSize: dates.length, windowDays };
+}
+
+export function estimateFinishDate(remainingLessons, lessonsPerWeek, today) {
+  if (!lessonsPerWeek || lessonsPerWeek <= 0) return null;
+  return addDays(today, Math.ceil((remainingLessons / lessonsPerWeek) * 7));
+}
+
+export const DEFAULT_TARGET_TOTAL_HOURS = 50;
+
+/**
+ * Two remaining-cost estimates (label as estimates in the UI), derived from data with no manual inputs
+ * except one-time costs: remaining hours from milestones; rates from the current phase; ground time from
+ * the pilot's own average ground hours per lesson x the lesson count implied by their average lesson
+ * length. Remaining solo hours cost aircraft only; dual hours cost aircraft + instructor; ground hours
+ * cost the ground rate. "FAA minimum" uses the remaining requirement hours as-is; "realistic" pads
+ * total hours up to `targetTotalHours` (extra hours assumed solo) and, if the pilot has already flown past
+ * the target without finishing, raises the target to flown + remaining minimum instead of showing $0.
+ */
+export function buildCertificateProjection({
+  requirements, flights, aircraftRate, instructorRate, groundRate,
+  targetTotalHours = DEFAULT_TARGET_TOTAL_HOURS, oneTimeCostsTotal = 0, today,
+}) {
+  const { dualHours, soloHours } = remainingHoursByType(requirements);
+  const { avgLessonLength, avgGroundPerLesson } = lessonAverages(flights);
+  const flownTotal = flights.reduce((s, f) => s + (Number(f.total_time) || 0), 0);
+  const minRemaining = dualHours + soloHours;
+  const effectiveTarget = Math.max(targetTotalHours, flownTotal + minRemaining);
+  const realisticSolo = soloHours + Math.max(0, effectiveTarget - flownTotal - minRemaining);
+
+  const rentalPerHr = aircraftRate ? aircraftRate.rental_rate_per_hr + aircraftRate.fuel_surcharge_per_hr : 0;
+  const instructorPerHr = instructorRate?.hourly_rate ?? 0;
+  const groundPerHr = groundRate?.hourly_rate ?? 0;
+  const oneTime = round2(oneTimeCostsTotal);
+
+  const estimate = (dual, solo) => {
+    const lessons = avgLessonLength > 0 ? (dual + solo) / avgLessonLength : 0;
+    const groundHours = lessons * avgGroundPerLesson;
+    const aircraftCost = (dual + solo) * rentalPerHr;
+    const instructorCost = dual * instructorPerHr;
+    const groundCost = groundHours * groundPerHr;
+    return {
+      dualHours: round2(dual), soloHours: round2(solo), lessons: round2(lessons), groundHours: round2(groundHours),
+      aircraftCost: round2(aircraftCost), instructorCost: round2(instructorCost), groundCost: round2(groundCost),
+      oneTimeCosts: oneTime, cost: round2(aircraftCost + instructorCost + groundCost + oneTime),
+    };
   };
 
-  const faaMinEstimate = estimate(remainingDualFaaMin, remainingSoloFaaMin);
-
-  const remainingRealisticTotal = Math.max(0, realisticTotalHours - flownTotalHours);
-  const faaMinRemainingTotal = remainingDualFaaMin + remainingSoloFaaMin;
-  let realisticDual;
-  let realisticSolo;
-  if (remainingRealisticTotal <= faaMinRemainingTotal) {
-    const scale = faaMinRemainingTotal > 0 ? remainingRealisticTotal / faaMinRemainingTotal : 0;
-    realisticDual = remainingDualFaaMin * scale;
-    realisticSolo = remainingSoloFaaMin * scale;
-  } else {
-    realisticDual = remainingDualFaaMin;
-    realisticSolo = remainingSoloFaaMin + (remainingRealisticTotal - faaMinRemainingTotal);
-  }
-  const realisticEstimate = estimate(realisticDual, realisticSolo);
-
-  return { faaMinEstimate, realisticEstimate };
+  const faaMinEstimate = estimate(dualHours, soloHours);
+  const realisticEstimate = estimate(dualHours, realisticSolo);
+  const frequency = recentFlyingFrequency(flights, today);
+  return {
+    faaMinEstimate, realisticEstimate,
+    finishDate: frequency ? estimateFinishDate(realisticEstimate.lessons, frequency.lessonsPerWeek, today) : null,
+    breakdown: {
+      avgLessonLength: round2(avgLessonLength), avgGroundPerLesson: round2(avgGroundPerLesson),
+      rentalPerHr, instructorPerHr, groundPerHr, frequency,
+      targetTotalHours: round2(effectiveTarget), targetRaised: effectiveTarget > targetTotalHours, flownTotal: round2(flownTotal),
+    },
+  };
 }

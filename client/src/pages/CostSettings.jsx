@@ -64,6 +64,42 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
   );
 }
 
+function PlannedCosts({ certificate, rows, onCreate, onDelete }) {
+  const [adding, setAdding] = useState(false);
+  const [label, setLabel] = useState('');
+  const [amount, setAmount] = useState('');
+  const add = async () => {
+    await onCreate({ certificate, label, amount });
+    setAdding(false); setLabel(''); setAmount('');
+  };
+  return (
+    <div className="space-y-2">
+      {rows.length === 0 && !adding && <p className="text-sm text-slate-500">None yet — e.g. checkride examiner fee, written test fee.</p>}
+      {rows.map((r) => (
+        <div key={r.id} className="flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm">
+          <span className="text-slate-300">{r.label}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{fmtMoney(r.amount)}</span>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete planned cost" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+          </div>
+        </div>
+      ))}
+      {adding ? (
+        <div className="space-y-2 rounded-xl border border-edge p-3">
+          <TextField label="What is it?" value={label} onChange={setLabel} placeholder="Checkride examiner fee" />
+          <TextField label="Amount ($)" type="number" value={amount} onChange={setAmount} />
+          <div className="flex gap-2">
+            <Button size="sm" fullWidth={false} onClick={add}>Add</Button>
+            <Button size="sm" fullWidth={false} variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a one-time cost</button>
+      )}
+    </div>
+  );
+}
+
 function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }) {
   const [adding, setAdding] = useState(false);
   const [date, setDate] = useState(todayISO());
@@ -114,8 +150,8 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
  * phase's row.
  */
 function PhaseCard({
-  certificate, phase, aircraft, aircraftRates, instructorRates, groundRates, simulatorRates,
-  onSavePhase, onCreateRate, onDeleteRate, defaultOpen,
+  certificate, phase, aircraft, aircraftRates, instructorRates, groundRates, simulatorRates, plannedCosts,
+  onSavePhase, onCreateRate, onDeleteRate, onCreatePlanned, onDeletePlanned, defaultOpen,
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [start, setStart] = useState(phase?.start_date ?? todayISO());
@@ -169,6 +205,11 @@ function PhaseCard({
               onCreate={(r) => onCreateRate('simulator', r)} onDelete={(id) => onDeleteRate('simulator', id)} />
           </div>
           <div className="space-y-3 border-t border-edge pt-4">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">One-time costs still ahead</h3>
+            <p className="text-xs text-slate-500">Added to both projection estimates on the Costs page.</p>
+            <PlannedCosts certificate={certificate} rows={plannedCosts} onCreate={onCreatePlanned} onDelete={onDeletePlanned} />
+          </div>
+          <div className="space-y-3 border-t border-edge pt-4">
             <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Aircraft rental rates</h3>
             {aircraft.length === 0 ? (
               <p className="text-sm text-slate-500">Add an aircraft first, on the Aircraft screen.</p>
@@ -203,10 +244,10 @@ export default function CostSettings() {
   const load = useCallback(() => {
     Promise.all([
       api.listAircraft(true), api.listAircraftRates(), api.listInstructorRates(), api.listGroundRates(),
-      api.listSimulatorRates(), api.listTrainingPhases(), api.listMilestonesConfig(), api.getSettings(),
+      api.listSimulatorRates(), api.listTrainingPhases(), api.listMilestonesConfig(), api.getSettings(), api.listPlannedCosts(),
     ])
-      .then(([aircraft, aircraftRates, instructorRates, groundRates, simulatorRates, phases, milestonesConfig, settings]) => {
-        setData({ aircraft, aircraftRates, instructorRates, groundRates, simulatorRates, phases, milestonesConfig });
+      .then(([aircraft, aircraftRates, instructorRates, groundRates, simulatorRates, phases, milestonesConfig, settings, plannedCosts]) => {
+        setData({ aircraft, aircraftRates, instructorRates, groundRates, simulatorRates, phases, milestonesConfig, plannedCosts });
         setSettingsForm({
           default_ground_time: settings.default_ground_time == null ? '' : String(settings.default_ground_time),
           private_realistic_total_hours: settings.private_realistic_total_hours == null ? '' : String(settings.private_realistic_total_hours),
@@ -246,8 +287,8 @@ export default function CostSettings() {
       <Section title="Default settings">
         <TextField label="Default ground briefing time (hrs)" type="number" value={settingsForm.default_ground_time}
           onChange={(v) => setSettingsForm((f) => ({ ...f, default_ground_time: v }))} placeholder="Not set" />
-        <TextField label="Private pilot: realistic total hours target" type="number" value={settingsForm.private_realistic_total_hours}
-          onChange={(v) => setSettingsForm((f) => ({ ...f, private_realistic_total_hours: v }))} placeholder="Defaults to the 40hr FAA minimum" />
+        <TextField label="Private pilot: realistic total hours target (raised automatically if you pass it)" type="number" value={settingsForm.private_realistic_total_hours}
+          onChange={(v) => setSettingsForm((f) => ({ ...f, private_realistic_total_hours: v }))} placeholder="Defaults to 50" />
         <Button size="sm" fullWidth={false} onClick={saveSettings} disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save'}</Button>
       </Section>
 
@@ -261,6 +302,9 @@ export default function CostSettings() {
               instructorRates={data.instructorRates.filter((r) => r.certificate === c)}
               groundRates={data.groundRates.filter((r) => r.certificate === c)}
               simulatorRates={data.simulatorRates.filter((r) => r.certificate === c)}
+              plannedCosts={data.plannedCosts.filter((r) => r.certificate === c)}
+              onCreatePlanned={async (r) => { await api.createPlannedCost(r); load(); }}
+              onDeletePlanned={async (id) => { await api.deletePlannedCost(id); load(); }}
               onSavePhase={async (cert, phase) => { await api.setTrainingPhase(cert, phase); load(); }}
               onCreateRate={async (kind, r) => { await RATE_API[kind].create(r); load(); }}
               onDeleteRate={async (kind, id) => { await RATE_API[kind].delete(id); load(); }} />

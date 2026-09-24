@@ -28,7 +28,7 @@ test('export shape: format_version, exported_at, and every table present, even w
   for (const t of [
     'aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations',
     'milestone_completions', 'pilot_settings', 'aircraft_rates', 'instructor_rates', 'ground_rates',
-    'simulator_rates', 'other_expenses', 'ground_sessions', 'training_phases',
+    'simulator_rates', 'other_expenses', 'ground_sessions', 'training_phases', 'planned_costs',
   ]) {
     assert.ok(Array.isArray(body.tables[t]), `${t} should be an array`);
   }
@@ -66,6 +66,7 @@ test('round trip: export -> restore into an empty database -> export again match
   await call('POST', '/costs/expenses', { category: 'headset', date: '2026-05-01', amount: 899, note: 'Bose A20' });
   await call('POST', '/costs/ground-sessions', { date: '2026-05-01', hours: 1, instructor: 'Jane', topics: 'Weather' });
   await call('PUT', '/costs/phases/private', { start_date: '2026-01-01', end_date: null });
+  await call('POST', '/costs/planned-costs', { certificate: 'private', label: 'Checkride examiner fee', amount: 700 });
 
   const before = await (await call('GET', '/backup/export')).json();
   assert.equal(before.tables.flights.length, 2); // the one from the previous test plus this one
@@ -86,6 +87,7 @@ test('round trip: export -> restore into an empty database -> export again match
   assert.equal(before.tables.other_expenses.length, 1);
   assert.equal(before.tables.ground_sessions.length, 1);
   assert.equal(before.tables.training_phases.length, 1);
+  assert.equal(before.tables.planned_costs.length, 1);
 
   const restore = await call('POST', '/backup/restore', { ...before, mode: 'replace' });
   assert.equal(restore.status, 200);

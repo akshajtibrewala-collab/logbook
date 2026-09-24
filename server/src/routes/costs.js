@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { all, get, run } from '../db.js';
 import {
-  parseHourlyRate, parseAircraftRate, parseExpense, parseGroundSession, parseTrainingPhase,
+  parseHourlyRate, parseAircraftRate, parseExpense, parseGroundSession, parseTrainingPhase, parsePlannedCost,
 } from '../validate.js';
 
 const router = Router();
@@ -147,6 +147,31 @@ router.put('/phases/:certificate', async (req, res) => {
 router.delete('/phases/:certificate', async (req, res) => {
   const { changes } = await run('DELETE FROM training_phases WHERE certificate = ?', [req.params.certificate]);
   if (!changes) return res.status(404).json({ error: 'Training phase not found' });
+  res.status(204).end();
+});
+
+router.get('/planned-costs', async (_req, res) => {
+  res.json(await all('SELECT * FROM planned_costs ORDER BY certificate, id'));
+});
+router.post('/planned-costs', async (req, res) => {
+  const { value, errors } = parsePlannedCost(req.body);
+  if (errors) return res.status(400).json({ errors });
+  const { lastId } = await run('INSERT INTO planned_costs (certificate, label, amount) VALUES (:certificate, :label, :amount)', value);
+  res.status(201).json(await get('SELECT * FROM planned_costs WHERE id = ?', [lastId]));
+});
+router.put('/planned-costs/:id', async (req, res) => {
+  const { value, errors } = parsePlannedCost(req.body);
+  if (errors) return res.status(400).json({ errors });
+  const { changes } = await run(
+    'UPDATE planned_costs SET certificate = :certificate, label = :label, amount = :amount WHERE id = :id',
+    { ...value, id: req.params.id },
+  );
+  if (!changes) return res.status(404).json({ error: 'Planned cost not found' });
+  res.json(await get('SELECT * FROM planned_costs WHERE id = ?', [req.params.id]));
+});
+router.delete('/planned-costs/:id', async (req, res) => {
+  const { changes } = await run('DELETE FROM planned_costs WHERE id = ?', [req.params.id]);
+  if (!changes) return res.status(404).json({ error: 'Planned cost not found' });
   res.status(204).end();
 });
 

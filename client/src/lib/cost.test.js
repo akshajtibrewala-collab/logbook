@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   pickRate, findPhaseForDate, computeFlightCost, computeGroundSessionCost, totalSpent, spentPerCertificate,
-  averageCostPerFlightHour, projectRemainingCost, fmtMoney,
+  spentPerFlightHour, remainingHoursByType, lessonAverages, recentFlyingFrequency, estimateFinishDate,
+  buildCertificateProjection, fmtMoney,
 } from './cost.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -162,54 +163,103 @@ test('spentPerCertificate splits by each certificate\'s training-phase date rang
   assert.equal(spent.instrument, 315);
 });
 
-test('averageCostPerFlightHour divides total cost by aircraft + simulator hours, over tracked flights only', () => {
-  const flights = [
-    { date: '2026-01-10', aircraft_id: 1, total_time: 1.5, dual_received: 1.5, solo_time: 0, simulator_time: 0, ground_time: 0, cost_override: null },
-    { date: '2026-01-11', aircraft_id: 1, total_time: 1.5, dual_received: 0, solo_time: 1.5, simulator_time: 0, ground_time: 0, cost_override: null },
-    { date: '2025-01-01', aircraft_id: 1, total_time: 10, dual_received: 0, solo_time: 10, simulator_time: 0, ground_time: 0, cost_override: null }, // untracked, excluded from both sides of the ratio
-  ];
-  assert.equal(averageCostPerFlightHour(flights, rates, phases), round2((442.5 + 315) / 3));
-});
-
-test('projectRemainingCost: FAA-minimum estimate uses remaining dual/solo hours at current rates', () => {
-  const { faaMinEstimate } = projectRemainingCost({
-    faaMinDualHours: 20, faaMinSoloHours: 10, flownDualHours: 15, flownSoloHours: 5, flownTotalHours: 20,
-    realisticTotalHours: 20, // irrelevant to this assertion
-    currentAircraftRate: { rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 },
-    currentInstructorRate: { hourly_rate: 85 },
-  });
-  assert.equal(faaMinEstimate.dualHours, 5);
-  assert.equal(faaMinEstimate.soloHours, 5);
-  assert.equal(faaMinEstimate.cost, round2(5 * (195 + 15 + 85) + 5 * (195 + 15)));
-});
-
-test('projectRemainingCost: realistic estimate beyond the FAA minimum assumes the extra hours are solo', () => {
-  const { realisticEstimate } = projectRemainingCost({
-    faaMinDualHours: 20, faaMinSoloHours: 10, flownDualHours: 20, flownSoloHours: 10, flownTotalHours: 40,
-    realisticTotalHours: 65,
-    currentAircraftRate: { rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 },
-    currentInstructorRate: { hourly_rate: 85 },
-  });
-  assert.equal(realisticEstimate.dualHours, 0); // FAA-min dual already fully flown
-  assert.equal(realisticEstimate.soloHours, 25); // all 25 remaining hours (65 - 40) assumed solo
-  assert.equal(realisticEstimate.cost, round2(25 * (195 + 15)));
-});
-
-test('projectRemainingCost: realistic total at or under the FAA-min remaining total scales both proportionally', () => {
-  const { realisticEstimate, faaMinEstimate } = projectRemainingCost({
-    faaMinDualHours: 20, faaMinSoloHours: 10, flownDualHours: 0, flownSoloHours: 0, flownTotalHours: 0,
-    realisticTotalHours: 15, // half of the 30hr FAA-min remaining total
-    currentAircraftRate: { rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 },
-    currentInstructorRate: { hourly_rate: 85 },
-  });
-  assert.equal(faaMinEstimate.dualHours, 20);
-  assert.equal(faaMinEstimate.soloHours, 10);
-  assert.equal(realisticEstimate.dualHours, 10); // half of 20
-  assert.equal(realisticEstimate.soloHours, 5); // half of 10
-});
-
 test('fmtMoney formats to two decimal places with thousands separators', () => {
   assert.equal(fmtMoney(442.5), '$442.50');
   assert.equal(fmtMoney(1234.5), '$1,234.50');
   assert.equal(fmtMoney(0), '$0.00');
+});
+
+// ---- Real numbers: 20 flights, 29.9 flight hrs, 5.9 ground hrs, $10,736.42 total spent ----
+
+test('spentPerFlightHour: $10,736.42 over 29.9 flight hours = $359.08 (not the per-flight-cost average)', () => {
+  const flights = Array.from({ length: 20 }, (_, i) => ({ total_time: i < 10 ? 1.5 : 1.49, simulator_time: 0 }));
+  const hours = flights.reduce((s, f) => s + f.total_time, 0);
+  assert.equal(round2(hours), 29.9);
+  assert.equal(spentPerFlightHour(10736.42, flights), 359.08);
+  assert.equal(spentPerFlightHour(100, []), 0);
+});
+
+const req = (key, min, current, extra = {}) => ({
+  requirement_key: key, min_value: min, current, met: current != null && current >= min, manual: 0, unit: 'hours',
+  sum_field: key, flight_filter: null, ...extra,
+});
+const dualFilter = JSON.stringify([{ field: 'cross_country_time', op: '>', value: 0 }]);
+const privateReqs = [
+  req('total_time', 40, 29.9),
+  req('dual_received', 20, 29.9),
+  req('dual_xc', 3, 0, { sum_field: 'dual_received', flight_filter: dualFilter }),
+  req('dual_night', 3, 0, { sum_field: 'dual_received', flight_filter: dualFilter }),
+  req('solo_time', 10, 0),
+  req('solo_xc', 5, 0, { sum_field: 'solo_time', flight_filter: dualFilter }),
+  { requirement_key: 'solo_xc_150nm', manual: 1, current: null, met: false, min_value: 1, unit: 'count' },
+  { requirement_key: 'checkride_prep', manual: 1, current: null, met: false, min_value: 1, unit: 'count' },
+];
+
+test('remainingHoursByType: real private requirements -> 6.00h dual (3 xc/night binding + 3 checkride prep), 10.00h solo', () => {
+  assert.deepEqual(remainingHoursByType(privateReqs), { dualHours: 6, soloHours: 10 });
+});
+
+test('remainingHoursByType: a total-time gap beyond dual+solo is folded into solo; completed checkride prep adds nothing', () => {
+  const reqs = [req('total_time', 40, 10), req('dual_received', 20, 15), { requirement_key: 'checkride_prep', manual: 1, met: true }];
+  assert.deepEqual(remainingHoursByType(reqs), { dualHours: 5, soloHours: 25 });
+});
+
+const realFlights = [
+  ...Array.from({ length: 10 }, (_, i) => ({ date: `2026-08-${String(i + 1).padStart(2, '0')}`, total_time: 1.5, ground_time: 0.3 })),
+  ...Array.from({ length: 10 }, (_, i) => ({ date: `2026-09-${String(i + 1).padStart(2, '0')}`, total_time: 1.49, ground_time: 0.29 })),
+];
+
+test('lessonAverages: average lesson length and ground hours per lesson', () => {
+  const a = lessonAverages(realFlights);
+  assert.ok(Math.abs(a.avgLessonLength - 1.495) < 1e-9);
+  assert.ok(Math.abs(a.avgGroundPerLesson - 0.295) < 1e-9);
+  assert.deepEqual(lessonAverages([]), { avgLessonLength: 0, avgGroundPerLesson: 0 });
+});
+
+test('recentFlyingFrequency and estimateFinishDate: pace from recent flights, null with too little data', () => {
+  const f = recentFlyingFrequency(realFlights, '2026-09-23');
+  assert.equal(f.sampleSize, 20);
+  assert.ok(f.lessonsPerWeek > 2 && f.lessonsPerWeek < 3); // 20 flights over ~7.5 weeks
+  assert.equal(recentFlyingFrequency([realFlights[0]], '2026-09-23'), null);
+  assert.equal(estimateFinishDate(14, 2, '2026-09-23'), '2026-11-11'); // 7 weeks out
+  assert.equal(estimateFinishDate(14, 0, '2026-09-23'), null);
+});
+
+const projRates = {
+  aircraftRate: { rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 },
+  instructorRate: { hourly_rate: 85 },
+  groundRate: { hourly_rate: 85 },
+};
+
+test('buildCertificateProjection: FAA minimum = 6h dual + 10h solo at $210 aircraft, $85 instructor, $85 ground + one-time costs', () => {
+  const p = buildCertificateProjection({ requirements: privateReqs, flights: realFlights, ...projRates, oneTimeCostsTotal: 800, today: '2026-09-23' });
+  const e = p.faaMinEstimate;
+  assert.equal(e.dualHours, 6);
+  assert.equal(e.soloHours, 10);
+  assert.equal(e.aircraftCost, 3360); // 16h x $210
+  assert.equal(e.instructorCost, 510); // 6h x $85
+  assert.equal(e.lessons, round2(16 / 1.495)); // 10.70 lessons at the average lesson length
+  assert.equal(e.groundHours, round2((16 / 1.495) * 0.295)); // 3.16h at avg 0.295 ground/lesson
+  assert.equal(e.groundCost, round2((16 / 1.495) * 0.295 * 85));
+  assert.equal(e.oneTimeCosts, 800);
+  assert.equal(e.cost, round2(3360 + 510 + (16 / 1.495) * 0.295 * 85 + 800));
+});
+
+test('buildCertificateProjection: realistic estimate pads to the 50h default target with extra hours costed as solo', () => {
+  const p = buildCertificateProjection({ requirements: privateReqs, flights: realFlights, ...projRates, today: '2026-09-23' });
+  const e = p.realisticEstimate;
+  assert.equal(e.dualHours, 6);
+  assert.equal(e.soloHours, 14.1); // 10 + (50 - 29.9 - 16)
+  assert.equal(e.aircraftCost, round2(20.1 * 210));
+  assert.equal(p.breakdown.targetTotalHours, 50);
+  assert.equal(p.breakdown.targetRaised, false);
+  assert.ok(p.finishDate > '2026-09-23');
+});
+
+test('buildCertificateProjection: already past the target without finishing raises the target instead of $0 remaining', () => {
+  const p = buildCertificateProjection({ requirements: privateReqs, flights: realFlights, ...projRates, targetTotalHours: 25, today: '2026-09-23' });
+  assert.equal(p.breakdown.targetRaised, true);
+  assert.equal(p.breakdown.targetTotalHours, 45.9); // flown 29.9 + 16 remaining minimum
+  assert.equal(p.realisticEstimate.cost, p.faaMinEstimate.cost);
+  assert.ok(p.realisticEstimate.cost > 0);
 });
