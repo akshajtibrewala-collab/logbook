@@ -109,6 +109,31 @@ logged in an aircraft with none; MM/DD/YYYY date display everywhere (storage/CSV
 automatic weekly backup (Vercel Cron + Resend email, `backup_runs` log from migration 017, status card,
 "Run backup now", Dashboard warning when failed or over 8 days old). Verified end to end on production.
 
+## Phase 3 — faster logging, charts, map polish, photos, sharing — built on a branch (not yet merged)
+
+- **Logging**: `/logbook/quick` (Quick log), Copy last flight (`/logbook/new?copy=last`), airport
+  autocomplete with remembered airports (`AirportSearchField`), recent-first aircraft, client-side
+  validation (`lib/flightDraft.js`), draft autosave and an offline outbox with automatic retry
+  (`lib/outbox.js`, `OutboxBanner`).
+- **Add button**: `AddFab` (hides on scroll down, clears the last row via a `.fab-clearance` spacer,
+  not rendered from `md`); Logbook and Aircraft headers carry the Add action on desktop.
+- **Stats**: hours by month, by tail number, cumulative line with a target (`lib/charts.js`, tested;
+  target stored in `pilot_settings.hours_target` / `hours_target_label`, migration 018).
+- **Map**: animated routes (skipped for reduced motion and above 120 routes), colour by year/aircraft
+  with legend, pin mini-summary, counters (`lib/mapstyle.js`, tested), tile cache (`public/sw.js`).
+  States visited needs `airports.region` (migration 018 adds the column; the seed script fills it — re-seed).
+- **Photos**: `flight_photos` (migration 019), `routes/photos.js`, client-side compression
+  (`lib/image.js`). Stored as base64 in the database rather than Vercel Blob so no extra service or token
+  is needed. Not in the JSON backup on purpose (size) — a full restore leaves photos in place but a
+  restore into a *fresh* database will not bring them back. Follow-up: move to object storage (e.g.
+  Vercel Blob) if the photo volume grows.
+- **Sharing**: `share_settings` (migration 020), `routes/share.js` (admin + public routers),
+  `lib/share-summary.js` (the only thing that shapes what a public link can see; unit tested),
+  `/share/:token` (outside the passcode gate) and `/logbook/print`. Also intentionally not in backups so
+  restoring can't revive a revoked link.
+- **Design/a11y**: system light/dark preference until the toggle is used, Space Grotesk headings, global
+  focus ring, skip link, higher-contrast secondary text in dark mode, pagination ("Show more") in the logbook.
+
 ## Known follow-ups
 
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,

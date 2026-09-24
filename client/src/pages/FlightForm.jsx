@@ -1,12 +1,17 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Copy } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours, parseHours } from '../lib/hours.js';
 import { computeFlightCost, fmtMoney } from '../lib/cost.js';
 import HoursInput from '../components/HoursInput.jsx';
 import CountInput from '../components/CountInput.jsx';
 import TextField from '../components/TextField.jsx';
+import AirportSearchField from '../components/AirportSearchField.jsx';
+import PhotoPicker, { uploadPending } from '../components/PhotoPicker.jsx';
+import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
+import { prefillFromFlight, mostRecentFlight, validateFlightPayload } from '../lib/flightDraft.js';
+import { saveDraft, loadDraft, clearDraft, enqueue, outboxList, removeFromOutbox, isNetworkError } from '../lib/outbox.js';
 import DatePicker from '../components/DatePicker.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Button from '../components/Button.jsx';
@@ -46,6 +51,8 @@ function fromFlight(f) {
   return s;
 }
 
+const DRAFT_NAME = 'flight-new';
+
 function Section({ title, children }) {
   return (
     <section className="card p-4">
@@ -69,11 +76,56 @@ export default function FlightForm() {
   const [phases, setPhases] = useState(null);
   const [defaultGroundTime, setDefaultGroundTime] = useState(null);
   const [groundTouched, setGroundTouched] = useState(false);
+  const [params] = useSearchParams();
+  const [notice, setNotice] = useState('');
+  const [pendingPhotos, setPendingPhotos] = useState([]);
+  const draftReady = useRef(false); // autosave starts only after any restore/prefill has happened
 
   useEffect(() => {
-    if (!id) return;
-    api.getFlight(id).then((f) => setForm(fromFlight(f))).catch((e) => setMessage(e.message)).finally(() => setLoading(false));
-  }, [id]);
+    if (id) {
+      api.getFlight(id).then((f) => setForm(fromFlight(f))).catch((e) => setMessage(e.message)).finally(() => { setLoading(false); draftReady.current = true; });
+      return undefined;
+    }
+    // New flight: start from (in priority order) a queued entry being fixed, the last flight (Copy last),
+    // or an unsaved draft from an earlier visit; otherwise a blank form.
+    const outboxId = params.get('outbox');
+    const queued = outboxId ? outboxList().find((e) => e.id === outboxId) : null;
+    if (queued) {
+      setForm(fromFlight(queued.payload));
+      setNotice(`This flight couldn’t be saved: ${queued.rejected || 'unknown reason'}. Fix it and save again.`);
+      draftReady.current = true;
+      return undefined;
+    }
+    if (params.get('copy') === 'last') {
+      setLoading(true);
+      api.listFlights()
+        .then(async (list) => {
+          const last = mostRecentFlight(list);
+          if (!last) { setNotice('There’s no previous flight to copy yet.'); return; }
+          const full = await api.getFlight(last.id);
+          setForm(fromFlight(prefillFromFlight(full, today())));
+          setNotice('Copied from your last flight — change anything that’s different.');
+        })
+        .catch((e) => setMessage(e.message))
+        .finally(() => { setLoading(false); draftReady.current = true; });
+      return undefined;
+    }
+    const draft = loadDraft(DRAFT_NAME);
+    if (draft?.value) {
+      setForm({ ...blank(), ...draft.value });
+      setNotice('Restored your unsaved flight from earlier.');
+    }
+    draftReady.current = true;
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, params]);
+
+  // Autosave the in-progress new flight so a crash, refresh or failed save never loses it.
+  useEffect(() => {
+    if (id || !draftReady.current) return undefined;
+    const timer = setTimeout(() => saveDraft(DRAFT_NAME, form), 400);
+    return () => clearTimeout(timer);
+  }, [form, id]);
   useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
   useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
   useEffect(() => { api.getSettings().then((s) => setDefaultGroundTime(s.default_ground_time)).catch(() => {}); }, []);
@@ -113,18 +165,48 @@ export default function FlightForm() {
       payload[k] = n;
     }
     if (Object.keys(local).length) return setErrors(local);
+    const invalid = validateFlightPayload(payload, { today: today() });
+    if (Object.keys(invalid).length) {
+      setErrors(invalid);
+      setMessage('Please fix the highlighted fields.');
+      return undefined;
+    }
     setSaving(true);
     setErrors({});
     setMessage('');
     try {
+      let savedId = id;
       if (id) await api.updateFlight(id, payload);
-      else await api.createFlight(payload);
+      else savedId = (await api.createFlight(payload)).id;
+      const outboxId = params.get('outbox');
+      if (outboxId) { removeFromOutbox(outboxId); window.dispatchEvent(new Event(OUTBOX_CHANGED)); }
+      if (!id) clearDraft(DRAFT_NAME);
+      if (pendingPhotos.length) {
+        const failed = await uploadPending(savedId, pendingPhotos);
+        if (failed) {
+          // The flight itself is saved; keep the person on its edit screen to add the missing photos.
+          setPendingPhotos([]);
+          setMessage(`Flight saved, but ${failed} photo${failed === 1 ? '' : 's'} didn’t upload. Add ${failed === 1 ? 'it' : 'them'} again below.`);
+          setSaving(false);
+          navigate(`/logbook/${savedId}/edit`, { replace: true });
+          return undefined;
+        }
+      }
       navigate(id ? `/logbook/${id}` : '/logbook');
     } catch (err) {
+      if (isNetworkError(err) && !id && !pendingPhotos.length && enqueue(payload)) {
+        // Offline: keep the entry safely on the device and retry automatically (OutboxBanner).
+        clearDraft(DRAFT_NAME);
+        window.dispatchEvent(new Event(OUTBOX_CHANGED));
+        navigate('/logbook');
+        return undefined;
+      }
       setErrors(err.fieldErrors || {});
-      setMessage(err.fieldErrors ? 'Please fix the highlighted fields.' : err.message);
+      setMessage(err.fieldErrors ? 'Please fix the highlighted fields.'
+        : isNetworkError(err) ? `${err.message} Your entry is still here — try again when you’re connected.` : err.message);
       setSaving(false);
     }
+    return undefined;
   }
 
   async function remove() {
@@ -144,13 +226,27 @@ export default function FlightForm() {
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => navigate(id ? `/logbook/${id}` : '/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
+        <h1 className="min-w-0 flex-1 text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
+        {!id && (
+          <button type="button" onClick={() => navigate('/logbook/new?copy=last', { replace: true })}
+            className="flex h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 active:text-accent">
+            <Copy size={16} />Copy last
+          </button>
+        )}
       </div>
+      {notice && (
+        <p role="status" className="flex items-center justify-between gap-3 rounded-xl bg-accent/10 p-3 text-sm text-accent">
+          <span>{notice}</span>
+          {!id && !params.get('outbox') && (
+            <button type="button" onClick={() => { clearDraft(DRAFT_NAME); setForm(blank()); setNotice(''); }} className="h-11 shrink-0 px-2 font-medium underline">Start over</button>
+          )}
+        </p>
+      )}
 
       <Section title="Flight">
         <div className="col-span-2"><DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} /></div>
-        <TextField label="From" upper value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
-        <TextField label="To" upper value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
+        <AirportSearchField label="From" value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
+        <AirportSearchField label="To" value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
         <div className="col-span-2">
           <StopsEditor stops={form.stops} onChange={(stops) => setForm((f) => ({ ...f, stops }))}
             from={form.departure_airport} to={form.arrival_airport} />
@@ -242,9 +338,14 @@ export default function FlightForm() {
       </section>
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Remarks</h2>
+        <h2 className="mb-3 text-sm font-medium text-accent">Note</h2>
         <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3}
           className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+      </section>
+
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-medium text-accent">Photos</h2>
+        <PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} />
       </section>
 
       <section className="card p-4">

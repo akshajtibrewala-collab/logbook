@@ -8,6 +8,7 @@ import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Badge from '../components/Badge.jsx';
+import PhotoGallery from '../components/PhotoGallery.jsx';
 import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
 
 const TIME_FIELDS = [
@@ -36,6 +37,19 @@ function Stat({ label, value }) {
       <div className="text-lg font-semibold">{fmtHours(value)}</div>
       <div className="text-xs text-slate-400">{label}</div>
     </div>
+  );
+}
+
+// Only takes up space when the flight has photos (PhotoGallery renders nothing otherwise, but the card
+// around it would still show), so it checks first.
+function PhotosSection({ flightId }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => { api.photoCounts().then((c) => setCount(c[flightId] || 0)).catch(() => {}); }, [flightId]);
+  if (!count) return null;
+  return (
+    <Section title={`Photos (${count})`}>
+      <PhotoGallery flightId={flightId} />
+    </Section>
   );
 }
 
@@ -158,10 +172,12 @@ export default function FlightDetail() {
           )}
 
           {flight.remarks && (
-            <Section title="Remarks">
+            <Section title="Note">
               <p className="whitespace-pre-wrap text-sm text-slate-300">{flight.remarks}</p>
             </Section>
           )}
+
+          <PhotosSection flightId={flight.id} />
 
           {(flight.debrief_went_well || flight.debrief_work_on) && (
             <Section title="Debrief">

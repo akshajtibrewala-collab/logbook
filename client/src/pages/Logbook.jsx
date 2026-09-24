@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useMatch, useNavigate } from 'react-router-dom';
-import { Plus, Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign, GraduationCap } from 'lucide-react';
+import { Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign, GraduationCap, Zap, Copy, Camera, Share2 } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { computeFlightCost, computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
@@ -11,6 +11,9 @@ import ErrorNote from '../components/ErrorNote.jsx';
 import Card from '../components/Card.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Modal from '../components/Modal.jsx';
+import AddFab from '../components/AddFab.jsx';
+import Button from '../components/Button.jsx';
+import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
 const CATEGORIES = [
@@ -26,6 +29,8 @@ const SORTS = {
 };
 
 
+const PAGE_SIZE = 40; // entries shown at a time; "Show more" reveals the next page
+
 const selectCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent';
 
 function LogChoiceModal({ open, onClose }) {
@@ -38,9 +43,19 @@ function LogChoiceModal({ open, onClose }) {
           <Plane size={28} className="text-accent" />
           <span className="text-sm font-medium">Log flight</span>
         </button>
-        <button type="button" onClick={() => navigate('/logbook/ground/new')}
+        <button type="button" onClick={() => navigate('/logbook/quick')}
           className="flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
-          <GraduationCap size={28} className="text-accent" />
+          <Zap size={28} className="text-accent" />
+          <span className="text-sm font-medium">Quick log</span>
+        </button>
+        <button type="button" onClick={() => navigate('/logbook/new?copy=last')}
+          className="flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
+          <Copy size={28} className="text-accent" />
+          <span className="text-sm font-medium">Copy last flight</span>
+        </button>
+        <button type="button" onClick={() => navigate('/logbook/ground/new')}
+          className="col-span-2 flex flex-col items-center gap-2 rounded-2xl border border-edge p-4 active:bg-navy-800">
+          <GraduationCap size={24} className="text-accent" />
           <span className="text-sm font-medium">Log ground session</span>
         </button>
       </div>
@@ -62,6 +77,8 @@ export default function Logbook() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ from: '', to: '', type: '', category: '', kind: 'all' });
   const [showLogChoice, setShowLogChoice] = useState(false);
+  const [photoCounts, setPhotoCounts] = useState({});
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
   const load = useCallback(() => {
     setError('');
@@ -70,6 +87,14 @@ export default function Logbook() {
       .catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
+  // A queued flight that finally saved (see OutboxBanner) should appear without a manual refresh.
+  useEffect(() => {
+    window.addEventListener(OUTBOX_CHANGED, load);
+    return () => window.removeEventListener(OUTBOX_CHANGED, load);
+  }, [load]);
+  useEffect(() => { api.photoCounts().then(setPhotoCounts).catch(() => {}); }, []);
+  // Any change to what's shown starts the list back at the first page.
+  useEffect(() => setLimit(PAGE_SIZE), [filters, sort]);
   useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
   useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
 
@@ -112,6 +137,11 @@ export default function Logbook() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Logbook</h1>
         <div className="flex gap-2">
+          <Link to="/logbook/new" className="hidden h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">Add flight</Link>
+          <Link to="/logbook/quick" className="hidden h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 md:flex"><Zap size={16} />Quick log</Link>
+          <Link to="/logbook/share" aria-label="Share and print" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+            <Share2 size={20} />
+          </Link>
           <Link to="/costs" aria-label="Costs" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <DollarSign size={20} />
           </Link>
@@ -174,7 +204,7 @@ export default function Logbook() {
       )}
 
       <ul className="stagger mt-2 space-y-2">
-        {visible.map((e) => {
+        {visible.slice(0, limit).map((e) => {
           const isSelected = selected && selected.kind === e.kind && String(e.id) === selected.id;
           const cost = costFor(e);
           const to = e.kind === 'flight' ? `/logbook/${e.id}` : `/logbook/ground/${e.id}`;
@@ -191,6 +221,7 @@ export default function Logbook() {
                     <div className="mt-1 flex justify-between text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.route ? ` · via ${e.data.route}` : ''}</span>
                       <span className="flex items-center gap-2">
+                        {photoCounts[e.id] > 0 && <Camera size={14} aria-label={`${photoCounts[e.id]} photo(s)`} className="text-slate-500" />}
                         {e.data.airline && <AirlineBadge airline={e.data.airline} />}
                         {[e.data.aircraft_type, e.data.tail_number].filter(Boolean).join(' · ')}
                       </span>
@@ -219,18 +250,21 @@ export default function Logbook() {
         })}
       </ul>
 
+      {visible.length > limit && (
+        <Button variant="secondary" size="md" className="mt-3" onClick={() => setLimit((l) => l + PAGE_SIZE)}>
+          Show more ({visible.length - limit} older)
+        </Button>
+      )}
+
       {entries && entries.length === 0 && (
-        <EmptyState icon={Plane} title="Nothing logged yet." description="Tap the + button to log your first flight or ground session." />
+        <EmptyState icon={Plane} title="Nothing logged yet." description="Log your first flight or ground session to start your logbook."
+          action={<div className="mx-auto grid max-w-xs gap-2"><Button as={Link} to="/logbook/new" size="md">Add a flight</Button><Button as={Link} to="/logbook/quick" size="md" variant="secondary">Quick log</Button></div>} />
       )}
       {entries && entries.length > 0 && visible.length === 0 && (
         <EmptyState title="Nothing matches these filters." />
       )}
 
-      <button onClick={() => setShowLogChoice(true)} aria-label="Log flight or ground session"
-        style={{ bottom: 'calc(var(--bottom-nav-h) + 1rem)' }}
-        className="fixed right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink shadow-lg shadow-accent/30 active:scale-95 active:bg-accent-dark md:bottom-6">
-        <Plus size={28} strokeWidth={2.25} />
-      </button>
+      <AddFab onClick={() => setShowLogChoice(true)} label="Log flight or ground session" />
       <LogChoiceModal open={showLogChoice} onClose={() => setShowLogChoice(false)} />
     </div>
 

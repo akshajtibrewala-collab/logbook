@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Plane, Search } from 'lucide-react';
 import { api } from '../lib/api.js';
+import { getRecents, recordRecent, sortByRecency } from '../lib/recents.js';
 import Modal from './Modal.jsx';
 import TextField from './TextField.jsx';
 import Button from './Button.jsx';
@@ -34,14 +35,17 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
       api.getAircraft(value).then(setFallback).catch(() => {});
     }
   }, [value, list]);
+  // Aircraft you've used most recently come first, so tonight's tail number is one tap away.
   const filtered = useMemo(() => {
     if (!list) return [];
+    const ordered = sortByRecency(list, getRecents('aircraft'));
     const s = q.trim().toLowerCase();
-    if (!s) return list;
-    return list.filter((a) => [a.tail_number, a.make, a.model, a.type_designator].filter(Boolean).join(' ').toLowerCase().includes(s));
-  }, [list, q]);
+    if (!s) return ordered;
+    return ordered.filter((a) => [a.tail_number, a.make, a.model, a.type_designator].filter(Boolean).join(' ').toLowerCase().includes(s));
+  }, [list, q, open]);
 
   function pick(a) {
+    recordRecent('aircraft', a.id);
     onSelect(a);
     setOpen(false);
   }
