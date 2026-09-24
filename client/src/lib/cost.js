@@ -8,10 +8,48 @@
 // that's already closed. Nothing here talks to the API.
 
 import { addDays, daysBetween } from './currency.js';
+import { formatDate } from './calendar.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
 export const fmtMoney = (n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Cost tracking is meant to cover training only. The pilot can set a cutoff calendar day (e.g. the
+// commercial certificate date, `pilot_settings.cost_cutoff_date`); flights and ground sessions dated ON OR
+// AFTER it are left out of every cost total. It travels on the rates object (`rates.cost_cutoff_date`,
+// added by fetchAllRates), which every cost function already receives. Dates are compared as plain
+// YYYY-MM-DD strings — calendar days, never timestamps — so no time zone can move a flight across the line.
+// The flight's stored cost fields are never touched; they're just not counted.
+
+/** True when `date` is on or after a set cutoff. No cutoff (empty/null) means never. */
+export const isPastCostCutoff = (date, cutoff) => Boolean(cutoff) && Boolean(date) && String(date).slice(0, 10) >= cutoff;
+
+/** The calendar day before `iso` (YYYY-MM-DD), by pure UTC date arithmetic. */
+export function dayBefore(iso) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The note shown next to cost totals when a cutoff is set (else ''): "Costs counted through 06/14/2026 …". */
+export function costCutoffNote(cutoff) {
+  if (!cutoff) return '';
+  return `Costs counted through ${formatDate(dayBefore(cutoff))} — flights and ground sessions from ${formatDate(cutoff)} on aren't included.`;
+}
+
+/**
+ * The flights and ground sessions that count toward costs: everything dated before the cutoff (all of them
+ * when there is no cutoff). Used for cost per hour, averages, pace and projections, so hours flown after the
+ * cutoff don't dilute or skew them. Everything else in the app keeps using the full lists.
+ */
+export function entriesCountedForCost(flights, groundSessions, cutoff) {
+  return {
+    flights: flights.filter((f) => !isPastCostCutoff(f.date, cutoff)),
+    groundSessions: groundSessions.filter((g) => !isPastCostCutoff(g.date, cutoff)),
+  };
+}
+
+const EXCLUDED = { total: null, computedTotal: null, tracked: false, override: false, missingRate: false, breakdown: null, excluded: true };
 
 /** The latest rate row from `rates` with effective_date <= date, or null if none applies yet. */
 export function pickRate(rates, date) {
@@ -58,6 +96,7 @@ const hasValue = (v) => v !== null && v !== undefined && v !== '';
  * cost at all, and callers should exclude it from totals/projections rather than treat it as free.
  */
 export function computeFlightCost(flight, rates, phases) {
+  if (isPastCostCutoff(flight.date, rates?.cost_cutoff_date)) return EXCLUDED;
   const phase = findPhaseForDate(phases, flight.date);
   const tracked = Boolean(phase?.track_costs);
   const hasOverride = hasValue(flight.cost_override);
@@ -108,6 +147,7 @@ export function computeFlightCost(flight, rates, phases) {
  * one rate (hours x the ground rate in effect, in the phase covering the session's date).
  */
 export function computeGroundSessionCost(session, rates, phases) {
+  if (isPastCostCutoff(session.date, rates?.cost_cutoff_date)) return EXCLUDED;
   const phase = findPhaseForDate(phases, session.date);
   const tracked = Boolean(phase?.track_costs);
   const hasOverride = hasValue(session.cost_override);

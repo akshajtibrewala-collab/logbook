@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, Plus, Trash2 } from 'lucide-react';
-import { api } from '../lib/api.js';
+import { api, saveSettingsMerged } from '../lib/api.js';
 import { fmtMoney } from '../lib/cost.js';
 import { certificateLabel } from '../lib/milestones.js';
 import { todayISO, formatDate } from '../lib/calendar.js';
@@ -238,7 +238,7 @@ export default function CostSettings() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [message, setMessage] = useState('');
-  const [settingsForm, setSettingsForm] = useState({ default_ground_time: '', private_realistic_total_hours: '' });
+  const [settingsForm, setSettingsForm] = useState({ default_ground_time: '', private_realistic_total_hours: '', cost_cutoff_date: '' });
   const [savingSettings, setSavingSettings] = useState(false);
 
   const load = useCallback(() => {
@@ -251,6 +251,7 @@ export default function CostSettings() {
         setSettingsForm({
           default_ground_time: settings.default_ground_time == null ? '' : String(settings.default_ground_time),
           private_realistic_total_hours: settings.private_realistic_total_hours == null ? '' : String(settings.private_realistic_total_hours),
+          cost_cutoff_date: settings.cost_cutoff_date ?? '',
         });
       })
       .catch((e) => setMessage(e.message));
@@ -260,7 +261,7 @@ export default function CostSettings() {
   const saveSettings = async () => {
     setSavingSettings(true);
     try {
-      await api.updateSettings(settingsForm);
+      await saveSettingsMerged(settingsForm);
     } catch (err) {
       setMessage(err.message);
     } finally {
@@ -289,6 +290,11 @@ export default function CostSettings() {
           onChange={(v) => setSettingsForm((f) => ({ ...f, default_ground_time: v }))} placeholder="Not set" />
         <TextField label="Private pilot: realistic total hours target (raised automatically if you pass it)" type="number" value={settingsForm.private_realistic_total_hours}
           onChange={(v) => setSettingsForm((f) => ({ ...f, private_realistic_total_hours: v }))} placeholder="Defaults to 50" />
+        <div className="col-span-2">
+          <DatePicker label="Commercial certificate date — stop counting costs from" value={settingsForm.cost_cutoff_date}
+            onChange={(v) => setSettingsForm((f) => ({ ...f, cost_cutoff_date: v }))} clearable placeholder="Not set — count everything" />
+          <p className="mt-1 text-xs text-slate-500">Optional. Flights and ground sessions on or after this day are left out of every cost total, average and chart. They still count everywhere else, and their saved cost fields are kept.</p>
+        </div>
         <Button size="sm" fullWidth={false} onClick={saveSettings} disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save'}</Button>
       </Section>
 

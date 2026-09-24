@@ -53,3 +53,13 @@ test('PUT rejects an invalid airport code and an out-of-range number', async () 
   assert.ok(body.errors.home_airport_ident);
   assert.ok(body.errors.max_wind_kt);
 });
+
+test('cost cutoff date: saved as a calendar day, blank clears it, invalid dates are rejected', async () => {
+  let res = await call('PUT', '/settings', { cost_cutoff_date: '2026-06-15' });
+  assert.equal((await res.json()).cost_cutoff_date, '2026-06-15');
+  res = await call('PUT', '/settings', { cost_cutoff_date: '2026-02-30' });
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).errors.cost_cutoff_date);
+  res = await call('PUT', '/settings', { cost_cutoff_date: '' });
+  assert.equal((await res.json()).cost_cutoff_date, null);
+});

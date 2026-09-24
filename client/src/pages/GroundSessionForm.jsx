@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours, parseHours } from '../lib/hours.js';
-import { computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
+import { computeGroundSessionCost, fmtMoney, isPastCostCutoff } from '../lib/cost.js';
+import { formatDate } from '../lib/calendar.js';
 import HoursInput from '../components/HoursInput.jsx';
 import TextField from '../components/TextField.jsx';
 import DatePicker from '../components/DatePicker.jsx';
@@ -91,6 +92,8 @@ export default function GroundSessionForm() {
     }
   }
 
+  const costOff = Boolean(rates) && isPastCostCutoff(form.date, rates.cost_cutoff_date);
+
   if (loading) return <p className="text-slate-400">Loading…</p>;
 
   return (
@@ -112,6 +115,13 @@ export default function GroundSessionForm() {
         </div>
       </Section>
 
+      {costOff ? (
+        <section className="card p-4">
+          <h2 className="text-sm font-medium text-accent">Cost</h2>
+          <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
+        </section>
+      ) : (
+      <>
       <section className="card p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-accent">Cost</h2>
@@ -136,6 +146,8 @@ export default function GroundSessionForm() {
           )}
         </div>
       </Disclosure>
+      </>
+      )}
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 

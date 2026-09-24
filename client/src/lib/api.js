@@ -120,8 +120,21 @@ export const api = {
 
 /** Fetches all four rate tables in one round trip, in the shape client/src/lib/cost.js expects. */
 export async function fetchAllRates() {
-  const [aircraft_rates, instructor_rates, ground_rates, simulator_rates] = await Promise.all([
+  const [aircraft_rates, instructor_rates, ground_rates, simulator_rates, settings] = await Promise.all([
     api.listAircraftRates(), api.listInstructorRates(), api.listGroundRates(), api.listSimulatorRates(),
+    api.getSettings().catch(() => ({})),
   ]);
-  return { aircraft_rates, instructor_rates, ground_rates, simulator_rates };
+  // The cost cutoff date rides along with the rates: every cost function already receives this object, so
+  // one place makes "flights on/after the cutoff don't count" apply everywhere (see lib/cost.js).
+  return { aircraft_rates, instructor_rates, ground_rates, simulator_rates, cost_cutoff_date: settings.cost_cutoff_date ?? null };
+}
+
+/**
+ * Saves part of the pilot settings without disturbing the rest. The settings endpoint replaces the whole
+ * row (a field left out is cleared), and the weather and cost settings pages each edit only their own
+ * fields — so each merges its changes into the current settings instead of sending a partial form.
+ */
+export async function saveSettingsMerged(patch) {
+  const current = await api.getSettings();
+  return api.updateSettings({ ...current, ...patch });
 }
