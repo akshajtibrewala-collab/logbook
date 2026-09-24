@@ -82,10 +82,10 @@ export function localAndZulu(date, timeZone) {
   return `${zonedHHMM(date, timeZone)} ${zoneAbbreviation(date, timeZone)} · ${zuluHHMM(date)}Z`;
 }
 
-/** "Sep 4, 3:00 PM MDT · 21:00Z" — same, with the zoned date/time spelled out for a different-day case. */
+/** "09/04/2026, 3:00 PM MDT · 21:00Z" — same, with the zoned date/time spelled out for a different-day case. */
 export function localAndZuluLong(date, timeZone) {
   if (!timeZone) return `${date.toISOString().slice(0, 16).replace('T', ' ')}Z`;
-  const datePart = new Intl.DateTimeFormat('en-US', { timeZone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
+  const datePart = new Intl.DateTimeFormat('en-US', { timeZone, month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
   return `${datePart} ${zoneAbbreviation(date, timeZone)} · ${zuluHHMM(date)}Z`;
 }
 

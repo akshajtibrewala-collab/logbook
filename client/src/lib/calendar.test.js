@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseISO, toISO, daysInMonth, firstWeekday, monthGrid, shiftMonth, formatDate, toDateTime, parseDateTime, formatDateTime } from './calendar.js';
+import { parseISO, toISO, daysInMonth, firstWeekday, monthGrid, shiftMonth, formatDate, formatDateWithWeekday, formatInstant, toDateTime, parseDateTime, formatDateTime } from './calendar.js';
 
 test('parses only real calendar dates', () => {
   assert.deepEqual(parseISO('2026-09-04'), { y: 2026, m: 9, d: 4 });
@@ -37,11 +37,25 @@ test('shifts months across year boundaries', () => {
   assert.deepEqual(shiftMonth(2026, 3, -14), { y: 2025, m: 1 });
 });
 
-test('formats without time zone drift', () => {
-  assert.match(formatDate('2026-09-04'), /Sep/);
-  assert.match(formatDate('2026-09-04'), /4/);
+test('formatDate is MM/DD/YYYY, pure string formatting (no day ever shifts)', () => {
+  assert.equal(formatDate('2026-09-04'), '09/04/2026');
+  assert.equal(formatDate('2026-12-31'), '12/31/2026');
+  assert.equal(formatDate('2026-01-01'), '01/01/2026');
+  assert.equal(formatDate('2028-02-29'), '02/29/2028');
+  assert.equal(formatDate('2026-02-30'), '');
   assert.equal(formatDate(''), '');
   assert.equal(formatDate('nope'), '');
+});
+
+test('formatDateWithWeekday names the weekday of that calendar date', () => {
+  assert.equal(formatDateWithWeekday('2026-09-12'), 'Sat 09/12/2026');
+  assert.equal(formatDateWithWeekday('2026-01-01'), 'Thu 01/01/2026');
+  assert.equal(formatDateWithWeekday('bad'), '');
+});
+
+test('formatInstant formats a real timestamp as MM/DD/YYYY with a time', () => {
+  assert.equal(formatInstant('2026-09-12T15:30:00'), '09/12/2026, 3:30 PM');
+  assert.equal(formatInstant('garbage'), '');
 });
 
 test('toDateTime combines a date and hour/minute into the datetime-local shape, zero-padded', () => {
@@ -59,10 +73,10 @@ test('parseDateTime accepts only the exact datetime-local shape with a real date
   assert.equal(parseDateTime(null), null);
 });
 
-test('formatDateTime reads back as the same wall-clock time regardless of the runner\'s time zone', () => {
-  assert.match(formatDateTime('2026-09-04T14:30'), /Sep/);
-  assert.match(formatDateTime('2026-09-04T14:30'), /4/);
-  assert.match(formatDateTime('2026-09-04T14:30'), /:30/);
+test('formatDateTime is MM/DD/YYYY plus a 12-hour wall-clock time, with no zone conversion', () => {
+  assert.equal(formatDateTime('2026-09-04T14:30'), '09/04/2026, 2:30 PM');
+  assert.equal(formatDateTime('2026-09-04T00:05'), '09/04/2026, 12:05 AM');
+  assert.equal(formatDateTime('2026-09-04T12:00'), '09/04/2026, 12:00 PM');
   assert.equal(formatDateTime(''), '');
   assert.equal(formatDateTime('nope'), '');
 });

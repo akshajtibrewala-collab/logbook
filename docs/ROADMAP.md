@@ -65,6 +65,37 @@ Merged to `main` (2026-09-23). No migrations — nothing to back up before this 
   since it's the same `md`/`lg` breakpoints, not separate device logic. ("Costs" two-column treatment from
   the original request doesn't apply — there's no Costs page yet, see the Phase 2 idea below.)
 
+## Phase 2b — training cost tracker — delivered, not yet merged
+
+On branch `phase2b`. The Logbook is now the single place flights *and* ground-only sessions get logged:
+the + button offers "Log flight" or "Log ground session", both entry kinds show together in one date-
+ordered list (a filter narrows to All/Flights/Ground), and tapping either opens a matching detail/edit view
+(`GroundSessionForm.jsx`, `GroundSessionDetail.jsx`). `FlightForm`'s ground-instruction-hours field lives in
+the main time section (auto-filled from a default briefing time on dual flights, editable), with the
+calculated cost shown live and a manual override tucked behind a disclosure.
+
+Costs are calculated per **training phase**, not globally: migration 013 adds `other_expenses`,
+`ground_sessions`, `training_phases` (a certificate's own date range) and `ground_time`/`cost_override` on
+`flights`; migration 014 adds `instructor`/`invoice_ref` (for idempotent external imports); migration 015
+scopes every rate table (aircraft rental+fuel, instructor, ground, simulator) to one training phase's own
+`certificate`, and gives each phase a `track_costs` toggle. A flight or ground session only gets a
+calculated cost when its date falls inside a phase with cost tracking on, using *that phase's own* rates —
+never a global "current rate" — so ending a phase (an end_date, e.g. a checkride date) freezes its totals
+permanently: a later rate change is always a different phase's row and can never reach back in. Outside any
+tracked phase, cost is `null` (shown as "Not tracked"), not $0, and excluded from totals/projections; a
+manual cost override still applies anywhere, tracked or not. All of this — cost breakdown, phase lookup,
+spend totals, spend per phase, average cost per flight hour, and a two-estimate remaining-cost projection
+(FAA minimum vs. a settable "realistic" total-hours target) — lives in `client/src/lib/cost.js`, pure and
+unit-tested against the plan's own worked examples ($442.50 for a 1.5hr dual lesson, $315 solo, $485 with
+0.5hr ground). `Costs.jsx` (summary, per-phase totals, spending chart, projections, expenses) and
+`CostSettings.jsx` (per-phase rate history editors, the track-costs toggle, default-ground-time and
+realistic-hours-target settings) are reached from Logbook's header icon row. CSV, JSON backup/restore, and
+their tests cover every new field/table.
+
+Locally imported the pilot's Elite Aviation invoice history into the Private phase (effective 2026-07-10,
+matching the phase's start) — 20 flights, 6 ground-only sessions, 6 expenses, matched idempotently by
+invoice number. That data lives only in the local database, never in this repo.
+
 ## Known follow-ups
 
 - **Orphaned Turso tables.** `certificates`, `certificate_requirements`, `requirement_completions`,
@@ -93,10 +124,9 @@ Merged to `main` (2026-09-23). No migrations — nothing to back up before this 
   still only style `active:` (touch), not `hover:`/`focus-visible:`, so trackpad users get little visual
   feedback pointing at a control before clicking it.
 
-## Phase 2 ideas
+## Phase 2b ideas (remaining)
 
 - **Oral exam study mode** with spaced repetition, tied to certificate/rating progress.
-- **Training cost tracker**: money spent per certificate/rating, cost per hour trends.
 - **Document vault**: medical certificate, pilot certificate, endorsements — scanned/photographed and
   stored alongside the expirations they relate to.
 - **Later**: CFI tools (student tracking, endorsement templates) and airline-career features (application

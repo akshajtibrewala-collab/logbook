@@ -3,7 +3,7 @@ import { CheckCircle2, ChevronDown, Circle, EyeOff, GraduationCap, Info, ListChe
 import { api } from '../lib/api.js';
 import { computeMilestones, certificateLabel, groupRequirements, certificateSummary, completionsByKey } from '../lib/milestones.js';
 import { fmtHours } from '../lib/hours.js';
-import { todayISO } from '../lib/calendar.js';
+import { todayISO, formatDate } from '../lib/calendar.js';
 import Card from '../components/Card.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 import RingProgress from '../components/RingProgress.jsx';
@@ -50,7 +50,7 @@ function ManualRequirement({ req, onComplete, onUndo }) {
           <span className="text-sm">{req.label}</span>
           {req.met && (
             <div className="mt-0.5 text-xs text-slate-400">
-              Completed {req.completed_at}{req.completion_note ? ` — ${req.completion_note}` : ''}
+              Completed {formatDate(req.completed_at)}{req.completion_note ? ` — ${req.completion_note}` : ''}
             </div>
           )}
         </div>

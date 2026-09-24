@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Logbook from './pages/Logbook.jsx';
 import FlightForm from './pages/FlightForm.jsx';
 import FlightDetail from './pages/FlightDetail.jsx';
+import GroundSessionDetail from './pages/GroundSessionDetail.jsx';
 import Skeleton from './components/Skeleton.jsx';
 
 // Map, Stats and the CSV/Aircraft screens are all secondary, so they load on demand.
@@ -19,6 +20,9 @@ const Currency = lazy(() => import('./pages/Currency.jsx'));
 const ExpirationForm = lazy(() => import('./pages/ExpirationForm.jsx'));
 const Weather = lazy(() => import('./pages/Weather.jsx'));
 const WeatherSettings = lazy(() => import('./pages/WeatherSettings.jsx'));
+const Costs = lazy(() => import('./pages/Costs.jsx'));
+const CostSettings = lazy(() => import('./pages/CostSettings.jsx'));
+const GroundSessionForm = lazy(() => import('./pages/GroundSessionForm.jsx'));
 
 export default function App() {
   const location = useLocation();
@@ -31,6 +35,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/logbook" element={<Logbook />}>
+              <Route path="ground/:id" element={<GroundSessionDetail />} />
               <Route path=":id" element={<FlightDetail />} />
             </Route>
             <Route path="/logbook/data" element={<ImportExport />} />
@@ -39,12 +44,16 @@ export default function App() {
             <Route path="/aircraft/:id" element={<AircraftForm />} />
             <Route path="/logbook/new" element={<FlightForm />} />
             <Route path="/logbook/:id/edit" element={<FlightForm />} />
+            <Route path="/logbook/ground/new" element={<GroundSessionForm />} />
+            <Route path="/logbook/ground/:id/edit" element={<GroundSessionForm />} />
             <Route path="/milestones" element={<Milestones />} />
             <Route path="/currency" element={<Currency />} />
             <Route path="/currency/new" element={<ExpirationForm />} />
             <Route path="/currency/:id" element={<ExpirationForm />} />
             <Route path="/weather" element={<Weather />} />
             <Route path="/weather/settings" element={<WeatherSettings />} />
+            <Route path="/costs" element={<Costs />} />
+            <Route path="/costs/settings" element={<CostSettings />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="*" element={<Navigate to="/" replace />} />

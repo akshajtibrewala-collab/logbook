@@ -14,15 +14,26 @@ export const FORMAT_VERSION = 1;
 // `milestones_config` (the requirement definitions — seed/config data edited via migrations, not
 // something a restore should ever overwrite with a stale copy) and `_migrations` (schema bookkeeping,
 // not data). `pilot_settings` is personal (home airport, weather minimums) so it IS included.
-const TABLES = ['aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations', 'milestone_completions', 'pilot_settings'];
+// `aircraft_rates` references `aircraft`, so it's listed after it; the other cost-tracker tables
+// (instructor/ground/simulator rates, expenses, ground-only sessions, training phases) reference nothing.
+const TABLES = [
+  'aircraft', 'flights', 'flight_stops', 'flight_approaches', 'flight_reviews', 'expirations',
+  'milestone_completions', 'pilot_settings', 'aircraft_rates', 'instructor_rates', 'ground_rates',
+  'simulator_rates', 'other_expenses', 'ground_sessions', 'training_phases', 'planned_costs',
+];
 const DELETE_ORDER = [...TABLES].reverse();
 
 const router = Router();
 
-router.get('/export', async (_req, res) => {
+/** The full backup object (personal tables only — never airports/runways/reference data). Shared by the export route and the scheduled job. */
+export async function buildBackup() {
   const tables = {};
   for (const t of TABLES) tables[t] = await all(`SELECT * FROM "${t}"`);
-  res.json({ format_version: FORMAT_VERSION, app: 'AeroTrail', exported_at: new Date().toISOString(), tables });
+  return { format_version: FORMAT_VERSION, app: 'AeroTrail', exported_at: new Date().toISOString(), tables };
+}
+
+router.get('/export', async (_req, res) => {
+  res.json(await buildBackup());
 });
 
 router.post('/restore', async (req, res) => {

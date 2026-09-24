@@ -38,16 +38,16 @@ export function detectDelimiter(text) {
 }
 
 export const EXPORT_COLUMNS = [
-  'date', 'departure_airport', 'arrival_airport', 'route', 'aircraft_type', 'tail_number', 'airline', 'flight_number',
-  'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time',
+  'entry_type', 'date', 'departure_airport', 'arrival_airport', 'route', 'aircraft_type', 'tail_number', 'airline', 'flight_number',
+  'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time', 'ground_time',
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
   'day_landings', 'full_stop_day_landings', 'night_landings', 'full_stop_night_landings',
-  'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on',
+  'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics',
 ];
 const TIME_COLUMNS = new Set(['total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time',
-  'simulator_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
+  'simulator_time', 'ground_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
 const TEXT_COLUMNS = new Set(['aircraft_type', 'tail_number', 'remarks', 'departure_airport', 'arrival_airport', 'route',
-  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on']);
+  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics']);
 // full_stop_day_landings/full_stop_night_landings deliberately don't reuse the app's own
 // day_landings_full_stop/night_landings_full_stop names: those normalise (lowercase, strip punctuation)
 // to the same string ForeFlight's "Landing Full-Stop Day/Night" columns already alias to day_landings/
@@ -73,10 +73,17 @@ export function parseApproachTypesCell(cell) {
   }).filter((a) => a.approach_type);
 }
 
-export function flightsToCsv(flights) {
+/**
+ * One CSV for the whole logbook: flights and ground-only sessions together, told apart by the entry_type
+ * column ("flight" / "ground"). A ground row uses date, ground_time (its hours), instructor, topics and
+ * remarks (its notes); every other column is blank.
+ */
+export function flightsToCsv(flights, groundSessions = []) {
   const lines = [EXPORT_COLUMNS.join(',')];
-  for (const f of flights) {
+  const groundRows = groundSessions.map((g) => ({ entry_type: 'ground', date: g.date, ground_time: g.hours, instructor: g.instructor, topics: g.topics, remarks: g.notes }));
+  for (const f of [...flights, ...groundRows]) {
     lines.push(EXPORT_COLUMNS.map((c) => {
+      if (c === 'entry_type') return f.entry_type ?? 'flight';
       if (c === 'approach_types') return quote(formatApproachTypes(f.approach_types));
       const dbField = DB_FULL_STOP_FIELD[c] ?? c;
       const v = f[dbField];
@@ -91,7 +98,7 @@ export function flightsToCsv(flights) {
 export const TEMPLATE_CSV = flightsToCsv([{
   date: '2026-03-14', departure_airport: 'KPAO', arrival_airport: 'KSQL', aircraft_type: 'C172', tail_number: 'N123AB',
   airline: '', flight_number: '', total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, dual_given: 0,
-  solo_time: 0, simulator_time: 0, night_time: 0, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
+  solo_time: 0, simulator_time: 0, ground_time: 0, night_time: 0, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
   day_landings: 3, day_landings_full_stop: 3, night_landings: 0, night_landings_full_stop: 0,
   approaches: 1, approach_types: [{ approach_type: 'ILS', count: 1 }], holds: 0,
   remarks: 'Pattern work and one approach', debrief_went_well: '', debrief_work_on: '',
@@ -119,6 +126,10 @@ const ALIASES = {
   dual_given: ['dualgiven', 'flightdualgiven'],
   solo_time: ['solotime', 'solo', 'flightsolo'],
   simulator_time: ['simulatortime', 'simtime', 'flightsimulatortime'],
+  entry_type: ['entrytype'],
+  instructor: ['instructor'],
+  topics: ['topics'],
+  ground_time: ['groundtime', 'groundinstructiontime', 'groundinstruction'],
   night_time: ['nighttime', 'night', 'flightnight'],
   instrument_actual: ['instrumentactual', 'actualinstrument', 'actual', 'flightactualinstrument'],
   instrument_simulated: ['instrumentsimulated', 'simulatedinstrument', 'simulated', 'hood', 'flightsimulatedinstrument'],
@@ -190,6 +201,7 @@ function extractForeFlight(rows) {
   return { rows: flights[0].length ? flights : [], aircraft };
 }
 
+const groundKey = (g) => [g.date, Number(g.hours || 0).toFixed(2), g.instructor ?? ''].join('|');
 const dupKey = (f) => [f.date, f.departure_airport ?? '', f.arrival_airport ?? '', f.tail_number ?? '', Number(f.total_time || 0).toFixed(2)].join('|');
 
 /**
@@ -198,7 +210,7 @@ const dupKey = (f) => [f.date, f.departure_airport ?? '', f.arrival_airport ?? '
  * { row, flight, errors[], status: 'ready' | 'duplicate' | 'error', duplicateOf? }.
  * `existing` (the current logbook) is used to spot duplicates.
  */
-export function parseImport(text, existing = []) {
+export function parseImport(text, existing = [], existingGround = []) {
   let rows = parseDelimited(text, detectDelimiter(text));
   let format = 'generic';
   let aircraft = {};
@@ -223,10 +235,29 @@ export function parseImport(text, existing = []) {
 
   const seen = new Set(existing.map(dupKey));
   const out = [];
+  const ground = [];
+  const seenGround = new Set(existingGround.map((g) => groundKey(g)));
   const reviews = new Set();
   const cell = (r, field) => (field in col ? (r[col[field]] ?? '').trim() : '');
 
   body.forEach((r, idx) => {
+    if (cell(r, 'entry_type').toLowerCase() === 'ground') {
+      const errs = [];
+      const date = normalizeDate(cell(r, 'date'));
+      if (!date) errs.push(`Invalid date "${cell(r, 'date')}"`);
+      const hours = parseHours(cell(r, 'ground_time'));
+      if (hours === null || hours <= 0 || hours > 24) errs.push(`Invalid ground hours "${cell(r, 'ground_time')}"`);
+      const session = {
+        date, hours, instructor: unguard(cell(r, 'instructor')) || null, topics: unguard(cell(r, 'topics')) || null,
+        notes: unguard(cell(r, 'remarks')) || null,
+      };
+      let status = 'ready';
+      if (errs.length) status = 'error';
+      else if (seenGround.has(groundKey(session))) status = 'duplicate';
+      if (!errs.length) seenGround.add(groundKey(session));
+      ground.push({ row: idx + 2, session, errors: errs, status });
+      return;
+    }
     const errors = [];
     const f = {};
     f.date = normalizeDate(cell(r, 'date'));
@@ -250,6 +281,7 @@ export function parseImport(text, existing = []) {
     f.remarks = unguard(cell(r, 'remarks')) || null;
     f.debrief_went_well = unguard(cell(r, 'debrief_went_well')) || null;
     f.debrief_work_on = unguard(cell(r, 'debrief_work_on')) || null;
+    f.instructor = unguard(cell(r, 'instructor')) || null;
 
     for (const field of TIME_FIELDS) {
       const raw = cell(r, field);
@@ -280,7 +312,9 @@ export function parseImport(text, existing = []) {
     if (f.night_landings_full_stop > f.night_landings) errors.push('full-stop night landings exceeds night landings');
 
     for (const field of TIME_FIELDS) {
-      if (field !== 'total_time' && f[field] > f.total_time) errors.push(`${field.replace(/_/g, ' ')} exceeds total time`);
+      // ground_time isn't flight time (a briefing can run longer than the flight itself), so it's exempt
+      // from this check the same way it's exempt from the equivalent server-side check in validate.js.
+      if (field !== 'total_time' && field !== 'ground_time' && f[field] > f.total_time) errors.push(`${field.replace(/_/g, ' ')} exceeds total time`);
     }
 
     let status = 'ready';
@@ -295,5 +329,5 @@ export function parseImport(text, existing = []) {
     out.push({ row: idx + 2, flight: f, errors, status, duplicateOf });
   });
 
-  return { format, rows: out, reviews: [...reviews].sort(), ignored };
+  return { format, rows: out, ground, reviews: [...reviews].sort(), ignored };
 }

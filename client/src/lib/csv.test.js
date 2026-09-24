@@ -20,10 +20,10 @@ test('export then import round-trips every field, including tricky text', () => 
   const flight = {
     date: '2026-03-14', departure_airport: 'KPAO', arrival_airport: 'KSQL', route: 'KCOU KJEF',
     stops: [{ airport_code: 'KCOU', stop_type: 'full_stop' }, { airport_code: 'KJEF', stop_type: 'full_stop' }],
-    tail_number: 'N123AB', aircraft_type: 'C172', airline: 'Delta', flight_number: 'DL123',
+    tail_number: 'N123AB', aircraft_type: 'C172', airline: 'Delta', flight_number: 'DL123', instructor: 'Jane Smith',
     remarks: '=cmd|"x", with comma\nand newline', debrief_went_well: 'Smooth, stable approach', debrief_work_on: 'Crosswind landings',
     total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, dual_given: 0.5, solo_time: 0, simulator_time: 0.2,
-    night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
+    ground_time: 0.5, night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
     day_landings: 3, night_landings: 1, day_landings_full_stop: 2, night_landings_full_stop: 1,
     approaches: 3, holds: 1, approach_types: [{ approach_type: 'ILS', count: 2 }, { approach_type: 'RNAV (GPS)', count: 1 }],
   };
@@ -147,4 +147,31 @@ test('ForeFlight landings: AllLandings (incl. touch-and-gos) wins over full-stop
   const { rows, reviews } = parseImport(csv);
   assert.deepEqual(rows.map((r) => [r.flight.day_landings, r.flight.night_landings]), [[14, 0], [2, 1], [4, 0]]);
   assert.deepEqual(reviews, ['2026-09-11']); // "Flight Review (FAA)" header is recognised
+});
+
+test('ground-only sessions export as entry_type "ground" rows and import back (round trip), dates stay YYYY-MM-DD', () => {
+  const flight = { date: '2026-09-12', departure_airport: 'KSUS', arrival_airport: 'KSUS', total_time: 1.1, dual_received: 1.1, ground_time: 0.3 };
+  const sessions = [
+    { date: '2026-08-06', hours: 1.5, instructor: 'John Tapia', topics: 'Weather, airspace', notes: 'Went well, "quoted"' },
+    { date: '2026-08-10', hours: 2, instructor: null, topics: null, notes: null },
+  ];
+  const csv = flightsToCsv([flight], sessions);
+  assert.match(csv, /2026-08-06/); // ISO in the file, never MM/DD/YYYY
+  assert.equal(csv.split(/\r?\n/).filter((l) => l.startsWith('ground,')).length, 2);
+  const { rows, ground, error } = parseImport(csv);
+  assert.equal(error, undefined);
+  assert.equal(rows.length, 1);
+  assert.equal(ground.length, 2);
+  assert.deepEqual(ground[0].session, { date: '2026-08-06', hours: 1.5, instructor: 'John Tapia', topics: 'Weather, airspace', notes: 'Went well, "quoted"' });
+  assert.deepEqual(ground[1].session, { date: '2026-08-10', hours: 2, instructor: null, topics: null, notes: null });
+  assert.ok(ground.every((g) => g.status === 'ready'));
+});
+
+test('ground import flags duplicates of existing sessions and rejects bad rows', () => {
+  const csv = flightsToCsv([], [{ date: '2026-08-06', hours: 1.5, instructor: 'John Tapia' }, { date: '2026-08-07', hours: 1 }]);
+  const { ground } = parseImport(csv, [], [{ date: '2026-08-06', hours: 1.5, instructor: 'John Tapia' }]);
+  assert.deepEqual(ground.map((g) => g.status), ['duplicate', 'ready']);
+  const bad = parseImport(['entry_type,date,ground_time', 'ground,not-a-date,0'].join('\n'));
+  assert.equal(bad.ground[0].status, 'error');
+  assert.equal(bad.ground[0].errors.length, 2);
 });
