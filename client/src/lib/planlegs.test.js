@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  blankLeg, changeAirport, applyResolved, setLegWall, legWall, legZone, legTimeLabel, tzNotice, planPayload, FALLBACK_ZONE,
+  blankLeg, changeAirport, applyResolved, setLegWall, legWall, legZone, legTimeLabel, legDateLabel, tzNotice, planPayload, FALLBACK_ZONE,
 } from './planlegs.js';
 
 const resolved = (ident, tz) => ({ [ident]: { ident, tz } });
@@ -146,4 +146,22 @@ test('the request sends UTC instants only, for legs that have both an airport an
   const b = { ...blankLeg(), ident: 'KLAX' }; // no time yet
   assert.deepEqual(planPayload([a, b]), [{ ident: 'KJFK', eta: '2026-09-24T04:10:00.000Z' }]);
   assert.deepEqual(planPayload([blankLeg()]), []);
+});
+
+// ---- Field labels ------------------------------------------------------------------------------------
+
+test('the departure leg says Departure; the destination and any intermediate stops say Arrival', () => {
+  const leg = at('KJFK', 'America/New_York', '2026-09-24T00:10');
+  assert.equal(legDateLabel(0, leg), 'Departure date & time (airport local)');
+  assert.equal(legDateLabel(1, leg), 'Arrival date & time (airport local)'); // a stop
+  assert.equal(legDateLabel(2, leg), 'Arrival date & time (airport local)'); // the destination
+});
+
+test('the departure/arrival wording is kept while the zone is being looked up or unknown', () => {
+  const pending = changeAirport(blankLeg(), 'KLAX');
+  assert.equal(legDateLabel(0, pending), 'Departure date & time (looking up airport time zone…)');
+  assert.equal(legDateLabel(1, pending), 'Arrival date & time (looking up airport time zone…)');
+  const unknown = applyResolved({ ...blankLeg(), ident: 'ZZZZ' }, {});
+  assert.equal(legDateLabel(0, unknown), 'Departure date & time (UTC — zone unknown)');
+  assert.equal(legDateLabel(1, unknown), 'Arrival date & time (UTC — zone unknown)');
 });

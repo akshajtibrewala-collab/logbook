@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Settings, Plus, X, CloudSun } from 'lucide-react';
 import { api } from '../lib/api.js';
 import {
-  blankLeg, changeAirport, applyResolved, setLegWall, legWall, legZone, legTimeLabel, tzNotice, planPayload,
+  blankLeg, changeAirport, applyResolved, setLegWall, legWall, legZone, legTimeLabel, legDateLabel, tzNotice, planPayload,
 } from '../lib/planlegs.js';
 import AirportSearchField from '../components/AirportSearchField.jsx';
 import WeatherConditions from '../components/WeatherConditions.jsx';
@@ -137,9 +137,7 @@ function PlanFlight() {
     <form onSubmit={check} className="space-y-4">
       {legs.map((leg, i) => {
         const notice = tzNotice(leg);
-        const dateLabel = leg.tzStatus === 'unknown' ? 'Arrival date & time (UTC — zone unknown)'
-          : leg.tzStatus === 'pending' ? 'Arrival date & time (looking up airport time zone…)'
-          : 'Arrival date & time (airport local)';
+        const dateLabel = legDateLabel(i, leg);
         return (
           <div key={i} className="card space-y-2 p-4">
             <div className="flex items-center justify-between">

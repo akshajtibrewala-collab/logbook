@@ -82,6 +82,17 @@ export function legTimeLabel(leg) {
   return `${localDay} ${local} / ${localDay === zuluDay ? '' : `${zuluDay} `}${zulu}`;
 }
 
+/**
+ * The date/time field's label. The first leg is the departure; every later leg (intermediate stops and the
+ * destination) is an arrival. The suffix says which clock the field is on.
+ */
+export function legDateLabel(index, leg) {
+  const what = index === 0 ? 'Departure date & time' : 'Arrival date & time';
+  if (leg.tzStatus === 'unknown') return `${what} (UTC — zone unknown)`;
+  if (leg.tzStatus === 'pending') return `${what} (looking up airport time zone…)`;
+  return `${what} (airport local)`;
+}
+
 /** A clear message when this leg's airport has no usable time zone, else null. */
 export function tzNotice(leg) {
   if (leg.tzStatus !== 'unknown') return null;
