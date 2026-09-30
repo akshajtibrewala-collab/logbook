@@ -164,7 +164,7 @@ export default function PassengerFlights() {
                 {yearFlights.map((f) => (
                   <li key={f.id}>
                     <Card as="button" onClick={() => navigate(`/travel/${f.id}`)} aria-current={selected === String(f.id) ? 'true' : undefined}
-                      className={`w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800 ${selected === String(f.id) ? 'lg:border-accent' : ''}`}>
+                      className={`w-full text-left transition-colors active:bg-navy-800 ${selected === String(f.id) ? 'lg:border-accent' : ''}`}>
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="truncate text-base font-medium">{f.departure_airport || '—'} → {f.arrival_airport || '—'}</span>
                         <span className="shrink-0 text-lg font-semibold text-accent-strong">{fmtHours(f.total_time)}</span>
