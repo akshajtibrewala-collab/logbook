@@ -21,7 +21,10 @@ import AircraftPicker from '../components/AircraftPicker.jsx';
 import StopsEditor from '../components/StopsEditor.jsx';
 import ApproachesEditor from '../components/ApproachesEditor.jsx';
 import Disclosure from '../components/Disclosure.jsx';
+import Select from '../components/Select.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
+import { FLIGHT_ROLES } from '../lib/flightRoles.js';
+import { SEAT_CLASSES } from '../lib/aviationEnums.js';
 
 const TIME_FIELDS = [
   ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'],
@@ -35,8 +38,8 @@ const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings'
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
 const blank = () => ({
-  date: today(), departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
-  airline: '', flight_number: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
+  date: today(), role: 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
+  airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
 });
@@ -246,6 +249,23 @@ export default function FlightForm() {
         </p>
       )}
 
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-medium text-accent">Role</h2>
+        <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Flight role">
+          {FLIGHT_ROLES.map((r) => (
+            <button key={r.value} type="button" onClick={() => set('role')(r.value)} aria-pressed={form.role === r.value}
+              className={`h-11 flex-1 rounded-lg text-sm font-medium transition-colors ${form.role === r.value ? 'bg-accent text-ink' : 'text-slate-400'}`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+        {form.role !== 'pilot' && (
+          <p className="mt-2 text-xs text-slate-500">
+            {form.role === 'passenger' ? 'A passenger flight' : 'An observer flight'} doesn't count toward your logbook hours, currency or milestones — just the map and your travel history.
+          </p>
+        )}
+      </section>
+
       <Section title="Flight">
         <div className="col-span-2"><DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} /></div>
         <AirportSearchField label="From" value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
@@ -267,7 +287,7 @@ export default function FlightForm() {
         </div>
       </Section>
 
-      <Disclosure title="Airline / Operator" defaultOpen={Boolean(form.airline.trim() || form.flight_number.trim())}>
+      <Disclosure key={form.role === 'pilot' ? 'pilot' : 'nonpilot'} title="Airline / Operator" defaultOpen={Boolean(form.airline.trim() || form.flight_number.trim() || form.role !== 'pilot')}>
         <div className="col-span-2">
           <TextField label="Airline (optional, for commercial flights)" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
           <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
@@ -276,8 +296,15 @@ export default function FlightForm() {
         <div className="col-span-2">
           <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
         </div>
+        {form.role !== 'pilot' && (
+          <>
+            <Select label="Seat class" value={form.seat_class} onChange={set('seat_class')} options={SEAT_CLASSES} placeholder="Not set" />
+            <TextField label="Confirmation code" upper value={form.confirmation_code} onChange={set('confirmation_code')} placeholder="ABC123" />
+          </>
+        )}
       </Disclosure>
 
+      {form.role === 'pilot' && (
       <Section title="Time (hours — 1.5 or 1:30)">
         {TIME_FIELDS.map(([k, label]) => (
           <div key={k} className={k === 'total_time' ? 'col-span-2' : ''}>
@@ -285,15 +312,23 @@ export default function FlightForm() {
           </div>
         ))}
       </Section>
+      )}
+      {form.role !== 'pilot' && (
+        <Section title="Time">
+          <div className="col-span-2"><HoursInput label="Total time" value={form.total_time} onChange={set('total_time')} error={errors.total_time} /></div>
+        </Section>
+      )}
 
+      {form.role === 'pilot' && (
       <Section title="Landings">
         <CountInput label="Day landings" value={form.day_landings} onChange={set('day_landings')} error={errors.day_landings} />
         <CountInput label="Day, full stop" value={form.day_landings_full_stop} onChange={set('day_landings_full_stop')} error={errors.day_landings_full_stop} />
         <CountInput label="Night landings" value={form.night_landings} onChange={set('night_landings')} error={errors.night_landings} />
         <CountInput label="Night, full stop" value={form.night_landings_full_stop} onChange={set('night_landings_full_stop')} error={errors.night_landings_full_stop} />
       </Section>
+      )}
 
-      {costOff ? (
+      {form.role === 'pilot' && (costOff ? (
         <section className="card p-4">
           <h2 className="text-sm font-medium text-accent">Cost</h2>
           <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
@@ -325,8 +360,9 @@ export default function FlightForm() {
         </div>
       </Disclosure>
       </>
-      )}
+      ))}
 
+      {form.role === 'pilot' && (
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-medium text-accent">Approaches</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -348,6 +384,7 @@ export default function FlightForm() {
           {typeof errors.approach_types === 'object' && <p className="mt-1 text-xs text-bad">Check the approach rows above.</p>}
         </div>
       </section>
+      )}
 
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-medium text-accent">Note</h2>
@@ -360,6 +397,7 @@ export default function FlightForm() {
         <PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} />
       </section>
 
+      {form.role === 'pilot' && (
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-medium text-accent">Debrief</h2>
         <div className="space-y-3">
@@ -375,6 +413,7 @@ export default function FlightForm() {
           </div>
         </div>
       </section>
+      )}
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 

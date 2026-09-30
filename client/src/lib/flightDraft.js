@@ -86,6 +86,7 @@ export function quickFlightPayload({ date, departure_airport, arrival_airport, a
   const total = Math.round(Number(total_time) * 100) / 100;
   return {
     date,
+    role: 'pilot', // Quick log is for logging your own flying — there's no role picker to keep it fast on a phone
     departure_airport: (departure_airport || '').trim().toUpperCase(),
     arrival_airport: (arrival_airport || '').trim().toUpperCase(),
     aircraft_id: aircraft?.id ?? null,

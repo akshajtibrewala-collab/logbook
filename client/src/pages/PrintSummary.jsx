@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { computeMilestones, certificateLabel, certificateSummary, completionsByKey } from '../lib/milestones.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 import SummaryDocument from '../components/SummaryDocument.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
@@ -26,7 +27,7 @@ export default function PrintSummary() {
     Promise.all([api.listMilestonesConfig(), api.listFlights(), api.listAircraft(true), api.listMilestoneCompletions()])
       .then(([config, flights, aircraft, completions]) => {
         const byId = Object.fromEntries(aircraft.map((a) => [a.id, a]));
-        setMilestones(computeMilestones(config, flights, byId, completionsByKey(completions)));
+        setMilestones(computeMilestones(config, pilotFlights(flights), byId, completionsByKey(completions)));
       })
       .catch(() => setMilestones(new Map())); // progress is a bonus; the rest of the summary still prints
   }, []);

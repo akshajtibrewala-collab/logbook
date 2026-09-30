@@ -8,7 +8,9 @@ import AirlineBadge from '../components/AirlineBadge.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
+import Badge from '../components/Badge.jsx';
 import Card from '../components/Card.jsx';
+import { isPilotFlight, roleOf } from '../lib/flightRoles.js';
 import EmptyState from '../components/EmptyState.jsx';
 import Modal from '../components/Modal.jsx';
 import AddFab from '../components/AddFab.jsx';
@@ -128,7 +130,10 @@ export default function Logbook() {
     : null);
 
   const activeFilters = Object.entries(filters).filter(([k, v]) => v && !(k === 'kind' && v === 'all')).length;
-  const total = visible.reduce((s, e) => s + e.hours, 0);
+  // A ground session's hours always count; a flight's only count toward this total when it's the pilot's
+  // own flying — a passenger/observer flight is shown in the list (with a role badge below) but never
+  // adds to the hours total, matching every other logbook-time total in the app.
+  const total = visible.reduce((s, e) => s + (e.kind === 'ground' || isPilotFlight(e.data) ? e.hours : 0), 0);
   const setFilter = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value }));
 
   return (
@@ -219,9 +224,14 @@ export default function Logbook() {
                 className={`w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800 ${isSelected ? 'lg:border-accent' : ''}`}>
                 {e.kind === 'flight' ? (
                   <>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-base font-medium">{e.data.departure_airport || '—'} → {e.data.arrival_airport || '—'}</span>
-                      <span className="text-lg font-semibold text-accent">{fmtHours(e.data.total_time)}</span>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="flex min-w-0 items-baseline gap-2">
+                        <span className="truncate text-base font-medium">{e.data.departure_airport || '—'} → {e.data.arrival_airport || '—'}</span>
+                        {!isPilotFlight(e.data) && (
+                          <Badge tone="neutral" className="shrink-0 capitalize">{roleOf(e.data)}</Badge>
+                        )}
+                      </span>
+                      <span className={`shrink-0 text-lg font-semibold ${isPilotFlight(e.data) ? 'text-accent' : 'text-slate-400'}`}>{fmtHours(e.data.total_time)}</span>
                     </div>
                     <div className="mt-1 flex justify-between text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.route ? ` · via ${e.data.route}` : ''}</span>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, PlaneTakeoff, Archive } from 'lucide-react';
 import AddFab from '../components/AddFab.jsx';
@@ -8,6 +8,7 @@ import Badge from '../components/Badge.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import { isPilotFlight } from '../lib/flightRoles.js';
 
 function FlagBadges({ a }) {
   const flags = [
@@ -25,14 +26,30 @@ function FlagBadges({ a }) {
 export default function Aircraft() {
   const navigate = useNavigate();
   const [aircraft, setAircraft] = useState(null);
+  const [flights, setFlights] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(() => {
     setError('');
-    api.listAircraft(showArchived).then(setAircraft).catch((e) => setError(e.message));
+    Promise.all([api.listAircraft(showArchived), api.listFlights()])
+      .then(([a, f]) => { setAircraft(a); setFlights(f); })
+      .catch((e) => setError(e.message));
   }, [showArchived]);
   useEffect(load, [load]);
+
+  // How each aircraft has actually been used: flown as pilot, or only ridden as a passenger/observer —
+  // an airliner added from a passenger flight's aircraft picker should never look like something you fly.
+  const usageById = useMemo(() => {
+    const byId = new Map();
+    for (const f of flights) {
+      if (f.aircraft_id == null) continue;
+      const u = byId.get(f.aircraft_id) ?? { flown: 0, ridden: 0 };
+      if (isPilotFlight(f)) u.flown++; else u.ridden++;
+      byId.set(f.aircraft_id, u);
+    }
+    return byId;
+  }, [flights]);
 
   return (
     <div>
@@ -67,6 +84,16 @@ export default function Aircraft() {
               <div className="mt-0.5 text-sm text-slate-400">
                 {[a.is_simulator ? a.simulator_device_type : a.tail_number && a.model, a.category, a.class].filter(Boolean).join(' · ') || 'No details yet'}
               </div>
+              {(() => {
+                const u = usageById.get(a.id);
+                if (!u) return null;
+                return (
+                  <div className="mt-1.5 flex gap-3 text-xs text-slate-500">
+                    {u.flown > 0 && <span>Flown {u.flown}×</span>}
+                    {u.ridden > 0 && <span>Ridden {u.ridden}×</span>}
+                  </div>
+                );
+              })()}
               <FlagBadges a={a} />
             </Card>
           </li>

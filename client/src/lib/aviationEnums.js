@@ -43,4 +43,12 @@ export const APPROACH_TYPES = [
   { value: 'Circling', label: 'Circling' },
 ];
 
+export const SEAT_CLASSES = [
+  { value: 'economy', label: 'Economy' },
+  { value: 'premium_economy', label: 'Premium economy' },
+  { value: 'business', label: 'Business' },
+  { value: 'first', label: 'First' },
+  { value: 'jumpseat', label: 'Jumpseat' },
+];
+
 export const labelFor = (list, value) => list.find((o) => o.value === value)?.label ?? value;

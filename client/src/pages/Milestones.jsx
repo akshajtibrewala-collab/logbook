@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, ChevronDown, Circle, EyeOff, GraduationCap, Info, ListChecks } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { computeMilestones, certificateLabel, groupRequirements, certificateSummary, completionsByKey } from '../lib/milestones.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 import { fmtHours } from '../lib/hours.js';
 import { todayISO, formatDate } from '../lib/calendar.js';
 import Card from '../components/Card.jsx';
@@ -172,7 +173,7 @@ export default function Milestones() {
   const grouped = useMemo(() => {
     if (!config || !flights || !aircraft || !completions) return null;
     const aircraftById = Object.fromEntries(aircraft.map((a) => [a.id, a]));
-    return computeMilestones(config, flights, aircraftById, completionsByKey(completions));
+    return computeMilestones(config, pilotFlights(flights), aircraftById, completionsByKey(completions));
   }, [config, flights, aircraft, completions]);
 
   const saveCompletion = async (req, date, note) => {

@@ -15,6 +15,7 @@ import BackupStatus from '../components/BackupStatus.jsx';
 import { pickHeadline, pickSubline } from '../lib/greeting.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations, daysBetween, summarize } from '../lib/currency.js';
 import { computeMilestones, certificateLabel } from '../lib/milestones.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
 const LAST_GREETING_KEY = 'aerotrail-last-greeting';
@@ -69,38 +70,42 @@ export default function Dashboard() {
   }, []);
   useEffect(load, [load]);
 
+  const pilotOnly = useMemo(() => pilotFlights(flights ?? []), [flights]);
+
   // Total ground training hours: ground instruction logged with a flight, plus ground-only sessions —
   // the same total the cost tracker bills at the ground rate, shown here regardless of cost tracking.
+  // Pilot-only: a passenger/observer flight always has ground_time forced to 0 (see validate.js), but
+  // filtering explicitly here keeps this in step with every other logbook-time total on this page.
   const totalGroundHours = useMemo(() => {
     if (!flights) return 0;
-    const flightGround = flights.reduce((s, f) => s + (Number(f.ground_time) || 0), 0);
+    const flightGround = pilotOnly.reduce((s, f) => s + (Number(f.ground_time) || 0), 0);
     const groundOnly = groundSessions.reduce((s, g) => s + (Number(g.hours) || 0), 0);
     return flightGround + groundOnly;
-  }, [flights, groundSessions]);
+  }, [flights, pilotOnly, groundSessions]);
 
   const data = useMemo(() => {
     if (!flights) return null;
     return {
-      pax: passengerCurrency(flights, now),
-      inst: instrumentCurrency(flights, now),
+      pax: passengerCurrency(pilotOnly, now),
+      inst: instrumentCurrency(pilotOnly, now),
       review: flightReviewStatus(reviews, now),
       medical: medicalCurrency(expirations, now),
-      stats: summarize(flights, now),
+      stats: summarize(pilotOnly, now),
     };
-  }, [flights, reviews, expirations, now]);
+  }, [flights, pilotOnly, reviews, expirations, now]);
 
   const closestMilestone = useMemo(() => {
     if (!flights || !milestonesConfig.length) return null;
     const aircraftById = Object.fromEntries(aircraft.map((a) => [a.id, a]));
     let best = null;
-    for (const [cert, reqs] of computeMilestones(milestonesConfig, flights, aircraftById)) {
+    for (const [cert, reqs] of computeMilestones(milestonesConfig, pilotOnly, aircraftById)) {
       for (const r of reqs) {
         if (r.percent == null || r.met) continue;
         if (!best || r.percent > best.percent) best = { label: r.label, certificateLabel: certificateLabel(cert), percent: r.percent };
       }
     }
     return best;
-  }, [flights, milestonesConfig, aircraft]);
+  }, [flights, pilotOnly, milestonesConfig, aircraft]);
 
   const subline = useMemo(() => {
     if (!data || !flights) return null;
@@ -112,20 +117,20 @@ export default function Dashboard() {
       { label: 'Medical certificate', result: data.medical },
       ...customExpirations(expirations, now).map((r) => ({ label: r.item.label, result: r })),
     ];
-    const lastFlight = flights.length
-      ? [...flights].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0]
+    const lastFlight = pilotOnly.length
+      ? [...pilotOnly].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0]
       : null;
-    const reviewCount = flights.filter((f) => f.aircraft_id == null && daysBetween(f.date, now) >= 0 && daysBetween(f.date, now) <= 14).length;
+    const reviewCount = pilotOnly.filter((f) => f.aircraft_id == null && daysBetween(f.date, now) >= 0 && daysBetween(f.date, now) <= 14).length;
     return pickSubline({
       currencyItems,
-      hasFlights: flights.length > 0,
+      hasFlights: pilotOnly.length > 0,
       daysSinceLastFlight: lastFlight ? daysBetween(lastFlight.date, now) : null,
       reviewCount,
       lastFlightWorkOn: lastFlight?.debrief_work_on?.trim() || null,
       closestMilestone,
       totalHoursThisYear: data.stats.year,
     });
-  }, [data, flights, expirations, closestMilestone, now]);
+  }, [data, flights, pilotOnly, expirations, closestMilestone, now]);
 
   const newestFirst = (x, y) => y.date.localeCompare(x.date) || y.id - x.id;
 

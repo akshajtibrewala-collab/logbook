@@ -11,6 +11,10 @@ import Button from '../components/Button.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
+import { pilotFlights, roleOf } from '../lib/flightRoles.js';
+
+const ROLE_CHIPS = [['all', 'All'], ['pilot', 'Pilot'], ['passenger', 'Passenger']];
+const byRole = (flights, roleFilter) => (roleFilter === 'all' ? flights : flights.filter((f) => roleOf(f) === roleFilter));
 
 const PALETTE = ['#38bdf8', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#2dd4bf', '#fb923c', '#94a3b8'];
 
@@ -37,7 +41,7 @@ function MonthlyChart({ flights }) {
   const rows = useMemo(() => hoursByMonth(flights, { months: 12, now: localToday() }), [flights]);
   const any = rows.some((r) => r.hours > 0);
   return (
-    <Card title="Hours by month" note="The last 12 months.">
+    <Card title="Hours by month" note="The last 12 months · pilot flights only.">
       {!any ? <p className="text-sm text-slate-500">No flying in the last 12 months.</p> : (
         <div className="h-56" role="img" aria-label={`Bar chart of hours flown per month. ${rows.map((r) => `${r.label}: ${fmtHours(r.hours)}`).join(', ')}`}>
           <ResponsiveContainer>
@@ -74,7 +78,7 @@ function CumulativeChart({ flights, settings, onSaveTarget }) {
 
   const name = settings?.hours_target_label || 'goal';
   return (
-    <Card title="Progress toward your goal" note={series.target ? `${fmtHours(series.total)} of ${fmtHours(series.target)} h (${series.percent}%)` : 'Set a target to draw a goal line.'}>
+    <Card title="Progress toward your goal" note={`${series.target ? `${fmtHours(series.total)} of ${fmtHours(series.target)} h (${series.percent}%)` : 'Set a target to draw a goal line.'} Pilot flights only.`}>
       {series.points.length === 0 ? <p className="text-sm text-slate-500">Log a flight to start the line.</p> : (
         <div className="h-56" role="img" aria-label={`Line chart of cumulative hours, now ${fmtHours(series.total)}${series.target ? ` toward ${fmtHours(series.target)}` : ''}`}>
           <ResponsiveContainer>
@@ -149,6 +153,7 @@ export default function Stats() {
   const [error, setError] = useState('');
   const [settings, setSettings] = useState(null);
   const [aircraftBy, setAircraftBy] = useState('type'); // 'type' | 'tail'
+  const [aircraftRole, setAircraftRole] = useState('pilot'); // 'all' | 'pilot' | 'passenger' — shared by the aircraft/tail/airline cards
 
   // The pilot settings PUT replaces the whole row, so a target change sends the current settings back with it.
   async function saveTarget(patch) {
@@ -168,17 +173,23 @@ export default function Stats() {
   }, []);
   useEffect(load, [load]);
 
+  const pilotOnly = useMemo(() => pilotFlights(flights ?? []), [flights]);
+
   const data = useMemo(() => {
     if (!flights) return null;
+    const roleScoped = byRole(flights, aircraftRole);
     return {
-      categories: hoursByCategory(flights),
-      aircraft: hoursByAircraft(flights),
-      tails: hoursByTail(flights).map((t) => ({ type: t.tail, hours: t.hours })),
-      airlines: hoursByAirline(flights),
+      // Logbook/legal time: pilot flights only, always (never affected by the aircraftRole chip).
+      categories: hoursByCategory(pilotOnly),
+      // Aircraft/tail/airline hours count every role per CLAUDE.md — the chip narrows which role(s), default Pilot.
+      aircraft: hoursByAircraft(roleScoped),
+      tails: hoursByTail(roleScoped).map((t) => ({ type: t.tail, hours: t.hours })),
+      airlines: hoursByAirline(roleScoped),
+      // Routes/airports visited: always every role, never scoped by the chip.
       routes: topRoutes(flights, airports),
       airports: topAirports(flights, airports),
     };
-  }, [flights, airports]);
+  }, [flights, pilotOnly, airports, aircraftRole]);
 
   const catTotal = data?.categories.reduce((s, c) => s + c.hours, 0) ?? 0;
 
@@ -202,10 +213,10 @@ export default function Stats() {
 
       {data && flights.length > 0 && (
         <>
-          <MonthlyChart flights={flights} />
-          <CumulativeChart flights={flights} settings={settings} onSaveTarget={saveTarget} />
+          <MonthlyChart flights={pilotOnly} />
+          <CumulativeChart flights={pilotOnly} settings={settings} onSaveTarget={saveTarget} />
 
-          <Card title="Hours by category" note="Categories overlap — night PIC counts toward both.">
+          <Card title="Hours by category" note="Categories overlap — night PIC counts toward both. Pilot flights only.">
             {data.categories.length === 0 ? <p className="text-sm text-slate-500">No category time logged yet.</p> : (
               <>
                 <div className="h-56">
@@ -233,11 +244,18 @@ export default function Stats() {
             )}
           </Card>
 
-          <Card title={aircraftBy === 'type' ? 'Hours by Aircraft Type' : 'Hours by Aircraft (tail number)'}>
+          <Card title={aircraftBy === 'type' ? 'Hours by Aircraft Type' : 'Hours by Aircraft (tail number)'}
+            note={`${ROLE_CHIPS.find(([k]) => k === aircraftRole)[1]} flights — every role counts toward aircraft hours.`}>
             <div className="mb-3 flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Group aircraft by">
               {[['type', 'By type'], ['tail', 'By tail number']].map(([k, l]) => (
                 <button key={k} type="button" onClick={() => setAircraftBy(k)} aria-pressed={aircraftBy === k}
                   className={`h-10 flex-1 rounded-lg text-sm font-medium transition-colors ${aircraftBy === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+              ))}
+            </div>
+            <div className="mb-3 flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by role">
+              {ROLE_CHIPS.map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setAircraftRole(k)} aria-pressed={aircraftRole === k}
+                  className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${aircraftRole === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
               ))}
             </div>
             <div style={{ height: Math.max(120, (aircraftBy === 'type' ? data.aircraft : data.tails).length * 44 + 24) }}>
@@ -256,7 +274,7 @@ export default function Stats() {
           </Card>
 
           {data.airlines.length > 0 && (
-            <Card title="Airlines">
+            <Card title="Airlines" note={`${ROLE_CHIPS.find(([k]) => k === aircraftRole)[1]} flights.`}>
               <ul className="space-y-3">
                 {data.airlines.map((a) => (
                   <li key={a.name} className="flex items-center gap-3">
@@ -269,8 +287,8 @@ export default function Stats() {
             </Card>
           )}
 
-          <Card title="Most Flown Routes"><Ranked rows={data.routes} /></Card>
-          <Card title="Most Visited Airports">
+          <Card title="Most Flown Routes" note="All flights — every role."><Ranked rows={data.routes} /></Card>
+          <Card title="Most Visited Airports" note="All flights — every role.">
             <Ranked rows={data.airports.map((a) => ({ label: a.code, sub: a.name, count: a.count }))} />
           </Card>
         </>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Upload, FileText, CheckCircle2, AlertTriangle, XCircle, DatabaseBackup, RotateCcw } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flightsToCsv, parseImport, TEMPLATE_CSV } from '../lib/csv.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 import { fmtHours } from '../lib/hours.js';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
@@ -50,15 +51,37 @@ export default function ImportExport() {
   const [restorePreview, setRestorePreview] = useState(null); // { name, data }
   const [confirmReplace, setConfirmReplace] = useState(false);
 
+  // The main CSV export is pilot flights only, the same logbook a ForeFlight/LogTen export would cover —
+  // passenger/observer flights are personal travel history, not logbook time, so they don't belong in the
+  // file used for insurance or job applications. "Export all flights" below is the escape hatch for anyone
+  // who wants every row, with `role` so they round-trip back in correctly.
   async function exportCsv() {
     setBusy(true);
     setMessage(null);
     try {
-      const [flights, sessions] = await Promise.all([api.listFlights(), api.listGroundSessions()]);
+      const [allFlights, sessions] = await Promise.all([api.listFlights(), api.listGroundSessions()]);
+      const flights = pilotFlights(allFlights);
       if (!flights.length && !sessions.length) return setMessage({ kind: 'error', text: 'Your logbook is empty, nothing to export.' });
       const rows = [...flights].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
       download(`logbook-${new Date().toLocaleDateString('en-CA')}.csv`, flightsToCsv(rows, [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)));
       setMessage({ kind: 'ok', text: `Exported ${flights.length} flight${flights.length === 1 ? '' : 's'} and ${sessions.length} ground session${sessions.length === 1 ? '' : 's'}.` });
+    } catch (e) {
+      setMessage({ kind: 'error', text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Every flight regardless of role (with its role column), for someone who wants their full travel history. */
+  async function exportAllCsv() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const flights = await api.listFlights();
+      if (!flights.length) return setMessage({ kind: 'error', text: 'Your logbook is empty, nothing to export.' });
+      const rows = [...flights].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+      download(`all-flights-${new Date().toLocaleDateString('en-CA')}.csv`, flightsToCsv(rows));
+      setMessage({ kind: 'ok', text: `Exported ${flights.length} flight${flights.length === 1 ? '' : 's'} (every role).` });
     } catch (e) {
       setMessage({ kind: 'error', text: e.message });
     } finally {
@@ -199,8 +222,9 @@ export default function ImportExport() {
 
       <section className="card space-y-3 p-4">
         <h2 className="text-sm font-medium text-slate-300">Export</h2>
-        <p className="text-sm text-slate-400">Your full logbook as a CSV — for insurance, job applications, or backup. It can be re-imported here.</p>
+        <p className="text-sm text-slate-400">Your pilot logbook as a CSV — for insurance, job applications, or backup. It can be re-imported here.</p>
         <button onClick={exportCsv} disabled={busy} className={`${btn} bg-accent text-ink active:bg-accent-dark`}><Download size={20} />Export CSV</button>
+        <button onClick={exportAllCsv} disabled={busy} className={`${btn} bg-navy-800 text-slate-300 active:text-accent`}><Download size={20} />Export all flights (with role)</button>
       </section>
 
       <section className="card space-y-3 p-4">

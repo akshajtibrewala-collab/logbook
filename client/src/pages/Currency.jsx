@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plane, Moon, Gauge, ClipboardCheck, HeartPulse, FileClock, Plus, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations } from '../lib/currency.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import EmptyState from '../components/EmptyState.jsx';
@@ -30,9 +31,10 @@ export default function Currency() {
 
   const data = useMemo(() => {
     if (!flights) return null;
+    const pilotOnly = pilotFlights(flights);
     return {
-      pax: passengerCurrency(flights, now),
-      inst: instrumentCurrency(flights, now),
+      pax: passengerCurrency(pilotOnly, now),
+      inst: instrumentCurrency(pilotOnly, now),
       review: flightReviewStatus(reviews, now),
       medical: medicalCurrency(expirations, now),
       custom: customExpirations(expirations, now),
