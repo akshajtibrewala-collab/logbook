@@ -1,7 +1,7 @@
 // LEGACY / LOCAL-ONLY TOOL — do not use this for a production import.
 //
 // The aircraft find-or-create step this script used to be the only place that did now lives in the app
-// itself (POST /api/flights/bulk, for role='passenger' rows — see findOrCreateAircraftByTail in
+// itself (POST /api/flights/bulk, for role='passenger' rows — see findOrCreateAircraftBatch in
 // server/src/routes/flights.js), so the app's own Import screen (ImportExport.jsx) is the correct, safe way
 // to import passenger flights anywhere, including production. This script is kept only as a local
 // dry-run/reporting convenience (its console summary of ready/duplicate/error and new-vs-matched aircraft

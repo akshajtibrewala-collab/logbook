@@ -1,43 +1,22 @@
 import { Router } from 'express';
 import { all, batchRun, get, run } from '../db.js';
-import { ensureAircraftRate } from '../lib/default-rate.js';
+import { ensureAircraftRate, pickDefaultAircraftRate } from '../lib/default-rate.js';
 import { parseFlight, parseStops, parseApproaches, parseAircraft, AIRCRAFT_FIELDS, FLIGHT_FIELDS } from '../validate.js';
-import { resolveAirportRow } from './airports.js';
+import { resolveAirportRow, resolveAirportRows } from './airports.js';
 import { passengerDuration } from '../lib/passengerDuration.js';
 
 const INSERT_AIRCRAFT = `INSERT INTO aircraft (${AIRCRAFT_FIELDS.join(',')}) VALUES (${AIRCRAFT_FIELDS.map((c) => ':' + c).join(',')})`;
 const normTail = (t) => (t ? String(t).trim().toUpperCase() : null);
+const lastIdOf = (rs) => (rs.lastInsertRowid == null ? null : Number(rs.lastInsertRowid));
 
 /**
- * Finds an aircraft by registration (case/whitespace-insensitive, including archived ones — the same
- * matching server/scripts/import-passenger-flights.js used, moved into the app itself), or creates one
- * from aircraft_type (never marked a simulator or training device). `cache` is a Map the caller keeps
- * across the whole bulk request, so a tail number repeated across many rows is only looked up/created once.
+ * The actual duration math, given the two airports already resolved (or null) — shared by the single-
+ * flight applyPassengerDuration (which resolves them itself) and the bulk route (which resolves every
+ * distinct airport across the whole request in one or two round trips, then calls this per row). Mutates
+ * `value` in place; returns an error string, or null on success/no-op.
  */
-async function findOrCreateAircraftByTail(tailNumber, aircraftType, cache) {
-  const tail = normTail(tailNumber);
-  if (!tail) return null;
-  if (cache.has(tail)) return cache.get(tail);
-  const existing = await get('SELECT id FROM aircraft WHERE UPPER(TRIM(tail_number)) = ?', [tail]);
-  if (existing) { cache.set(tail, existing.id); return existing.id; }
-  const { value } = parseAircraft({ tail_number: tail, model: aircraftType || '' });
-  const { lastId } = await run(INSERT_AIRCRAFT, value);
-  cache.set(tail, lastId);
-  return lastId;
-}
-
-/**
- * For a passenger flight with both dep_time and arr_time set, recomputes total_time (and resolves
- * arr_day_offset if the caller left it blank) from those local times — the server-side half of "Server-
- * side validation must enforce the same rules and recompute total_time from the times on save" (see
- * client/src/lib/passengerDuration.js for the shared calculation). Either time blank means manual
- * total_time entry: left alone. Mutates `value` in place; returns an error string, or null on success (or
- * when nothing needed recomputing — e.g. an airport with no resolvable time zone falls back to the manual
- * total_time already on the payload, per the "Airports without coordinates" rule).
- */
-export async function applyPassengerDuration(value) {
+function computeDurationInto(value, dep, arr) {
   if (value.role !== 'passenger' || !value.dep_time || !value.arr_time) return null;
-  const [dep, arr] = await Promise.all([resolveAirportRow(value.departure_airport), resolveAirportRow(value.arrival_airport)]);
   if (!dep?.tz || !arr?.tz) return null; // no usable time zone on one end: keep the manually-entered total_time
   const result = passengerDuration({
     date: value.date, depTime: value.dep_time, arrTime: value.arr_time,
@@ -48,6 +27,19 @@ export async function applyPassengerDuration(value) {
   value.total_time = result.hours;
   value.arr_day_offset = result.arrDayOffset;
   return null;
+}
+
+/**
+ * For a passenger flight with both dep_time and arr_time set, recomputes total_time (and resolves
+ * arr_day_offset if the caller left it blank) from those local times — the server-side half of "Server-
+ * side validation must enforce the same rules and recompute total_time from the times on save" (see
+ * client/src/lib/passengerDuration.js for the shared calculation). Either time blank means manual
+ * total_time entry: left alone.
+ */
+export async function applyPassengerDuration(value) {
+  if (value.role !== 'passenger' || !value.dep_time || !value.arr_time) return null;
+  const [dep, arr] = await Promise.all([resolveAirportRow(value.departure_airport), resolveAirportRow(value.arrival_airport)]);
+  return computeDurationInto(value, dep, arr);
 }
 
 const STOPS_SELECT = 'SELECT airport_code, stop_type FROM flight_stops WHERE flight_id = ? ORDER BY sequence';
@@ -73,6 +65,83 @@ async function saveApproaches(flightId, approaches) {
       args: [flightId, a.approach_type, a.count],
     })));
   }
+}
+
+/**
+ * Batched aircraft find-or-create for the bulk route: one SELECT for every distinct tail number across the
+ * whole import (an IN clause, not one query per tail), then — only for tails that don't already exist — one
+ * atomic batch of INSERTs. Mutates each row's `value.aircraft_id` in place. Passenger rows only (see the
+ * comment at its call site for why pilot rows are never auto-linked).
+ */
+async function findOrCreateAircraftBatch(rows) {
+  const tailsNeeded = [...new Set(
+    rows.filter((r) => r.value.role === 'passenger' && !r.value.aircraft_id && r.value.tail_number)
+      .map((r) => normTail(r.value.tail_number)),
+  )];
+  if (!tailsNeeded.length) return;
+
+  const placeholders = tailsNeeded.map(() => '?').join(',');
+  const existingRows = await all(`SELECT id, tail_number FROM aircraft WHERE UPPER(TRIM(tail_number)) IN (${placeholders})`, tailsNeeded);
+  const idByTail = new Map(existingRows.map((r) => [normTail(r.tail_number), r.id]));
+
+  const toCreate = tailsNeeded.filter((t) => !idByTail.has(t));
+  if (toCreate.length) {
+    const typeForTail = new Map();
+    for (const { value } of rows) {
+      const t = normTail(value.tail_number);
+      if (t && value.aircraft_type && !typeForTail.has(t)) typeForTail.set(t, value.aircraft_type);
+    }
+    const inserts = toCreate.map((tail) => ({ sql: INSERT_AIRCRAFT, args: parseAircraft({ tail_number: tail, model: typeForTail.get(tail) || '' }).value }));
+    const results = await batchRun(inserts);
+    toCreate.forEach((tail, i) => idByTail.set(tail, lastIdOf(results[i])));
+  }
+
+  for (const { value } of rows) {
+    if (value.role === 'passenger' && !value.aircraft_id && value.tail_number) {
+      value.aircraft_id = idByTail.get(normTail(value.tail_number)) ?? null;
+    }
+  }
+}
+
+/**
+ * Batched equivalent of ensureAircraftRate for the bulk route: fetches every cost-tracked phase and every
+ * existing rate once (not once per row), works out in JS which (aircraft, certificate) pairs still need a
+ * default rate, then writes them all in one atomic batch. One difference from calling ensureAircraftRate
+ * per row: if two different *new* aircraft in the same import both need a default rate for the same
+ * certificate, both get the same default (the latest rate that already existed before this import), rather
+ * than the second picking up the first's just-inserted rate — a predictable, documented simplification for
+ * the batched path, not a correctness issue (either default is equally "made up" until edited).
+ */
+async function ensureAircraftRatesBatch(values) {
+  const withAircraft = values.filter((v) => v.aircraft_id);
+  if (!withAircraft.length) return;
+  const phases = await all('SELECT * FROM training_phases WHERE track_costs = 1');
+  if (!phases.length) return;
+  const phaseFor = (date) => phases.find((p) => p.start_date <= date && (!p.end_date || p.end_date >= date));
+
+  const needed = new Map(); // `${aircraftId}|${certificate}` -> { aircraftId, certificate, phase }
+  for (const v of withAircraft) {
+    const phase = phaseFor(v.date);
+    if (phase) needed.set(`${v.aircraft_id}|${phase.certificate}`, { aircraftId: v.aircraft_id, certificate: phase.certificate, phase });
+  }
+  if (!needed.size) return;
+
+  const certificates = [...new Set([...needed.values()].map((n) => n.certificate))];
+  const placeholders = certificates.map(() => '?').join(',');
+  const existingRates = await all(`SELECT * FROM aircraft_rates WHERE certificate IN (${placeholders})`, certificates);
+  const hasRate = new Set(existingRates.map((r) => `${r.aircraft_id}|${r.certificate}`));
+  const ratesByCert = new Map(certificates.map((c) => [c, existingRates.filter((r) => r.certificate === c)]));
+
+  const inserts = [];
+  for (const { aircraftId, certificate, phase } of needed.values()) {
+    if (hasRate.has(`${aircraftId}|${certificate}`)) continue;
+    const rate = pickDefaultAircraftRate(ratesByCert.get(certificate) ?? []);
+    inserts.push({
+      sql: 'INSERT INTO aircraft_rates (certificate, aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr) VALUES (?, ?, ?, ?, ?)',
+      args: [certificate, aircraftId, phase.start_date, rate.rental_rate_per_hr, rate.fuel_surcharge_per_hr],
+    });
+  }
+  if (inserts.length) await batchRun(inserts);
 }
 
 const router = Router();
@@ -148,17 +217,20 @@ router.post('/', async (req, res) => {
   res.status(201).json(created);
 });
 
-// Bulk insert for CSV import. Each valid row is inserted individually (not one atomic batch) because
-// linking its stops/approaches needs that row's own new id back — a batch's statements don't hand those
-// back per-statement. Invalid rows (any of the flight, stops or approaches shape) are reported by index
-// and simply skipped, same partial-success contract as before; valid rows ahead of a bad one still land.
+// Bulk insert for CSV import. Everything is batched so the round-trip count to the database stays roughly
+// constant no matter how many rows are imported — critical on Turso (a real network hop per round trip)
+// under a serverless function's time limit: airport resolution, aircraft find-or-create and default cost
+// rates are each one or two round trips for the WHOLE request (see the helpers above), and the flight rows
+// themselves are inserted as a single atomic batch (all rows land, or none do — see STEP 0 of the
+// passenger-times release notes) with a second atomic batch for their stops/approaches. Only shape/duration
+// validation failures are reported per row and skipped; everything that validates is inserted together.
 router.post('/bulk', async (req, res) => {
   const list = req.body?.flights;
   if (!Array.isArray(list) || list.length === 0) return res.status(400).json({ error: 'Send { flights: [...] } with at least one flight' });
   if (list.length > 5000) return res.status(400).json({ error: 'Too many flights in one import (max 5000)' });
+
   const failed = [];
-  let inserted = 0;
-  const aircraftCache = new Map(); // tail -> aircraft id, reused across every row in this request
+  const valid = [];
   for (let index = 0; index < list.length; index++) {
     const item = list[index];
     const { value, errors } = parseFlight(item);
@@ -169,23 +241,54 @@ router.post('/bulk', async (req, res) => {
       continue;
     }
     if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : value.route;
-    const durationError = await applyPassengerDuration(value);
-    if (durationError) { failed.push({ index, errors: { arr_day_offset: durationError } }); continue; }
-    // Passenger rows with a tail number but no already-linked aircraft_id (every CSV-import row: the CSV
-    // only ever carries the aircraft as text) get linked here — find-or-create by registration, the same
-    // matching AircraftPicker's own "+ Add new aircraft" step uses, just without the interactive UI. Scoped
-    // to role='passenger' only: a pilot flight imported through this same screen must behave exactly as
-    // before (no new aircraft_id, so cost tracking and milestones see the same input they always did).
-    if (value.role === 'passenger' && !value.aircraft_id && value.tail_number) {
-      value.aircraft_id = await findOrCreateAircraftByTail(value.tail_number, value.aircraft_type, aircraftCache);
-    }
-    const { lastId } = await run(INSERT, value);
-    await ensureAircraftRate(value.aircraft_id, value.date);
-    if (stops) await saveStops(lastId, stops);
-    if (approachTypes) await saveApproaches(lastId, approachTypes);
-    inserted++;
+    valid.push({ index, value, stops, approachTypes });
   }
-  res.status(201).json({ inserted, failed });
+
+  // One batch to resolve every distinct airport any passenger row's duration calc needs, instead of two
+  // lookups per row (146 round trips for 73 rows would otherwise be typical).
+  const airportCodes = new Set();
+  for (const { value } of valid) {
+    if (value.role === 'passenger' && value.dep_time && value.arr_time) {
+      if (value.departure_airport) airportCodes.add(value.departure_airport);
+      if (value.arrival_airport) airportCodes.add(value.arrival_airport);
+    }
+  }
+  const airports = airportCodes.size ? await resolveAirportRows([...airportCodes]) : {};
+
+  const ready = [];
+  for (const row of valid) {
+    const durationError = computeDurationInto(row.value, airports[row.value.departure_airport], airports[row.value.arrival_airport]);
+    if (durationError) { failed.push({ index: row.index, errors: { arr_day_offset: durationError } }); continue; }
+    ready.push(row);
+  }
+  if (!ready.length) return res.status(201).json({ inserted: 0, failed });
+
+  await findOrCreateAircraftBatch(ready);
+  await ensureAircraftRatesBatch(ready.map((r) => r.value));
+
+  // The critical atomic step: every ready row's flight row lands in one batch, or (on any failure) none do.
+  let flightResults;
+  try {
+    flightResults = await batchRun(ready.map((r) => ({ sql: INSERT, args: r.value })));
+  } catch (err) {
+    return res.status(500).json({ error: 'Bulk insert failed; nothing was written.', detail: err.message });
+  }
+
+  const linkedStatements = [];
+  ready.forEach((r, i) => {
+    const flightId = lastIdOf(flightResults[i]);
+    r.stops?.forEach((s, seq) => linkedStatements.push({
+      sql: 'INSERT INTO flight_stops (flight_id, sequence, airport_code, stop_type) VALUES (?, ?, ?, ?)',
+      args: [flightId, seq, s.airport_code, s.stop_type],
+    }));
+    r.approachTypes?.forEach((a) => linkedStatements.push({
+      sql: 'INSERT INTO flight_approaches (flight_id, approach_type, count) VALUES (?, ?, ?)',
+      args: [flightId, a.approach_type, a.count],
+    }));
+  });
+  if (linkedStatements.length) await batchRun(linkedStatements);
+
+  res.status(201).json({ inserted: ready.length, failed });
 });
 
 router.put('/:id', async (req, res) => {

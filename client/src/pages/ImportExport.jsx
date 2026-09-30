@@ -33,6 +33,10 @@ function downloadJson(filename, obj) {
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-');
 const TABLE_LABELS = { aircraft: 'aircraft', flights: 'flights', flight_stops: 'stops', flight_approaches: 'approaches', flight_reviews: 'flight reviews', expirations: 'expirations' };
 
+// Flights are imported this many at a time (see runImport) rather than all in one request — keeps each
+// request small and fast regardless of file size, on top of the server's own batching.
+const IMPORT_CHUNK_SIZE = 15;
+
 const STATUS = {
   ready: { Icon: CheckCircle2, cls: 'text-ok', label: 'Ready' },
   duplicate: { Icon: AlertTriangle, cls: 'text-warn', label: 'Duplicate' },
@@ -142,7 +146,19 @@ export default function ImportExport() {
     setBusy(true);
     setMessage(null);
     try {
-      const { inserted, failed } = chosen.length ? await api.bulkCreateFlights(chosen.map((r) => r.flight)) : { inserted: 0, failed: [] };
+      // Sent in small chunks rather than one request for the whole file: each chunk is its own atomic
+      // server-side batch (see routes/flights.js), so a chunk that fails partway through a large import
+      // (a dropped connection, a slow cold start) never leaves that chunk half-inserted, and re-choosing
+      // the same CSV file afterwards re-detects everything already imported as a duplicate — no special
+      // resume logic needed, just re-run the preview.
+      let inserted = 0;
+      const failed = [];
+      for (let i = 0; i < chosen.length; i += IMPORT_CHUNK_SIZE) {
+        const chunk = chosen.slice(i, i + IMPORT_CHUNK_SIZE);
+        const result = await api.bulkCreateFlights(chunk.map((r) => r.flight));
+        inserted += result.inserted;
+        for (const f of result.failed) failed.push({ ...f, index: f.index + i });
+      }
       for (const g of chosenGround) await api.createGroundSession(g.session);
       const known = new Set((await api.listReviews()).map((r) => r.date));
       const newReviews = reviews.filter((d) => !known.has(d));
