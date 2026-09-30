@@ -45,6 +45,18 @@ test('1.5 hr dual lesson = $442.50 (per the plan\'s worked example)', () => {
   assert.equal(c.override, false);
 });
 
+test('a passenger flight gets no cost calculation at all, even with a manual override', () => {
+  const flight = {
+    date: '2026-05-01', role: 'passenger', aircraft_id: 1, total_time: 5.5, dual_received: 0, solo_time: 0,
+    simulator_time: 0, ground_time: 0, cost_override: 500,
+  };
+  const c = computeFlightCost(flight, rates, phases);
+  assert.equal(c.total, null);
+  assert.equal(c.tracked, false);
+  assert.equal(c.override, false);
+  assert.equal(c.excluded, true);
+});
+
 test('1.5 hr solo flight = $315 (no instructor charge without dual received)', () => {
   const flight = { date: '2026-05-01', aircraft_id: 1, total_time: 1.5, dual_received: 0, solo_time: 1.5, simulator_time: 0, ground_time: 0, cost_override: null };
   const c = computeFlightCost(flight, rates, phases);

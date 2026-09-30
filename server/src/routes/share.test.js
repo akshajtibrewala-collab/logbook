@@ -95,3 +95,18 @@ test('share link: private by default, token gates access, revoke and regenerate 
   assert.notEqual(again.token, regen.token);
   assert.equal((await open(regen.token)).status, 404);
 });
+
+test('the public and print summaries count pilot flights only — a passenger flight is invisible to both', async () => {
+  const before = await (await call('GET', '/share/summary')).json();
+  const passengerFlight = await makeFlight({ date: '2026-05-01', role: 'passenger', total_time: 6, remarks: null, instructor: null });
+
+  const printSummary = await (await call('GET', '/share/summary')).json();
+  assert.equal(printSummary.totals.total, before.totals.total); // 6h passenger flight added nothing
+  assert.ok(!printSummary.recent.some((r) => r.id === passengerFlight.id));
+
+  await call('POST', '/share');
+  const on = await (await call('GET', '/share')).json();
+  const publicSummary = await (await call('GET', `/public/${on.token}`, undefined, {})).json();
+  assert.equal(publicSummary.totals.total, before.totals.total);
+  assert.ok(!publicSummary.recent.some((r) => r.id === passengerFlight.id));
+});

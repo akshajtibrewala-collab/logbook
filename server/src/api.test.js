@@ -78,6 +78,29 @@ test('rejects invalid flights', async () => {
   assert.ok(errors.date && errors.pic_time && errors.day_landings);
 });
 
+test('flight role: defaults to pilot, and a passenger/observer flight has every logbook/legal field forced to 0', async () => {
+  let res = await call('POST', '/flights', flight);
+  assert.equal((await res.json()).role, 'pilot'); // no role sent at all -> pilot, same as every flight before this feature
+
+  res = await call('POST', '/flights', {
+    ...flight, role: 'passenger', total_time: 5.5, pic_time: 5.5, night_time: 1, cross_country_time: 5.5,
+    ground_time: 0.5, day_landings: 2, day_landings_full_stop: 2, approaches: 1, holds: 1,
+    seat_class: 'economy', confirmation_code: 'ABC123',
+  });
+  assert.equal(res.status, 201);
+  const passengerFlight = await res.json();
+  assert.equal(passengerFlight.role, 'passenger');
+  assert.equal(passengerFlight.total_time, 5.5); // flight duration is kept — it's not a logbook/legal-time field
+  assert.equal(passengerFlight.seat_class, 'economy');
+  assert.equal(passengerFlight.confirmation_code, 'ABC123');
+  for (const field of ['pic_time', 'night_time', 'cross_country_time', 'ground_time', 'day_landings', 'day_landings_full_stop', 'approaches', 'holds']) {
+    assert.equal(passengerFlight[field], 0, `${field} should be forced to 0 on a passenger flight`);
+  }
+
+  res = await call('POST', '/flights', { ...flight, role: 'crew' }); // not a real role -> falls back to pilot, not rejected
+  assert.equal((await res.json()).role, 'pilot');
+});
+
 test('flight reviews', async () => {
   const res = await call('POST', '/reviews', { date: '2025-06-15' });
   assert.equal(res.status, 201);

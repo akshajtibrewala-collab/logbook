@@ -5,6 +5,7 @@ import {
   instrumentCurrency, flightReviewStatus, summarize,
   expirationStatus, medicalCurrency, customExpirations,
 } from './currency.js';
+import { pilotFlights } from './flightRoles.js';
 
 const fl = (date, extra = {}) => ({ date, total_time: 1, day_landings: 0, night_landings: 0, approaches: 0, holds: 0, ...extra });
 
@@ -137,4 +138,14 @@ test('customExpirations excludes medical and sorts soonest-first', () => {
   ];
   const list = customExpirations(expirations, '2026-06-15');
   assert.deepEqual(list.map((e) => e.item.label), ['Renter’s insurance', 'Passport']);
+});
+
+test('a passenger flight, filtered out via pilotFlights, changes neither hours nor currency', () => {
+  const today = '2026-06-15';
+  const pilotOnly = [fl('2026-06-01', { day_landings: 2 })];
+  const withPassenger = [...pilotOnly, fl('2026-06-10', { role: 'passenger', total_time: 6, day_landings: 4, night_landings: 3 })];
+
+  assert.deepEqual(summarize(pilotFlights(withPassenger), today), summarize(pilotOnly, today));
+  assert.deepEqual(dayCurrency(pilotFlights(withPassenger), today), dayCurrency(pilotOnly, today));
+  assert.deepEqual(nightCurrency(pilotFlights(withPassenger), today), nightCurrency(pilotOnly, today));
 });

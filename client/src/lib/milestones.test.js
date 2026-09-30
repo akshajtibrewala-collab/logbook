@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { matchesFilter, computeRequirement, computeMilestones, certificateLabel, requirementGroup, groupRequirements, certificateSummary, completionsByKey, completionKey } from './milestones.js';
+import { pilotFlights } from './flightRoles.js';
 
 const flight = (o) => ({ total_time: 0, pic_time: 0, dual_received: 0, solo_time: 0, cross_country_time: 0, night_time: 0, aircraft_id: null, ...o });
 
@@ -143,4 +144,12 @@ test('certificateSummary: complete when every requirement (including checked-off
   assert.equal(empty.computableCount, 0);
   assert.equal(empty.percent, 0);
   assert.equal(empty.complete, false);
+});
+
+test('a passenger flight, filtered out via pilotFlights, contributes nothing to milestone progress', () => {
+  const req = { sum_field: 'total_time', flight_filter: null, min_value: 40, manual: false };
+  const pilotOnly = [flight({ total_time: 15 })];
+  const withPassenger = [...pilotOnly, flight({ total_time: 20, role: 'passenger' })];
+  assert.equal(computeRequirement(req, pilotFlights(withPassenger)).current, computeRequirement(req, pilotOnly).current);
+  assert.equal(computeRequirement(req, pilotFlights(withPassenger)).current, 15);
 });
