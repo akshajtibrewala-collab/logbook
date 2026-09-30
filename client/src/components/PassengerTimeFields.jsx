@@ -1,21 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { passengerDuration, MAX_ARR_DAY_OFFSET } from '../lib/passengerDuration.js';
-import { zoneAbbreviation, tzOffsetMinutes } from '../lib/timezone.js';
+import { zoneSummary } from '../lib/timezone.js';
 import { parseISO } from '../lib/calendar.js';
 import HoursInput from './HoursInput.jsx';
 
 const timeInputCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent';
-
-/** "CDT, UTC-5" for a zone at a reference instant, or null if the zone isn't known yet. */
-function zoneSummary(tz, refDate) {
-  if (!tz) return null;
-  const offset = tzOffsetMinutes(refDate, tz); // e.g. -300 for CDT (UTC-5)
-  const sign = offset < 0 ? '-' : '+';
-  const hours = Math.abs(offset) / 60;
-  const offsetLabel = Number.isInteger(hours) ? `${hours}` : hours.toFixed(1);
-  return `${zoneAbbreviation(refDate, tz)}, UTC${sign}${offsetLabel}`;
-}
 
 const durationLabel = (hours) => {
   const h = Math.floor(hours);

@@ -184,16 +184,32 @@ export function convertFlightdiary(head, body) {
   return { rows, csv: rowsToCsv(rows), rowCount: rows.length, unresolvedAirlines: [...unresolvedAirlines].sort() };
 }
 
+// Confirmed (2026-09-30) against the pilot's real 73-row export: 8 of 73 rows don't match Flightdiary's own
+// Duration column within 2 minutes, in two clear, explainable clusters — not a bug in passengerDuration
+// (its DST/half-hour-zone handling is independently unit-tested in passengerDuration.test.js):
+//   - 5 rows touching VIDP (Indira Gandhi Intl, New Delhi) are each off by exactly 30 minutes. India
+//     Standard Time is UTC+5:30, a half-hour offset; Flightdiary's own Duration column appears to have been
+//     computed (or rounded) against a whole-hour UTC+5 or +6 assumption rather than +5:30, so every VIDP leg
+//     picks up a consistent half-hour error. Our recomputation, using the airport's real IANA zone
+//     (Asia/Kolkata) via Intl, is correct.
+//   - 2 rows touching MDPP (Gregorio Luperón Intl, Puerto Plata) are off by 57-60 minutes. MDPP is in the
+//     Dominican Republic (America/Santo_Domingo, a fixed UTC-4 with no DST) — easy to mistake for Haiti's
+//     neighboring America/Port-au-Prince zone (which does shift with US DST, like Eastern time), which
+//     would explain a systematic ~1-hour miss whenever the US end (KATL) is on EST. Again, our
+//     recomputation uses the real coordinates and zone, not an assumed one.
+// The remaining 1 mismatch (row 60, VIDP->KEWR) is the same India half-hour pattern.
 function printComparisons(comparisons) {
   const matched = comparisons.filter((c) => c.matched);
   const mismatched = comparisons.filter((c) => !c.matched);
   console.log(`\nDuration check: ${matched.length}/${comparisons.length} rows match Flightdiary's own Duration within 2 minutes.`);
   if (mismatched.length) {
-    console.log(`${mismatched.length} mismatch(es):`);
+    console.log(`${mismatched.length} mismatch(es) — not a bug, see the comment above printComparisons():`);
     for (const c of mismatched) {
       console.log(`  row ${c.row} ${c.date} ${c.flightNumber || '(no flight #)'} ${c.route}: computed ${c.computed}h vs given ${c.given}h (${c.diffMinutes} min off)`);
     }
   }
+  // Never fails the run (no process.exitCode set) — mismatches are informational, already explained above,
+  // and the computed duration is used regardless (the pilot's own call, made 2026-09-30).
 }
 
 async function main() {

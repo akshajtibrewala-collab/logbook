@@ -109,6 +109,43 @@ test('resolveDurations: recomputes total_time and arr_day_offset from local time
   assert.equal(comparisons[0].diffMinutes, 60);
 });
 
+// Real rows from the pilot's own 73-row export (2026-09-30 --check run), locked down here so the two known
+// discrepancy clusters (see the comment above printComparisons() in convert-flightdiary-import.js) stay
+// explained and don't silently change if tz-lookup's boundary data or passengerDuration ever changes.
+test('resolveDurations: KIAD->VIDP 2023-07-23 (India, UTC+5:30) computes ~14.25h, not Flightdiary\'s naive 14.75h', async () => {
+  await migrate();
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('KIAD','KIAD','IAD','IAD','Washington Dulles','Dulles','US','large_airport',38.9445,-77.4558)");
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('VIDP','VIDP','DEL',NULL,'Indira Gandhi Intl','New Delhi','IN','large_airport',28.55563,77.09519)");
+
+  const body = [row({
+    Date: '2023-07-23', 'Flight number': 'AI104', From: 'Washington / Dulles (IAD/KIAD)', To: 'Delhi / Indira Gandhi (DEL/VIDP)',
+    'Dep time': '11:15:00', 'Arr time': '11:00:00', Duration: '14:45:00', Airline: 'Air India (AI/AIC)', Aircraft: 'Boeing 787-8 (B788)', Registration: '',
+  })];
+  const { rows } = convertFlightdiary(HEAD, body);
+  const { comparisons } = await resolveDurations(rows);
+
+  assert.equal(rows[0][8], '14.25');
+  assert.equal(rows[0][30], '1'); // arrives the next local day in Delhi
+  assert.equal(comparisons[0].diffMinutes, 30); // the India half-hour-zone discrepancy
+});
+
+test('resolveDurations: KATL->MDPP 2024-12-21 (Dominican Republic, fixed UTC-4) computes ~3.15h, not Flightdiary\'s naive 4.1h', async () => {
+  await migrate();
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('KATL','KATL','ATL','ATL','Hartsfield-Jackson','Atlanta','US','large_airport',33.6367,-84.4281)");
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('MDPP','MDPP','POP',NULL,'Gregorio Luperon Intl','Puerto Plata','DO','large_airport',19.7579,-70.57)");
+
+  const body = [row({
+    Date: '2024-12-21', 'Flight number': 'DL1777', From: 'Atlanta / Hartsfield-Jackson (ATL/KATL)', To: 'Puerto Plata / Puerto Plata (POP/MDPP)',
+    'Dep time': '11:23:00', 'Arr time': '15:32:00', Duration: '04:06:00', Airline: 'Delta Air Lines (DL/DAL)', Aircraft: 'Boeing 737-800 (B738)', Registration: 'N3767',
+  })];
+  const { rows } = convertFlightdiary(HEAD, body);
+  const { comparisons } = await resolveDurations(rows);
+
+  assert.equal(rows[0][8], '3.15');
+  assert.equal(rows[0][30], '0');
+  assert.equal(comparisons[0].diffMinutes, 57); // the Dominican-Republic-vs-Haiti-zone discrepancy
+});
+
 test('resolveDurations: an airport not in the local table leaves total_time as Flightdiary gave it (manual fallback)', async () => {
   const body = [row({ From: 'Nowhere / Nowhere (ZZZ/ZZZZ)', To: 'Raleigh / Durham (RDU/KRDU)', 'Dep time': '16:25:00', 'Arr time': '19:15:00', Duration: '02:50:00' })];
   const { rows } = convertFlightdiary(HEAD, body);
