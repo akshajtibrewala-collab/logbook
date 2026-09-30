@@ -105,7 +105,7 @@ export default function FlightForm() {
       api.listFlights()
         .then(async (list) => {
           // Copy last is for repeating your own flying — the most recent PILOT flight, never a
-          // passenger/observer one, so an airline/flight_number/aircraft from a commercial trip never
+          // passenger one, so an airline/flight_number/aircraft from a commercial trip never
           // leaks into what's meant to become a new logged-time flight.
           const last = mostRecentFlight(pilotFlights(list));
           if (!last) { setNotice('There’s no previous flight to copy yet.'); return; }
@@ -264,7 +264,7 @@ export default function FlightForm() {
         </div>
         {form.role !== 'pilot' && (
           <p className="mt-2 text-xs text-slate-500">
-            {form.role === 'passenger' ? 'A passenger flight' : 'An observer flight'} doesn't count toward your logbook hours, currency or milestones — just the map and your travel history.
+            A passenger flight doesn't count toward your logbook hours, currency or milestones — just the map and your travel history.
           </p>
         )}
       </section>

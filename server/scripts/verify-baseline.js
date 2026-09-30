@@ -43,7 +43,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
  */
 export function summarizeFlightData({ flights: allFlights, reviews, expirations, aircraftRows, config, completions }, today) {
   // Logbook hours, currency and milestones count role='pilot' flights only (see CLAUDE.md's "Flight
-  // roles") — a passenger/observer flight must never move any number this script checks. all_roles_
+  // roles") — a passenger flight must never move any number this script checks. all_roles_
   // flight_count is kept alongside purely for visibility (e.g. after an import), never diffed against
   // the pilot-only numbers below.
   const flights = pilotFlights(allFlights);
@@ -114,7 +114,7 @@ async function main() {
   if (!file) throw new Error('Usage: verify-baseline.js <path-to-baseline.json>  (or --save <path>)');
   const saved = JSON.parse(readFileSync(file, 'utf8'));
   const current = await computeBaseline(saved.today);
-  // all_roles_flight_count is informational only (it's expected to grow as passenger/observer flights
+  // all_roles_flight_count is informational only (it's expected to grow as passenger flights
   // are added) — never part of the pilot-only "must not change" comparison below.
   const { all_roles_flight_count: currentAllRoles, ...currentForDiff } = current;
   const { all_roles_flight_count: savedAllRoles, ...savedForDiff } = saved;

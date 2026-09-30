@@ -131,7 +131,7 @@ export default function Logbook() {
 
   const activeFilters = Object.entries(filters).filter(([k, v]) => v && !(k === 'kind' && v === 'all')).length;
   // A ground session's hours always count; a flight's only count toward this total when it's the pilot's
-  // own flying — a passenger/observer flight is shown in the list (with a role badge below) but never
+  // own flying — a passenger flight is shown in the list (with a role badge below) but never
   // adds to the hours total, matching every other logbook-time total in the app.
   const total = visible.reduce((s, e) => s + (e.kind === 'ground' || isPilotFlight(e.data) ? e.hours : 0), 0);
   const setFilter = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value }));

@@ -78,7 +78,7 @@ test('rejects invalid flights', async () => {
   assert.ok(errors.date && errors.pic_time && errors.day_landings);
 });
 
-test('flight role: defaults to pilot, and a passenger/observer flight has every logbook/legal field forced to 0', async () => {
+test('flight role: defaults to pilot, and a passenger flight has every logbook/legal field forced to 0', async () => {
   let res = await call('POST', '/flights', flight);
   assert.equal((await res.json()).role, 'pilot'); // no role sent at all -> pilot, same as every flight before this feature
 
@@ -99,6 +99,11 @@ test('flight role: defaults to pilot, and a passenger/observer flight has every 
 
   res = await call('POST', '/flights', { ...flight, role: 'crew' }); // not a real role -> falls back to pilot, not rejected
   assert.equal((await res.json()).role, 'pilot');
+
+  // 'observer' used to be a real role; it's explicitly rejected now rather than falling back to pilot.
+  res = await call('POST', '/flights', { ...flight, role: 'observer' });
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).errors.role);
 });
 
 test('flight reviews', async () => {

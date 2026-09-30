@@ -49,6 +49,13 @@ test('role round-trips through CSV export/import, and a missing/unknown role col
   assert.equal(parseImport(noRoleCsv).rows[0].flight.role, 'pilot');
 });
 
+test('role "observer" is rejected as an import error rather than falling back to pilot', () => {
+  const csv = flightsToCsv([{ date: '2026-05-03', role: 'observer', departure_airport: 'KPAO', arrival_airport: 'KSQL', total_time: 1 }]);
+  const { rows } = parseImport(csv);
+  assert.equal(rows[0].status, 'error');
+  assert.ok(rows[0].errors.some((e) => e.includes('observer')));
+});
+
 test('seat_class round-trips through CSV export/import; missing is null', () => {
   const base = { date: '2026-05-01', role: 'passenger', departure_airport: 'KPAO', arrival_airport: 'KSQL', total_time: 1 };
   const csv = flightsToCsv([{ ...base, seat_class: 'business' }]);

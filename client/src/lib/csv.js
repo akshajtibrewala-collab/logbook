@@ -266,8 +266,11 @@ export function parseImport(text, existing = [], existingGround = []) {
     if (!f.date) errors.push(`Invalid date "${cell(r, 'date')}"`);
     // A missing or unrecognized role column (this app's own older exports, or another tool's file)
     // defaults to pilot — the only role a flight could have been logged as before roles existed.
+    // 'observer' was removed as a role, so unlike any other unrecognized value it's flagged as an error
+    // rather than silently relabeled pilot.
     const roleCell = cell(r, 'role').toLowerCase();
-    f.role = ['pilot', 'passenger', 'observer'].includes(roleCell) ? roleCell : 'pilot';
+    if (roleCell === 'observer') { errors.push('Role "observer" is no longer supported'); f.role = 'pilot'; }
+    else f.role = ['pilot', 'passenger'].includes(roleCell) ? roleCell : 'pilot';
 
     for (const field of ['departure_airport', 'arrival_airport']) {
       const v = cell(r, field).toUpperCase();
@@ -316,9 +319,9 @@ export function parseImport(text, existing = [], existingGround = []) {
     f.approach_types = parseApproachTypesCell(cell(r, 'approach_types'));
     if (f.approach_types.length) f.approaches = f.approach_types.reduce((s, a) => s + a.count, 0);
 
-    // A passenger/observer row has no PIC/dual/solo/night/instrument/cross-country/ground time, no
-    // landings, no approaches or holds — zeroed here too (mirroring server/src/validate.js) so the import
-    // preview already shows exactly what will be saved, rather than surprising the pilot after import.
+    // A passenger row has no PIC/dual/solo/night/instrument/cross-country/ground time, no landings, no
+    // approaches or holds — zeroed here too (mirroring server/src/validate.js) so the import preview
+    // already shows exactly what will be saved, rather than surprising the pilot after import.
     if (f.role !== 'pilot') {
       for (const field of TIME_FIELDS) if (field !== 'total_time') f[field] = 0;
       f.day_landings = 0; f.night_landings = 0; f.day_landings_full_stop = 0; f.night_landings_full_stop = 0;
