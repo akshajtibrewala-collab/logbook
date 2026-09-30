@@ -28,7 +28,7 @@ const COUNT_FIELDS = [
 function Section({ title, children }) {
   return (
     <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-accent">{title}</h2>
+      <h2 className="mb-3 text-sm font-medium text-accent-strong">{title}</h2>
       {children}
     </section>
   );
@@ -94,7 +94,7 @@ export default function FlightDetail() {
   const counts = flight ? COUNT_FIELDS.filter(([k]) => Number(flight[k]) > 0) : [];
 
   return (
-    <div className="stagger space-y-4">
+    <div className={`stagger space-y-4 ${flight && !isPilotFlight(flight) ? 'role-pax-scope' : ''}`}>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => navigate(base)} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Flight</h1>
@@ -118,7 +118,7 @@ export default function FlightDetail() {
                 <div className="text-lg font-semibold">{route.length > 1 ? route.join(' → ') : (flight.departure_airport || flight.arrival_airport || 'Local flight')}</div>
                 <div className="mt-0.5 text-sm text-slate-400">{fmtDate(flight.date)}</div>
               </div>
-              <div className="shrink-0 text-right text-3xl font-semibold text-accent">{fmtHours(flight.total_time)}</div>
+              <div className="shrink-0 text-right text-3xl font-semibold text-accent-strong">{fmtHours(flight.total_time)}</div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {!isPilotFlight(flight) && <Badge tone="accent" className="capitalize">{roleOf(flight)}</Badge>}

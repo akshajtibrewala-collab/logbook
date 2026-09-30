@@ -55,6 +55,15 @@ body {
   /* Passenger/travel accent: a distinct hue family from the pilot sky-blue accent, so pilot vs. passenger
      data is recognizable at a glance without reading labels. */
   --role-pax: 167 139 250;
+  /* One step darker than --role-pax, the --accent-dark analog used for a pressed/active button state. */
+  --role-pax-dark: 139 92 246;
+  /* The shade plain violet TEXT (not a violet background) uses to clear AA — see --accent-strong below.
+     In dark mode --role-pax itself already clears 6.9:1 against the navy-900 card surface, so no extra
+     step is needed here. */
+  --role-pax-strong: 167 139 250;
+  /* Falls back to the plain accent everywhere --accent-strong isn't overridden by .role-pax-scope, so
+     using it (e.g. Badge's "accent" tone, a Section title) never changes a pilot-side screen's color. */
+  --accent-strong: var(--accent);
 }
 :root.light {
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px -6px rgba(15, 23, 42, 0.12);
@@ -62,6 +71,27 @@ body {
   /* violet-500, not -600: -600 only clears 3.5:1 against the dark `ink` label text on the active Travel
      tab pill — below the 4.5:1 AA floor for normal text. -500 clears 4.71:1. */
   --role-pax: 139 92 246;
+  /* violet-600: one step darker than --role-pax, used for a pressed/active button state AND (via
+     --role-pax-strong, same value) for plain violet text on a light card — --role-pax/-500 alone is only
+     ~4.2:1 against white, below AA; -600 clears ~5.7:1. */
+  --role-pax-dark: 124 58 237;
+  --role-pax-strong: 124 58 237;
+  --accent-strong: var(--accent);
+}
+
+/* Passenger/travel role-color scope: wrap the /travel page, a passenger flight's detail panel, and the
+   flight form while role=passenger in this class, and every accent-colored element inside it — buttons,
+   borders, focus rings, links — follows the violet role color automatically, with no per-element edits.
+   The one thing a variable swap can't do is serve both of --accent's jobs at once: a violet BACKGROUND
+   needs to stay light enough for dark `ink` text on top of it (buttons), while violet TEXT on a plain
+   card needs to be darker to clear AA against that light card — opposite requirements from one value. So
+   --accent/--accent-dark (backgrounds, borders, rings) use --role-pax/-dark, and the handful of spots that
+   are plain violet text on a card (duration numbers, a Section title, "Clear filters") use the separate
+   --accent-strong token instead of --accent, which resolves to --role-pax-strong only inside this scope. */
+.role-pax-scope {
+  --accent: var(--role-pax);
+  --accent-dark: var(--role-pax-dark);
+  --accent-strong: var(--role-pax-strong);
 }
 .card-elevated { box-shadow: var(--shadow-card); border-radius: 1.25rem; }
 .card-hero { box-shadow: var(--shadow-card-lg); border-radius: 1.5rem; }

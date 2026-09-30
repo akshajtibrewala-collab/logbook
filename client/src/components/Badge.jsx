@@ -4,7 +4,7 @@ const TONES = {
   ok: 'bg-ok/10 text-ok',
   warn: 'bg-warn/10 text-warn',
   bad: 'bg-bad/10 text-bad',
-  accent: 'bg-accent/10 text-accent',
+  accent: 'bg-accent/10 text-accent-strong',
   neutral: 'bg-navy-800 text-slate-300',
 };
 

@@ -62,7 +62,7 @@ const DRAFT_NAME = 'flight-new';
 function Section({ title, children }) {
   return (
     <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-accent">{title}</h2>
+      <h2 className="mb-3 text-sm font-medium text-accent-strong">{title}</h2>
       <div className="grid grid-cols-2 gap-3">{children}</div>
     </section>
   );
@@ -240,7 +240,7 @@ export default function FlightForm() {
   if (loading) return <p className="text-slate-400">Loading…</p>;
 
   return (
-    <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
+    <form onSubmit={submit} className={`space-y-4 md:mx-auto md:max-w-xl ${form.role !== 'pilot' ? 'role-pax-scope' : ''}`}>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => navigate(id ? `${base}/${id}` : base)} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
@@ -252,7 +252,7 @@ export default function FlightForm() {
         )}
       </div>
       {notice && (
-        <p role="status" className="flex items-center justify-between gap-3 rounded-xl bg-accent/10 p-3 text-sm text-accent">
+        <p role="status" className="flex items-center justify-between gap-3 rounded-xl bg-accent/10 p-3 text-sm text-accent-strong">
           <span>{notice}</span>
           {!id && !params.get('outbox') && (
             <button type="button" onClick={() => { clearDraft(DRAFT_NAME); setForm(blank()); setNotice(''); }} className="h-11 shrink-0 px-2 font-medium underline">Start over</button>
@@ -261,7 +261,7 @@ export default function FlightForm() {
       )}
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Role</h2>
+        <h2 className="mb-3 text-sm font-medium text-accent-strong">Role</h2>
         <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Flight role">
           {FLIGHT_ROLES.map((r) => (
             <button key={r.value} type="button" onClick={() => set('role')(r.value)} aria-pressed={form.role === r.value}
@@ -405,13 +405,13 @@ export default function FlightForm() {
       )}
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Note</h2>
+        <h2 className="mb-3 text-sm font-medium text-accent-strong">Note</h2>
         <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3}
           className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
       </section>
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Photos</h2>
+        <h2 className="mb-3 text-sm font-medium text-accent-strong">Photos</h2>
         <PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} />
       </section>
 

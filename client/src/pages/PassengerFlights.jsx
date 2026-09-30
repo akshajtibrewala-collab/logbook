@@ -91,6 +91,9 @@ export default function PassengerFlights() {
   return (
     <div className="lg:flex lg:items-start lg:gap-6">
       <div className={`${selected ? 'hidden lg:block' : 'block'} lg:w-[380px] lg:shrink-0`}>
+        {/* Deliberately doesn't wrap AddFab below — the phone floating "+" button stays sky blue for now,
+            pending a decision on it (see the passenger-accent PR notes). */}
+        <div className="role-pax-scope">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Passenger flights</h1>
         </div>
@@ -117,7 +120,7 @@ export default function PassengerFlights() {
         {flights && flights.length > 0 && (
           <div className="mt-3 flex gap-2">
             <button onClick={() => setShowFilters((s) => !s)}
-              className={`h-12 flex-1 rounded-xl border px-4 text-sm ${activeFilters ? 'border-accent text-accent' : 'border-edge text-slate-300'}`}>
+              className={`h-12 flex-1 rounded-xl border px-4 text-sm ${activeFilters ? 'border-accent-strong text-accent-strong' : 'border-edge text-slate-300'}`}>
               <SlidersHorizontal size={16} className="mr-2 inline" />Filter{activeFilters ? ` (${activeFilters})` : ''}
             </button>
           </div>
@@ -136,7 +139,7 @@ export default function PassengerFlights() {
               </select>
             </label>
             {activeFilters > 0 && (
-              <button onClick={() => setFilters({ year: '', airline: '' })} className="col-span-2 h-10 text-sm text-accent">Clear filters</button>
+              <button onClick={() => setFilters({ year: '', airline: '' })} className="col-span-2 h-10 text-sm text-accent-strong">Clear filters</button>
             )}
           </div>
         )}
@@ -166,7 +169,7 @@ export default function PassengerFlights() {
                       className={`w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800 ${selected === String(f.id) ? 'lg:border-accent' : ''}`}>
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="truncate text-base font-medium">{f.departure_airport || '—'} → {f.arrival_airport || '—'}</span>
-                        <span className="shrink-0 text-lg font-semibold text-accent">{fmtHours(f.total_time)}</span>
+                        <span className="shrink-0 text-lg font-semibold text-accent-strong">{fmtHours(f.total_time)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-2 text-sm text-slate-400">
                         <span className="flex min-w-0 items-center gap-1.5">
@@ -189,6 +192,7 @@ export default function PassengerFlights() {
               </ul>
             </div>
           ))}
+        </div>
         </div>
 
         {flights && flights.length > 0 && (
