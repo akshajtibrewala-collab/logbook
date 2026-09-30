@@ -24,7 +24,7 @@ export default function TravelTab({ passengerFlights, airports }) {
       flights: passengerFlights.length,
       hours,
       airports: counts.airports,
-      countries: counts.regionsKnown ? counts.countries : null,
+      countries: counts.countries,
       distanceNm: mapData.totalDistanceNm,
       aircraft: hoursByAircraft(passengerFlights),
       airlines: hoursByAirline(passengerFlights),
@@ -45,7 +45,7 @@ export default function TravelTab({ passengerFlights, airports }) {
       <SummaryStrip icon={Luggage} tint="pax" primary={{ label: 'Total hours', value: fmtHours(data.hours) }} items={[
         { label: 'Flights', value: data.flights },
         { label: 'Airports', value: data.airports },
-        { label: 'Countries', value: data.countries ?? '—' },
+        { label: 'Countries', value: data.countries },
       ]} />
       <FlightsPerYearChart rows={data.byYear} note={`By calendar year · ${fmtNm(data.distanceNm)} flown in total.`} />
       <AirlinesCard airlines={data.airlines} />

@@ -24,7 +24,7 @@ export default function PlacesTab({ flights, airports, roleFilter }) {
     const counts = visitedCounts(mapData.stops);
     return {
       airports: counts.airports,
-      countries: counts.regionsKnown ? counts.countries : null,
+      countries: counts.countries,
       aircraftTypes: hoursByAircraft(scoped).length,
       distanceNm: mapData.totalDistanceNm,
       routes: topRoutes(scoped, airports, ROUTE_LIMIT),
@@ -35,7 +35,7 @@ export default function PlacesTab({ flights, airports, roleFilter }) {
   return (
     <div className="stagger space-y-4">
       <SummaryStrip icon={MapPin} tint={tint} primary={{ label: 'Airports', value: data.airports }} items={[
-        { label: 'Countries', value: data.countries ?? '—' },
+        { label: 'Countries', value: data.countries },
         { label: 'Aircraft types', value: data.aircraftTypes },
         { label: 'Distance', value: fmtNm(data.distanceNm) },
       ]} />
