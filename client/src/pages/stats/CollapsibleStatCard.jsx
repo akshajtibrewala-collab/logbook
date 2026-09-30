@@ -9,7 +9,7 @@ import Card from '../../components/Card.jsx';
 export default function CollapsibleStatCard({ title, note, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <Card as="section">
+    <Card as="section" className="card-elevated">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
         className="flex w-full items-start justify-between gap-3 text-left">
         <span className="min-w-0">

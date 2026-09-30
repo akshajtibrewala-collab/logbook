@@ -74,10 +74,10 @@ export default function Stats() {
 
       {flights && flights.length > 0 && (
         <>
-          <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="tablist" aria-label="Stats section">
+          <div className="flex gap-1 rounded-2xl border border-edge bg-navy-950/60 p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]" role="tablist" aria-label="Stats section">
             {TABS.map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                className={`h-11 flex-1 rounded-lg text-sm font-medium transition-colors ${tab === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+                className={`h-11 flex-1 rounded-xl text-sm font-medium transition-all ${tab === k ? 'card-elevated bg-navy-700 text-accent' : 'text-slate-400 hover:text-slate-300'}`}>{l}</button>
             ))}
           </div>
           <p className="text-xs text-slate-500">{scopeLabel}</p>
