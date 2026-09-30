@@ -10,3 +10,6 @@ dist
 
 # Local backup snapshots (server/backups/*.json)
 server/backups/
+
+# Local Claude Code dev-server launch config (machine-specific, not part of the app)
+.claude/
