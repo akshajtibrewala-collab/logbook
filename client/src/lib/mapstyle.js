@@ -6,6 +6,12 @@
 const ROUTE_COLORS = { dark: '#38bdf8', light: '#0369a1' };
 export const routeColorFor = (theme) => (theme === 'light' ? ROUTE_COLORS.light : ROUTE_COLORS.dark);
 
+// Passenger routes get a distinct colour AND dash pattern (never color alone) so the two are
+// distinguishable for colorblind users too. Amber/warm, tuned per theme the same way as ROUTE_COLORS.
+const PASSENGER_ROUTE_COLORS = { dark: '#fbbf24', light: '#b45309' };
+export const passengerRouteColorFor = (theme) => (theme === 'light' ? PASSENGER_ROUTE_COLORS.light : PASSENGER_ROUTE_COLORS.dark);
+export const PASSENGER_ROUTE_DASH = '2 7'; // short dashes, long gaps — reads as "not flown by you" at a glance
+
 /** US state / country region code of an airport ("US-CA" -> "CA"); null when unknown or outside the US. */
 export function usState(airport) {
   const m = /^US-([A-Z]{2})$/.exec(airport?.region ?? '');

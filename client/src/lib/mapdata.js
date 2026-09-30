@@ -1,4 +1,5 @@
 import { flightStops } from './flightpath.js';
+import { greatCircleDistanceNm } from './geo.js';
 
 /**
  * Turns flights plus resolved airports into map-ready data.
@@ -10,6 +11,7 @@ export function buildMapData(flights, airports) {
   const stops = new Map();
   const routes = new Map();
   const unresolved = new Set();
+  let unresolvedFlightCount = 0; // flights that named an airport but it couldn't be placed at all — invisible otherwise
 
   for (const f of flights) {
     const codes = flightStops(f);
@@ -21,6 +23,7 @@ export function buildMapData(flights, airports) {
       if (path.length && path[path.length - 1].ident === ap.ident) continue;
       path.push(ap);
     }
+    if (!path.length && ends.size) unresolvedFlightCount++;
 
     const touched = new Map(path.map((ap) => [ap.ident, ap]));
     for (const ap of touched.values()) {
@@ -56,15 +59,20 @@ export function buildMapData(flights, airports) {
     s.first = s.flights[s.flights.length - 1].date;
   }
   const routeList = [...routes.values()];
+  let totalDistanceNm = 0;
   for (const r of routeList) {
     r.flights.sort((x, y) => y.date.localeCompare(x.date) || y.id - x.id);
     r.hours = Math.round(r.hours * 100) / 100;
     r.last = r.flights[0].date;
     r.first = r.flights[r.flights.length - 1].date;
+    r.distanceNm = Math.round(greatCircleDistanceNm([r.a.lat, r.a.lon], [r.b.lat, r.b.lon]));
+    totalDistanceNm += r.distanceNm * r.count;
   }
   return {
     stops: stopList.sort((x, y) => y.visits - x.visits),
     routes: routeList,
     unresolved: [...unresolved].sort(),
+    unresolvedFlightCount,
+    totalDistanceNm: Math.round(totalDistanceNm),
   };
 }

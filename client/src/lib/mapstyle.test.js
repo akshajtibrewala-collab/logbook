@@ -1,12 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { routeColorFor, usState, visitedCounts, airportSummary, shouldAnimateRoutes, loadAnimatePref, saveAnimatePref, orientedPositions } from './mapstyle.js';
+import { routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH, usState, visitedCounts, airportSummary, shouldAnimateRoutes, loadAnimatePref, saveAnimatePref, orientedPositions } from './mapstyle.js';
 
 test('routes use one colour per theme: a bright blue on dark tiles, a deeper blue on light tiles', () => {
   assert.equal(routeColorFor('dark'), '#38bdf8');
   assert.equal(routeColorFor('light'), '#0369a1');
   assert.equal(routeColorFor(undefined), '#38bdf8'); // anything unexpected falls back to the dark colour
   assert.notEqual(routeColorFor('dark'), routeColorFor('light'));
+});
+
+test('passenger routes get their own per-theme colour, distinct from pilot routes, plus a dash pattern (never color alone)', () => {
+  assert.notEqual(passengerRouteColorFor('dark'), routeColorFor('dark'));
+  assert.notEqual(passengerRouteColorFor('light'), routeColorFor('light'));
+  assert.notEqual(passengerRouteColorFor('dark'), passengerRouteColorFor('light'));
+  assert.ok(PASSENGER_ROUTE_DASH.length > 0);
 });
 
 test('a leftover colour-mode value in storage is simply never read (no such preference exists any more)', () => {

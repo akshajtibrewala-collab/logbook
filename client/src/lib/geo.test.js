@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { greatCircle } from './geo.js';
+import { greatCircle, greatCircleDistanceNm } from './geo.js';
 import { buildMapData } from './mapdata.js';
 
 test('great circle starts and ends at the endpoints', () => {
@@ -23,6 +23,12 @@ test('great circle stays continuous across the antimeridian', () => {
 
 test('great circle between identical points does not blow up', () => {
   assert.equal(greatCircle([10, 10], [10, 10]).length, 2);
+});
+
+test('greatCircleDistanceNm: SFO to LHR is about 4700nm, identical points are 0', () => {
+  const nm = greatCircleDistanceNm([37.6, -122.4], [51.5, -0.45]);
+  assert.ok(Math.abs(nm - 4700) < 50, nm);
+  assert.equal(greatCircleDistanceNm([10, 10], [10, 10]), 0);
 });
 
 const A = { ident: 'KPAO', name: 'Palo Alto', lat: 37.46, lon: -122.11 };

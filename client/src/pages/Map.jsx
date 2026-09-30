@@ -7,10 +7,14 @@ import { flightCodes, airportCode } from '../lib/flightpath.js';
 import { useTheme } from '../lib/theme.js';
 import { greatCircle } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
-import { airportSummary, routeColorFor, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
+import { airportSummary, routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
 import { PhotoImage } from '../components/PhotoGrid.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
+import { pilotFlights, roleOf } from '../lib/flightRoles.js';
+
+const ROLE_FILTERS = [['all', 'All'], ['pilot', 'Pilot'], ['passenger', 'Passenger']];
+const fmtNm = (nm) => `${Math.round(nm).toLocaleString()} nm`;
 
 
 // Frequency -> size and color (cool sky for one-offs, warming to amber for home bases).
@@ -190,6 +194,7 @@ export default function MapPage() {
   const [plays, setPlays] = useState(0); // bumped by the replay button; also re-runs the draw-in
   const [playOnce, setPlayOnce] = useState(false); // a replay while "Animate routes" is off
   const [open, setOpen] = useState(false);
+  const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'pilot' | 'passenger'
   const theme = useTheme();
   const tileSet = theme === 'light' ? 'World_Light_Gray' : 'World_Dark_Gray'; // both are keyless Esri canvases
 
@@ -203,28 +208,56 @@ export default function MapPage() {
     })().catch((e) => setError(e.message));
   }, []);
 
-  const data = useMemo(() => (flights ? buildMapData(flights, airports) : null), [flights, airports]);
+  // Stops, visit counts, distance and the unresolved-airport note all follow the role filter directly —
+  // one filtered flight list drives every one of them.
+  const filteredFlights = useMemo(() => {
+    if (!flights) return [];
+    return roleFilter === 'all' ? flights : flights.filter((f) => roleOf(f) === roleFilter);
+  }, [flights, roleFilter]);
+  const data = useMemo(() => (flights ? buildMapData(filteredFlights, airports) : null), [flights, filteredFlights, airports]);
+
+  // Route *lines* are built separately, by role, from the full (unfiltered) flight list — never from
+  // `data.routes` above, which (when the filter is "All") would merge a pilot flight and a passenger
+  // flight on the same leg into one entry, making the two impossible to style differently. Each bucket
+  // keeps its own count/hours, and only the bucket(s) matching the current filter are ever rendered.
+  const pilotMapData = useMemo(() => (flights ? buildMapData(pilotFlights(flights), airports) : null), [flights, airports]);
+  const passengerMapData = useMemo(
+    () => (flights ? buildMapData(flights.filter((f) => roleOf(f) === 'passenger'), airports) : null),
+    [flights, airports],
+  );
+  const hasPassengerRoutes = (passengerMapData?.routes.length ?? 0) > 0;
+
   const maxVisits = data?.stops[0]?.visits ?? 1;
-  const maxRoute = Math.max(1, ...(data?.routes.map((r) => r.count) ?? []));
   const icons = useMemo(
     () => new Map(data?.stops.map((s) => [s.ident, airportIcon(s.visits, maxVisits)])),
     [data, maxVisits],
   );
   const points = useMemo(() => data?.stops.map((s) => [s.lat, s.lon]) ?? [], [data]);
   const counts = useMemo(() => visitedCounts(data?.stops ?? []), [data]);
-  const totalHours = useMemo(() => (flights ?? []).reduce((s, f) => s + (Number(f.total_time) || 0), 0), [flights]);
+  const totalHours = useMemo(() => filteredFlights.reduce((s, f) => s + (Number(f.total_time) || 0), 0), [filteredFlights]);
   const routeColor = routeColorFor(theme); // one route colour, tuned for the current map tiles
+  const passengerRouteColor = passengerRouteColorFor(theme);
+
   // Great-circle geometry, oriented along the flight direction, computed once per route set (not on
-  // every colour/animation change).
-  const lines = useMemo(() => (data?.routes ?? []).map((r) => ({
+  // every colour/animation change) — one array per role bucket, so each can carry its own style.
+  const toLines = (routes) => routes.map((r) => ({
     route: r,
     key: `${r.a.ident}-${r.b.ident}`,
     positions: orientedPositions(r, greatCircle([r.a.lat, r.a.lon], [r.b.lat, r.b.lon])),
     label: `${airportCode(r.a)} ↔ ${airportCode(r.b)}`,
-  })), [data]);
-  const affordable = shouldAnimateRoutes(lines.length, true);
+  }));
+  const pilotLines = useMemo(() => toLines(pilotMapData?.routes ?? []), [pilotMapData]);
+  const passengerLines = useMemo(() => toLines(passengerMapData?.routes ?? []), [passengerMapData]);
+  const showPilotLines = roleFilter !== 'passenger';
+  const showPassengerLines = roleFilter !== 'pilot';
+  const visiblePilotLines = showPilotLines ? pilotLines : [];
+  const visiblePassengerLines = showPassengerLines ? passengerLines : [];
+  const maxRoute = Math.max(1, ...visiblePilotLines.map((l) => l.route.count), ...visiblePassengerLines.map((l) => l.route.count));
+  // Only pilot routes ever animate (passenger routes are always a plain static dashed line, much cheaper
+  // to render), so the affordability cap only needs to weigh the pilot line count.
+  const affordable = shouldAnimateRoutes(visiblePilotLines.length, true);
   const animMode = affordable ? (animate ? 'loop' : playOnce ? 'once' : null) : null;
-  const manyRoutes = lines.length > HIT_LINE_LIMIT;
+  const manyRoutes = (visiblePilotLines.length + visiblePassengerLines.length) > HIT_LINE_LIMIT;
 
   const toggleAnimate = (on) => { setAnimate(on); setPlayOnce(false); saveAnimatePref(on); if (on) setPlays((n) => n + 1); };
   const replay = () => { if (!animate) setPlayOnce(true); setPlays((n) => n + 1); };
@@ -243,14 +276,14 @@ export default function MapPage() {
         <ZoomTracker />
         <FitBounds points={points} />
 
-        {lines.map(({ route: r, key, positions, label }, i) => {
+        {visiblePilotLines.map(({ route: r, key, positions, label }, i) => {
           const stroke = routeColor;
           const weight = 1.5 + 2.5 * (r.count / maxRoute);
           const popup = (
             <Popup>
               <div className="min-w-[11rem]">
                 <div className="text-base font-semibold">{label}</div>
-                <div className="mt-1 text-sm font-medium">{r.count} flight{r.count === 1 ? '' : 's'} · {fmtHours(r.hours)} h</div>
+                <div className="mt-1 text-sm font-medium">{r.count} flight{r.count === 1 ? '' : 's'} · {fmtHours(r.hours)} h · {fmtNm(r.distanceNm)}</div>
                 <div className="text-xs text-slate-500">
                   {r.first === r.last ? fmtDate(r.last) : `${fmtDate(r.first)} – ${fmtDate(r.last)}`}
                 </div>
@@ -269,6 +302,30 @@ export default function MapPage() {
           );
         })}
 
+        {/* Passenger routes: always a plain static dashed line (never animated) — a distinct color AND
+            dash pattern from pilot routes, per the app's flight-role legend below. */}
+        {visiblePassengerLines.map(({ route: r, key, positions, label }) => {
+          const weight = 1.5 + 2.5 * (r.count / maxRoute);
+          const popup = (
+            <Popup>
+              <div className="min-w-[11rem]">
+                <div className="text-base font-semibold">{label}</div>
+                <div className="mt-1 text-sm font-medium">{r.count} flight{r.count === 1 ? '' : 's'} (passenger) · {fmtHours(r.hours)} h · {fmtNm(r.distanceNm)}</div>
+                <div className="text-xs text-slate-500">
+                  {r.first === r.last ? fmtDate(r.last) : `${fmtDate(r.first)} – ${fmtDate(r.last)}`}
+                </div>
+              </div>
+            </Popup>
+          );
+          return (
+            <Fragment key={key}>
+              <Polyline positions={positions} interactive={false}
+                pathOptions={{ color: passengerRouteColor, weight, opacity: 0.75, dashArray: PASSENGER_ROUTE_DASH }} />
+              <Polyline positions={positions} pathOptions={{ color: passengerRouteColor, weight: manyRoutes ? weight : 18, opacity: 0.01 }}>{popup}</Polyline>
+            </Fragment>
+          );
+        })}
+
         {data?.stops.map((s) => (
           <Marker key={s.ident} position={[s.lat, s.lon]} icon={icons.get(s.ident)}>
             <Popup><PinSummary stop={s} photoCounts={photoCounts} /></Popup>
@@ -276,7 +333,7 @@ export default function MapPage() {
         ))}
       </MapContainer>
 
-      {data && data.stops.length > 0 && (
+      {flights && flights.length > 0 && (
         <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2">
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-stats"
@@ -293,33 +350,55 @@ export default function MapPage() {
 
           {open && (
             <section id="map-stats" aria-label="Map details and options" className="w-64 max-w-full rounded-2xl border border-edge-strong bg-navy-900/95 p-3 text-sm backdrop-blur">
-              <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
+              <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by role">
+                {ROLE_FILTERS.map(([k, l]) => (
+                  <button key={k} type="button" onClick={() => setRoleFilter(k)} aria-pressed={roleFilter === k}
+                    className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${roleFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+                ))}
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5">
                 <Stat label={counts.airports === 1 ? 'airport' : 'airports'} value={counts.airports} />
                 {counts.regionsKnown && <Stat label={counts.states === 1 ? 'state' : 'states'} value={counts.states} />}
                 {counts.countries > 1 && <Stat label="countries" value={counts.countries} />}
-                <Stat label="routes" value={lines.length} />
-                <Stat label="flights" value={flights.length} />
+                <Stat label="routes" value={visiblePilotLines.length + visiblePassengerLines.length} />
+                <Stat label="flights" value={filteredFlights.length} />
                 <Stat label="hours" value={fmtHours(totalHours)} />
+                <Stat label="distance" value={fmtNm(data?.totalDistanceNm ?? 0)} />
               </div>
               {!counts.regionsKnown && <p className="mt-2 text-[11px] text-slate-500">States visited appears once the airport database is re-seeded (npm run seed).</p>}
 
               <div className="mt-3 border-t border-edge pt-1">
                 <label className="flex min-h-11 items-center justify-between gap-2 text-xs text-slate-300">
-                  <span>Animate routes{!affordable && lines.length > ANIMATE_ROUTE_LIMIT ? ' (off: many routes)' : ''}</span>
+                  <span>Animate routes{!affordable && visiblePilotLines.length > ANIMATE_ROUTE_LIMIT ? ' (off: many routes)' : ''}</span>
                   <input type="checkbox" checked={animate} onChange={(e) => toggleAnimate(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />
                 </label>
               </div>
             </section>
+          )}
+
+          {hasPassengerRoutes && (
+            <div className="flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/90 px-3 py-1.5 text-[11px] text-slate-300 backdrop-blur">
+              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Flown</span>
+              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Ridden</span>
+            </div>
           )}
         </div>
       )}
 
       <AttributionToggle />
 
-      {data && data.unresolved.length > 0 && (
+      {data && (data.unresolved.length > 0 || data.unresolvedFlightCount > 0) && (
         <p className="absolute bottom-3 left-3 right-16 z-[1000] rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">
-          Couldn’t place {data.unresolved.join(', ')} — check the airport code
-          {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.
+          {data.unresolved.length > 0 && (
+            <>Couldn’t place {data.unresolved.join(', ')} — check the airport code
+            {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.</>
+          )}
+          {data.unresolvedFlightCount > 0 && (
+            <span className={data.unresolved.length > 0 ? 'mt-1 block' : ''}>
+              {data.unresolvedFlightCount} flight{data.unresolvedFlightCount === 1 ? '' : 's'} not shown, missing airport data.
+            </span>
+          )}
         </p>
       )}
 
@@ -334,12 +413,22 @@ export default function MapPage() {
         </div>
       )}
 
-      {data && data.stops.length === 0 && !error && (
+      {data && data.stops.length === 0 && flights?.length === 0 && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
           <div className="rounded-2xl border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
             <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-500" />
             <p className="mt-3 font-medium">Nothing to plot yet</p>
             <p className="text-sm text-slate-400">Log a flight with departure and arrival airports.</p>
+          </div>
+        </div>
+      )}
+
+      {data && data.stops.length === 0 && flights?.length > 0 && !error && (
+        <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
+          <div className="rounded-2xl border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+            <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-500" />
+            <p className="mt-3 font-medium">Nothing to plot for this filter</p>
+            <p className="text-sm text-slate-400">Try "All" — no {roleFilter} flights have a placeable airport yet.</p>
           </div>
         </div>
       )}

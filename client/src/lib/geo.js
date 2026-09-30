@@ -1,5 +1,14 @@
 const rad = (d) => (d * Math.PI) / 180;
 const deg = (r) => (r * 180) / Math.PI;
+const EARTH_RADIUS_NM = 3440.065; // mean Earth radius in nautical miles
+
+/** Great-circle distance between two [lat, lon] points, in nautical miles (the standard aviation unit). */
+export function greatCircleDistanceNm([lat1, lon1], [lat2, lon2]) {
+  const p1 = rad(lat1), l1 = rad(lon1), p2 = rad(lat2), l2 = rad(lon2);
+  const d = 2 * Math.asin(Math.sqrt(
+    Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2));
+  return d * EARTH_RADIUS_NM;
+}
 
 /**
  * Points along the great-circle arc between two coordinates as [lat, lon] pairs.
