@@ -46,7 +46,7 @@ test('every listed airline is unique by name and code', () => {
   assert.equal(new Set(codes).size, codes.length);
 });
 
-test('hours by airline groups spellings, ignores GA flights, sorts by hours', () => {
+test('hours by airline groups spellings, sorts by hours, and buckets missing airlines as Unknown', () => {
   const out = hoursByAirline([
     { airline: 'Delta', total_time: 2.5 },
     { airline: 'DL', total_time: 1 },
@@ -55,6 +55,7 @@ test('hours by airline groups spellings, ignores GA flights, sorts by hours', ()
     { airline: '', total_time: 9 },
   ]);
   assert.deepEqual(out.map((a) => [a.name, a.code, a.flights, a.hours]), [
+    ['Unknown', '?', 2, 18],
     ['United Airlines', 'UA', 1, 5],
     ['Delta Air Lines', 'DL', 2, 3.5],
   ]);

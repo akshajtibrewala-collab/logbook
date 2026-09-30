@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { greatCircle, greatCircleDistanceNm } from './geo.js';
+import { greatCircle, greatCircleDistanceNm, fmtNm } from './geo.js';
 import { buildMapData } from './mapdata.js';
 
 test('great circle starts and ends at the endpoints', () => {
@@ -29,6 +29,11 @@ test('greatCircleDistanceNm: SFO to LHR is about 4700nm, identical points are 0'
   const nm = greatCircleDistanceNm([37.6, -122.4], [51.5, -0.45]);
   assert.ok(Math.abs(nm - 4700) < 50, nm);
   assert.equal(greatCircleDistanceNm([10, 10], [10, 10]), 0);
+});
+
+test('fmtNm rounds and adds thousands separators', () => {
+  assert.equal(fmtNm(1234.6), '1,235 nm');
+  assert.equal(fmtNm(0), '0 nm');
 });
 
 const A = { ident: 'KPAO', name: 'Palo Alto', lat: 37.46, lon: -122.11 };

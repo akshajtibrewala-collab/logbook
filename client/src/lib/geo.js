@@ -10,6 +10,9 @@ export function greatCircleDistanceNm([lat1, lon1], [lat2, lon2]) {
   return d * EARTH_RADIUS_NM;
 }
 
+/** Formats a nautical-mile distance for display, e.g. 12345 -> "12,345 nm". */
+export const fmtNm = (nm) => `${Math.round(nm).toLocaleString()} nm`;
+
 /**
  * Points along the great-circle arc between two coordinates as [lat, lon] pairs.
  * Longitudes are unwrapped so the line stays continuous across the antimeridian

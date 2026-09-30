@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hoursByMonth, hoursByTail, cumulativeHours } from './charts.js';
+import { hoursByMonth, hoursByTail, cumulativeHours, flightsByYear } from './charts.js';
 
 const flights = [
   { date: '2026-01-10', total_time: 1.5, tail_number: 'N1', aircraft_type: 'C172' },
@@ -28,6 +28,15 @@ test('hoursByTail merges tail spellings, falls back to type, sorts by hours', ()
   ]);
   assert.deepEqual(hoursByTail([{ total_time: 1 }]), [{ tail: 'Unknown', hours: 1 }]);
   assert.deepEqual(hoursByTail([]), []);
+});
+
+test('flightsByYear counts flights and sums hours per calendar year, earliest first', () => {
+  assert.deepEqual(flightsByYear(flights), [
+    { year: '2025', flights: 1, hours: 9 },
+    { year: '2026', flights: 3, hours: 4.25 },
+  ]);
+  assert.deepEqual(flightsByYear([]), []);
+  assert.deepEqual(flightsByYear([{ date: '', total_time: 1 }]), []); // no usable date, not counted anywhere
 });
 
 test('cumulativeHours builds a running total and progress toward the target', () => {
