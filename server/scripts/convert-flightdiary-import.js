@@ -31,6 +31,14 @@ function airlineNameOf(field) {
   return i === -1 ? (field || '').trim() : field.slice(0, i).trim();
 }
 
+// Flightdiary sometimes records an unknown aircraft type as a bare, empty parenthetical (" ()") rather
+// than leaving the field blank. Any value with no letter or digit at all (that empty-parens case, or any
+// other stray-punctuation variant) isn't a real type — treat it as blank rather than importing it as-is.
+export function cleanAircraftType(raw) {
+  const s = (raw || '').trim();
+  return /[A-Za-z0-9]/.test(s) ? s : '';
+}
+
 function decimalHours(hms) {
   const m = /^(\d+):(\d{2}):(\d{2})$/.exec(hms || '');
   if (!m) return null;
@@ -59,7 +67,7 @@ export function convertRow(r, col) {
     icaoOf(r[col.To]),
     airline,
     (r[col['Flight number']] || '').trim(),
-    (r[col.Aircraft] || '').trim(),
+    cleanAircraftType(r[col.Aircraft]),
     (r[col.Registration] || '').trim(),
     String(decimalHours(r[col.Duration]) ?? 0),
     '0', '0', '0', '0', '0', '0', '0',

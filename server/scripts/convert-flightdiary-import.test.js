@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { convertRow, convertFlightdiary } from './convert-flightdiary-import.js';
+import { convertRow, convertFlightdiary, cleanAircraftType } from './convert-flightdiary-import.js';
 
 // Synthetic fixture rows only — no real personal flight data. Column order matches a real Flightdiary export.
 const HEAD = [
@@ -58,6 +58,20 @@ test('convertRow: a missing seat number leaves remarks blank; a missing registra
   const out = convertRow(row({ 'Seat number': '', Registration: '' }), col);
   assert.equal(out[26], ''); // remarks
   assert.equal(out[7], ''); // tail_number
+});
+
+test('cleanAircraftType: a bare empty parenthetical (Flightdiary\'s "unknown type" placeholder) becomes blank', () => {
+  assert.equal(cleanAircraftType(' ()'), '');
+  assert.equal(cleanAircraftType('()'), '');
+  assert.equal(cleanAircraftType('  '), '');
+  assert.equal(cleanAircraftType(''), '');
+  assert.equal(cleanAircraftType(undefined), '');
+  assert.equal(cleanAircraftType('Boeing 737-800 (B738)'), 'Boeing 737-800 (B738)');
+});
+
+test('convertRow: an empty-parenthetical Aircraft column becomes a blank aircraft_type, not the literal "()"', () => {
+  const out = convertRow(row({ Aircraft: ' ()' }), col);
+  assert.equal(out[6], ''); // aircraft_type
 });
 
 test('convertFlightdiary: reports airlines with no branded badge, others are silent', () => {
