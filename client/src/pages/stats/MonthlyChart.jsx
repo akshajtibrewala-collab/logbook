@@ -3,7 +3,7 @@ import { TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fmtHours } from '../../lib/hours.js';
 import { hoursByMonth } from '../../lib/charts.js';
-import { axisTick, tooltipStyle, chartMargin, barCursor, gridStroke } from './chartStyle.js';
+import { axisTick, tooltipStyle, chartMargin, barCursor, barRestingOpacity, barActive, gridStroke } from './chartStyle.js';
 import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 
 const localToday = () => new Date().toLocaleDateString('en-CA');
@@ -21,7 +21,8 @@ export default function MonthlyChart({ flights, note, defaultOpen = true }) {
               <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={14} />
               <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip {...tooltipStyle} cursor={barCursor} formatter={(v) => `${fmtHours(v)} h`} />
-              <Bar dataKey="hours" name="Hours" fill="rgb(var(--accent))" radius={[8, 8, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+              <Bar dataKey="hours" name="Hours" fill="rgb(var(--accent))" fillOpacity={barRestingOpacity} activeBar={barActive('rgb(var(--accent))')}
+                radius={[8, 8, 0, 0]} maxBarSize={40} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>

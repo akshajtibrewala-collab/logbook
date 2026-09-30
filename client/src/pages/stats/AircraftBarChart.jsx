@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plane } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, LabelList, Tooltip, ResponsiveContainer } from 'recharts';
 import { fmtHours } from '../../lib/hours.js';
-import { tooltipStyle, barCursor, ROLE_TINT } from './chartStyle.js';
+import { tooltipStyle, barCursor, barRestingOpacity, barActive, ROLE_TINT } from './chartStyle.js';
 import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 
 // Tall enough per row that a single bar isn't stranded in a mostly-empty card, short enough that a dozen
@@ -36,8 +36,9 @@ export default function AircraftBarChart({ title, note, byType, byTail, tint = '
             <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 16, top: 0, bottom: 0 }}>
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="type" width={72} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-              <Tooltip {...tooltipStyle} cursor={barCursor} formatter={(v) => `${fmtHours(v)} h`} />
-              <Bar dataKey="hours" fill={barFill} radius={[0, 8, 8, 0]} barSize={22} isAnimationActive={false}>
+              <Tooltip {...tooltipStyle} cursor={barCursor} formatter={(v) => [`${fmtHours(v)} h`, 'Hours']} />
+              <Bar dataKey="hours" name="Hours" fill={barFill} fillOpacity={barRestingOpacity} activeBar={barActive(barFill)}
+                radius={[0, 8, 8, 0]} barSize={22} isAnimationActive={false}>
                 <LabelList dataKey="hours" position="right" fontSize={12} formatter={(v) => fmtHours(v)} />
               </Bar>
             </BarChart>

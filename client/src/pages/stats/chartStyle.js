@@ -12,6 +12,9 @@ export const tooltipStyle = {
   },
   itemStyle: { color: 'rgb(var(--slate-100))', fontWeight: 600, fontSize: 13 },
   labelStyle: { color: 'rgb(var(--slate-400))', fontSize: 12, marginBottom: 2 },
+  // Recharts' default separator is ' : ' (space before the colon); "Flights: 8" reads tidier than "Flights : 8".
+  separator: ': ',
+  offset: 14,
 };
 
 export const axisTick = { fontSize: 11, fill: 'rgb(var(--slate-400))' };
@@ -19,10 +22,15 @@ export const axisTick = { fontSize: 11, fill: 'rgb(var(--slate-400))' };
 // Low-contrast dashed gridlines rather than a solid rule — reads as data-forward, not spreadsheet-forward.
 export const gridStroke = { stroke: 'rgb(var(--edge) / var(--edge-a))', strokeDasharray: '3 6', vertical: false };
 
-// The hover/tap highlight behind a bar column, shared by every bar chart on the Stats page so they can't
-// drift apart again. Uses the same --edge token as hairline borders (0.06 alpha in both themes) rather
-// than a hardcoded white, which was invisible on the light theme's white card background.
-export const barCursor = { fill: 'rgb(var(--edge) / var(--edge-a))' };
+// Bar-chart hover, shared by every bar chart on the Stats page so they can't drift apart again. Recharts'
+// default bar cursor is a rectangle spanning the *entire plot height* for that category — a big gray
+// column with no relation to the bar's own size. Disabling it (cursor={false}) and instead styling
+// `activeBar` gives a thin highlight that hugs the actual bar shape: same fill, plus a light outline and
+// full opacity against the chart's normal (slightly less opaque) bars — a brighten-in-place rather than a
+// background box. Tooltip visibility on hover/tap is unaffected; only the visual cursor is removed.
+export const barCursor = false;
+export const barRestingOpacity = 0.88;
+export const barActive = (fill) => ({ fill, fillOpacity: 1, stroke: 'rgb(var(--slate-100))', strokeOpacity: 0.3, strokeWidth: 1 });
 
 // A little extra right margin than recharts' own defaults so the last x-axis tick label (e.g. "Sep 26")
 // doesn't get clipped by the card edge on a narrow phone screen.
