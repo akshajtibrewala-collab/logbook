@@ -34,20 +34,21 @@ const COUNT_COLUMNS = [
 ];
 const round2 = (n) => Math.round(n * 100) / 100;
 
-export async function computeBaseline(today = new Date().toISOString().slice(0, 10)) {
-  const flights = await all('SELECT * FROM flights');
-  const reviews = await all('SELECT * FROM flight_reviews');
-  const expirations = await all('SELECT * FROM expirations');
-  const aircraftRows = await all('SELECT * FROM aircraft');
+/**
+ * The actual number-crunching, given plain arrays already in hand — never fetches anything itself, so
+ * it works identically whether those arrays came from a live `all()` query (computeBaseline, below) or
+ * from an already-taken JSON backup file (baseline-from-backup.js), which matters when you want a
+ * production baseline without a second live round trip to production.
+ */
+export function summarizeFlightData({ flights, reviews, expirations, aircraftRows, config, completions }, today) {
   const aircraftById = Object.fromEntries(aircraftRows.map((a) => [a.id, a]));
-  const config = await all('SELECT * FROM milestones_config ORDER BY certificate, sort_order');
-  const completions = completionsByKey(await all('SELECT * FROM milestone_completions'));
+  const completionsIndex = completionsByKey(completions);
 
   const sum = (col) => round2(flights.reduce((s, f) => s + (Number(f[col]) || 0), 0));
   const totals = Object.fromEntries([...TIME_COLUMNS, ...COUNT_COLUMNS].map((c) => [c, sum(c)]));
 
   const milestones = {};
-  for (const [cert, reqs] of computeMilestones(config, flights, aircraftById, completions)) {
+  for (const [cert, reqs] of computeMilestones(config, flights, aircraftById, completionsIndex)) {
     milestones[cert] = { label: certificateLabel(cert), ...certificateSummary(reqs) };
   }
 
@@ -65,6 +66,16 @@ export async function computeBaseline(today = new Date().toISOString().slice(0, 
     },
     milestones,
   };
+}
+
+export async function computeBaseline(today = new Date().toISOString().slice(0, 10)) {
+  const flights = await all('SELECT * FROM flights');
+  const reviews = await all('SELECT * FROM flight_reviews');
+  const expirations = await all('SELECT * FROM expirations');
+  const aircraftRows = await all('SELECT * FROM aircraft');
+  const config = await all('SELECT * FROM milestones_config ORDER BY certificate, sort_order');
+  const completions = await all('SELECT * FROM milestone_completions');
+  return summarizeFlightData({ flights, reviews, expirations, aircraftRows, config, completions }, today);
 }
 
 /** Every path where two plain-JSON-shaped values differ, e.g. "totals.night_time" or "milestones.private.metCount". */
