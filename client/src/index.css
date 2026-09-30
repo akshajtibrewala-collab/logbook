@@ -134,6 +134,21 @@ html, body { overscroll-behavior-y: contain; }
 /* Space to scroll the last row fully clear of the button: its 4rem height + 1rem gap + breathing room. */
 .fab-clearance { height: calc(4rem + 2rem); }
 
+/* A long form's primary Save action (`.save-bar`, e.g. FlightForm/QuickFlight/GroundSessionForm) is
+   `sticky` above the bottom nav so it's reachable without scrolling to the end — see each form's own
+   "bottom-[calc(var(--bottom-nav-h)...] sticky" wrapper. But an on-screen keyboard can't be measured
+   reliably from CSS: iOS Safari doesn't resize the layout viewport when the keyboard opens (a `sticky`
+   element stays pinned to where the bottom "was", which can end up hidden under the keyboard), and even
+   where the viewport does resize, the browser's own "scroll the focused field into view" can land it
+   right where the bar is pinned. Rather than guess at either browser's behavior, the one position that's
+   safe on every device is no position trick at all: while focus is inside the form (a field is being
+   edited, the keyboard is presumably open), the bar drops out of `sticky` and back into normal document
+   flow, so it can never cover the field being typed into or hide behind a keyboard that resized nothing.
+   It returns to floating once focus leaves the form (moving between fields keeps it in flow the whole
+   time, via :focus-within rather than :focus). Specificity here (a type selector + two classes) already
+   wins over the plain `.sticky` utility class without needing !important. */
+form:focus-within .save-bar { position: static; }
+
 /* Animated route lines (see RouteLine in Map.jsx). Two phases, applied to the route's own SVG path:
      1. .route-draw  the line draws itself from departure to destination. Map.jsx sets pathLength="100"
                      on the path for this phase so the dash maths is the same for a short hop and a long leg.

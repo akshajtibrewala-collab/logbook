@@ -151,7 +151,7 @@ export default function GroundSessionForm() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <div className="sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
         <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Log ground session'}</Button>
         {id && (
           <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete ground session</Button>

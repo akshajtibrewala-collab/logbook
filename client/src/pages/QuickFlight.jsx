@@ -189,7 +189,7 @@ export default function QuickFlight() {
       </section>
 
       {message && <p role="alert" className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
-      <div className="sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
         <Button size="lg" disabled={saving}>{saving ? 'Saving…' : 'Save flight'}</Button>
       </div>
       <p className="text-center text-xs text-slate-500">Landings default to one full stop. Add night time, approaches, notes and photos later from the flight.</p>
