@@ -45,8 +45,10 @@ body {
   .card { @apply rounded-2xl border border-edge bg-navy-900; }
 }
 
-/* Phase D1 design-system tokens: elevation, display type, role color and native-feel details. Additive
-   only — nothing outside the Stats page opts into these classes, so no other screen's appearance changes. */
+/* Phase D1/D2 design-system tokens: elevation, display type, role color and native-feel details.
+   Additive only — a screen's appearance only changes where it opts into one of these classes. D1 used
+   them on the Stats page only; D2 carries --role-pax, .pressable and the safe-area/overscroll rules
+   through the app shell (nav, buttons, FlightRoleTabs). */
 :root {
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 28px -6px rgba(0, 0, 0, 0.45);
   --shadow-card-lg: 0 4px 10px rgba(0, 0, 0, 0.4), 0 24px 48px -10px rgba(0, 0, 0, 0.6);
@@ -81,6 +83,10 @@ body {
 .pressable:active { transform: scale(0.98); }
 
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+/* Installed/full-screen app feel: a swipe past the top or bottom of the page doesn't rubber-band into
+   browser chrome or reveal whatever is behind it. Vertical only — horizontal swipe gestures (e.g. the
+   map) are untouched. */
+html, body { overscroll-behavior-y: contain; }
 
 /* Height of the fixed BottomNav (see BottomNav.jsx: icon + label + vertical padding), plus the device's
    safe-area inset — BottomNav pads its own bottom with that inset via .safe-bottom, so anything that
