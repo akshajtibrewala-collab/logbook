@@ -238,7 +238,7 @@ export default function ImportExport() {
     else doRestore();
   }
 
-  const btn = 'flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold disabled:opacity-60';
+  const btn = 'pressable flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold disabled:opacity-60';
   const result = preview?.result;
   const restoreCounts = restorePreview ? Object.entries(restorePreview.data.tables ?? {}) : [];
   const sampleFlights = [...(restorePreview?.data.tables.flights ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
@@ -246,7 +246,7 @@ export default function ImportExport() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Import & export</h1>
       </div>
 
@@ -254,27 +254,27 @@ export default function ImportExport() {
         <p className={`rounded-xl p-3 text-sm ${message.kind === 'ok' ? 'bg-ok/10 text-ok' : 'bg-bad/10 text-bad'}`}>{message.text}</p>
       )}
 
-      <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-medium text-slate-300">Export</h2>
+      <section className="card card-elevated space-y-3 p-4">
+        <h2 className="stat-title text-sm text-slate-300">Export</h2>
         <p className="text-sm text-slate-400">Your pilot logbook as a CSV — for insurance, job applications, or backup. It can be re-imported here.</p>
         <button onClick={exportCsv} disabled={busy} className={`${btn} bg-accent text-ink active:bg-accent-dark`}><Download size={20} />Export CSV</button>
         <button onClick={exportAllCsv} disabled={busy} className={`${btn} bg-navy-800 text-slate-300 active:text-accent`}><Download size={20} />Export all flights (with role)</button>
       </section>
 
-      <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-medium text-slate-300">Import</h2>
+      <section className="card card-elevated space-y-3 p-4">
+        <h2 className="stat-title text-sm text-slate-300">Import</h2>
         <p className="text-sm text-slate-400">
           Choose a CSV from ForeFlight or LogTen, or use this app's template. You'll see a preview and can fix problems before anything is added.
         </p>
         <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv" onChange={onFile} className="hidden" />
         <button onClick={() => fileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent active:bg-navy-800`}><Upload size={20} />Choose CSV file</button>
-        <button onClick={() => download('logbook-template.csv', TEMPLATE_CSV)} className="flex h-10 w-full items-center justify-center gap-2 text-sm text-slate-400">
+        <button onClick={() => download('logbook-template.csv', TEMPLATE_CSV)} className="pressable flex h-10 w-full items-center justify-center gap-2 text-sm text-slate-400">
           <FileText size={16} />Download the template
         </button>
       </section>
 
-      <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-medium text-slate-300">Full backup</h2>
+      <section className="card card-elevated space-y-3 p-4">
+        <h2 className="stat-title text-sm text-slate-300">Full backup</h2>
         <BackupStatus />
         <p className="text-sm text-slate-400">
           Everything in one file — flights, stops, approaches, aircraft, flight reviews and expirations —
@@ -290,8 +290,8 @@ export default function ImportExport() {
       </section>
 
       {restorePreview && (
-        <section className="card space-y-3 p-4">
-          <h2 className="text-sm font-medium text-slate-300">Restore preview — {restorePreview.name}</h2>
+        <section className="card card-elevated space-y-3 p-4">
+          <h2 className="stat-title text-sm text-slate-300">Restore preview — {restorePreview.name}</h2>
           <p className="text-xs text-slate-500">
             Exported {restorePreview.data.exported_at ? formatInstant(restorePreview.data.exported_at) : 'unknown date'}
             {' · '}format v{restorePreview.data.format_version ?? '?'}
@@ -299,7 +299,7 @@ export default function ImportExport() {
           <div className="grid grid-cols-3 gap-2 text-center">
             {restoreCounts.map(([t, rows]) => (
               <div key={t} className="rounded-xl bg-navy-800 p-2">
-                <div className="text-xl font-semibold text-accent">{rows.length}</div>
+                <div className="stat-value text-xl text-accent">{rows.length}</div>
                 <div className="text-xs text-slate-400">{TABLE_LABELS[t] ?? t}</div>
               </div>
             ))}
@@ -326,12 +326,12 @@ export default function ImportExport() {
 
       {result && !result.error && (
         <section className="space-y-3">
-          <div className="card p-4">
+          <div className="card card-elevated p-4">
             <div className="text-sm text-slate-400">{preview.name} · {result.format === 'foreflight' ? 'ForeFlight format' : 'CSV'}</div>
             <div className="mt-2 grid grid-cols-3 gap-2 text-center">
               {['ready', 'duplicate', 'error'].map((s) => (
                 <div key={s} className="rounded-xl bg-navy-800 p-2">
-                  <div className={`text-xl font-semibold ${STATUS[s].cls}`}>{summary[s]}</div>
+                  <div className={`stat-value text-xl ${STATUS[s].cls}`}>{summary[s]}</div>
                   <div className="text-xs text-slate-400">{STATUS[s].label}{s === 'ready' ? '' : s === 'duplicate' ? 's' : 's'}</div>
                 </div>
               ))}
@@ -358,7 +358,7 @@ export default function ImportExport() {
             {result.rows.filter((r) => r.status !== 'ready').slice(0, 100).map((r) => {
               const { Icon, cls } = STATUS[r.status];
               return (
-                <li key={r.row} className="card flex gap-3 p-3 text-sm">
+                <li key={r.row} className="card card-elevated flex gap-3 p-3 text-sm">
                   <Icon size={18} className={`mt-0.5 shrink-0 ${cls}`} />
                   <div className="min-w-0">
                     <div className="font-medium">Row {r.row}{r.flight?.date ? ` · ${formatDate(r.flight.date)}` : ''}{r.flight?.departure_airport ? ` · ${r.flight.departure_airport} → ${r.flight.arrival_airport || '—'}` : ''}</div>
@@ -378,7 +378,7 @@ export default function ImportExport() {
           <button onClick={runImport} disabled={busy || toImport + groundToImport === 0} className={`${btn} bg-accent text-ink active:bg-accent-dark`}>
             {busy ? 'Importing…' : toImport + groundToImport === 0 ? 'Nothing to import' : `Import ${toImport} flight${toImport === 1 ? '' : 's'}${groundToImport ? ` + ${groundToImport} ground session${groundToImport === 1 ? '' : 's'}` : ''}`}
           </button>
-          <button onClick={() => setPreview(null)} className="h-10 w-full text-sm text-slate-400">Cancel</button>
+          <button onClick={() => setPreview(null)} className="pressable h-10 w-full text-sm text-slate-400">Cancel</button>
         </section>
       )}
 

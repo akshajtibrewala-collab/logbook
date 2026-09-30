@@ -20,7 +20,7 @@ const today = () => iso(new Date());
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return iso(d); };
 const CHIPS = ['0.5', '1.0', '1.5', '2.0'];
 
-const bigBtn = 'flex h-14 items-center justify-center rounded-2xl border text-base font-medium transition-colors active:scale-[0.98]';
+const bigBtn = 'pressable flex h-14 items-center justify-center rounded-2xl border text-base font-medium transition-colors';
 
 /**
  * Log a flight in a few taps, right after landing: date, route, aircraft, time. Everything else takes
@@ -105,9 +105,9 @@ export default function QuickFlight() {
   if (saved) {
     return (
       <div className="space-y-4 md:mx-auto md:max-w-xl">
-        <div className="card p-6 text-center">
+        <div className="card card-hero p-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok/15 text-ok"><Check size={28} /></span>
-          <h1 className="mt-3 text-2xl font-semibold">Flight logged</h1>
+          <h1 className="stat-title mt-3 text-2xl">Flight logged</h1>
           <p className="mt-1 text-sm text-slate-400">{formatDate(form.date)} · {fmtHours(form.total_time)} h</p>
         </div>
         <Button onClick={() => navigate(`/logbook/${saved.id}/edit`)}>Add details now</Button>
@@ -120,12 +120,12 @@ export default function QuickFlight() {
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Quick log</h1>
       </div>
       {notice && <p role="status" className="rounded-xl bg-accent/10 p-3 text-sm text-accent">{notice}</p>}
 
-      <section className="card space-y-3 p-4">
+      <section className="card card-elevated space-y-3 p-4">
         <span className="block text-xs text-slate-400">Date</span>
         <div className="grid grid-cols-2 gap-2">
           {[['Today', today()], ['Yesterday', yesterday()]].map(([label, value]) => (
@@ -136,16 +136,16 @@ export default function QuickFlight() {
         <DatePicker label="Other date" value={form.date} onChange={(v) => set({ date: v })} error={errors.date} />
       </section>
 
-      <section className="card space-y-3 p-4">
+      <section className="card card-elevated space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3">
           <AirportSearchField label="From" value={form.departure_airport} onChange={(v) => set({ departure_airport: v })} error={errors.departure_airport} />
           <AirportSearchField label="To" value={form.arrival_airport} onChange={(v) => set({ arrival_airport: v })} error={errors.arrival_airport} placeholder="KSQL" />
         </div>
         <button type="button" onClick={() => set({ departure_airport: form.arrival_airport, arrival_airport: form.departure_airport })}
-          className="h-11 text-sm text-accent">Swap From and To</button>
+          className="pressable h-11 text-sm text-accent">Swap From and To</button>
       </section>
 
-      <section className="card space-y-3 p-4">
+      <section className="card card-elevated space-y-3 p-4">
         {recentAircraft.length > 0 && (
           <div>
             <span className="mb-1 block text-xs text-slate-400">Recent aircraft</span>
@@ -162,16 +162,16 @@ export default function QuickFlight() {
         <AircraftPicker label={recentAircraft.length ? 'Another aircraft' : 'Aircraft'} value={form.aircraft?.id ?? null} onSelect={(a) => set({ aircraft: a })} />
       </section>
 
-      <section className="card space-y-3 p-4">
+      <section className="card card-elevated space-y-3 p-4">
         <span className="block text-xs text-slate-400">Flight time (hours)</span>
         <div className="flex items-center gap-3">
           <button type="button" aria-label="0.1 hour less" onClick={() => set({ total_time: stepHours(form.total_time, -0.1) })}
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-edge bg-navy-800 active:bg-navy-700"><Minus size={24} /></button>
+            className="pressable flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-edge bg-navy-800 active:bg-navy-700"><Minus size={24} /></button>
           <input aria-label="Flight time in hours" inputMode="decimal" value={form.total_time}
             onChange={(e) => set({ total_time: e.target.value })} onBlur={() => { const n = Number(String(form.total_time).replace(',', '.')); if (Number.isFinite(n) && n >= 0) set({ total_time: n.toFixed(2) }); }}
-            className={`h-16 min-w-0 flex-1 rounded-2xl border bg-navy-800 text-center text-3xl font-semibold outline-none focus:border-accent ${errors.total_time ? 'border-bad' : 'border-edge'}`} />
+            className={`stat-value h-16 min-w-0 flex-1 rounded-2xl border bg-navy-800 text-center text-3xl outline-none focus:border-accent ${errors.total_time ? 'border-bad' : 'border-edge'}`} />
           <button type="button" aria-label="0.1 hour more" onClick={() => set({ total_time: stepHours(form.total_time, 0.1) })}
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-edge bg-navy-800 active:bg-navy-700"><Plus size={24} /></button>
+            className="pressable flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-edge bg-navy-800 active:bg-navy-700"><Plus size={24} /></button>
         </div>
         {errors.total_time && <p role="alert" className="text-sm text-bad">{errors.total_time}</p>}
         <div className="grid grid-cols-4 gap-2">
@@ -189,7 +189,9 @@ export default function QuickFlight() {
       </section>
 
       {message && <p role="alert" className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
-      <Button size="lg" disabled={saving}>{saving ? 'Saving…' : 'Save flight'}</Button>
+      <div className="sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <Button size="lg" disabled={saving}>{saving ? 'Saving…' : 'Save flight'}</Button>
+      </div>
       <p className="text-center text-xs text-slate-500">Landings default to one full stop. Add night time, approaches, notes and photos later from the flight.</p>
     </form>
   );

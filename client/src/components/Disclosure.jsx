@@ -5,9 +5,9 @@ import { ChevronDown } from 'lucide-react';
 export default function Disclosure({ title, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="card p-4">
+    <section className="card card-elevated p-4">
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between text-sm font-medium text-accent">
+        className="pressable stat-title flex w-full items-center justify-between text-sm text-accent">
         {title}
         <ChevronDown size={18} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>

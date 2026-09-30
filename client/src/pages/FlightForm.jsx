@@ -61,8 +61,8 @@ const DRAFT_NAME = 'flight-new';
 
 function Section({ title, children }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-accent-strong">{title}</h2>
+    <section className="card card-elevated p-4">
+      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
       <div className="grid grid-cols-2 gap-3">{children}</div>
     </section>
   );
@@ -242,11 +242,11 @@ export default function FlightForm() {
   return (
     <form onSubmit={submit} className={`space-y-4 md:mx-auto md:max-w-xl ${form.role !== 'pilot' ? 'role-pax-scope' : ''}`}>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(id ? `${base}/${id}` : base)} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate(id ? `${base}/${id}` : base)} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
         {!id && (
           <button type="button" onClick={() => navigate(`/logbook/new?copy=last${base === '/travel' ? '&from=travel' : ''}`, { replace: true })}
-            className="flex h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 active:text-accent">
+            className="pressable flex h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 active:text-accent">
             <Copy size={16} />Copy last
           </button>
         )}
@@ -260,12 +260,12 @@ export default function FlightForm() {
         </p>
       )}
 
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent-strong">Role</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title mb-3 text-sm text-accent-strong">Role</h2>
         <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Flight role">
           {FLIGHT_ROLES.map((r) => (
             <button key={r.value} type="button" onClick={() => set('role')(r.value)} aria-pressed={form.role === r.value}
-              className={`h-11 flex-1 rounded-lg text-sm font-medium transition-colors ${form.role === r.value ? 'bg-accent text-ink' : 'text-slate-400'}`}>
+              className={`pressable h-11 flex-1 rounded-lg text-sm font-medium transition-colors ${form.role === r.value ? 'bg-accent text-ink' : 'text-slate-400'}`}>
               {r.label}
             </button>
           ))}
@@ -347,16 +347,16 @@ export default function FlightForm() {
       )}
 
       {form.role === 'pilot' && (costOff ? (
-        <section className="card p-4">
-          <h2 className="text-sm font-medium text-accent">Cost</h2>
+        <section className="card card-elevated p-4">
+          <h2 className="stat-title text-sm text-accent">Cost</h2>
           <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
         </section>
       ) : (
       <>
-      <section className="card p-4">
+      <section className="card card-elevated p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-accent">Cost</h2>
-          <span className="text-xl font-semibold">
+          <h2 className="stat-title text-sm text-accent">Cost</h2>
+          <span className="stat-value text-xl">
             {!previewCost ? '—'
               : previewCost.total !== null ? fmtMoney(previewCost.total)
               : <span className="text-sm font-normal text-slate-500">Not tracked</span>}
@@ -381,8 +381,8 @@ export default function FlightForm() {
       ))}
 
       {form.role === 'pilot' && (
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Approaches</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title mb-3 text-sm text-accent">Approaches</h2>
         <div className="grid grid-cols-2 gap-3">
           {form.approach_types.length > 0 ? (
             <div>
@@ -404,20 +404,20 @@ export default function FlightForm() {
       </section>
       )}
 
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent-strong">Note</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title mb-3 text-sm text-accent-strong">Note</h2>
         <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3}
           className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
       </section>
 
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent-strong">Photos</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title mb-3 text-sm text-accent-strong">Photos</h2>
         <PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} />
       </section>
 
       {form.role === 'pilot' && (
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Debrief</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title mb-3 text-sm text-accent">Debrief</h2>
         <div className="space-y-3">
           <div>
             <span className="mb-1 block text-xs text-slate-400">What went well</span>
@@ -435,10 +435,12 @@ export default function FlightForm() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}</Button>
-      {id && (
-        <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete flight</Button>
-      )}
+      <div className="sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}</Button>
+        {id && (
+          <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete flight</Button>
+        )}
+      </div>
 
       <ConfirmDialog open={confirmDelete} title="Delete flight?" description="This cannot be undone."
         confirmLabel="Delete" busy={deleting} onConfirm={remove} onClose={() => setConfirmDelete(false)} />

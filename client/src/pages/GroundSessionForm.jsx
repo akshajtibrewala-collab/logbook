@@ -25,8 +25,8 @@ function fromSession(s) {
 
 function Section({ title, children }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-accent">{title}</h2>
+    <section className="card card-elevated p-4">
+      <h2 className="stat-title mb-3 text-sm text-accent">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -99,7 +99,7 @@ export default function GroundSessionForm() {
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">{id ? 'Edit ground session' : 'Log ground session'}</h1>
       </div>
 
@@ -116,16 +116,16 @@ export default function GroundSessionForm() {
       </Section>
 
       {costOff ? (
-        <section className="card p-4">
-          <h2 className="text-sm font-medium text-accent">Cost</h2>
+        <section className="card card-elevated p-4">
+          <h2 className="stat-title text-sm text-accent">Cost</h2>
           <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
         </section>
       ) : (
       <>
-      <section className="card p-4">
+      <section className="card card-elevated p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-accent">Cost</h2>
-          <span className="text-xl font-semibold">
+          <h2 className="stat-title text-sm text-accent">Cost</h2>
+          <span className="stat-value text-xl">
             {!previewCost ? '—'
               : previewCost.total !== null ? fmtMoney(previewCost.total)
               : <span className="text-sm font-normal text-slate-500">Not tracked</span>}
@@ -151,10 +151,12 @@ export default function GroundSessionForm() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Log ground session'}</Button>
-      {id && (
-        <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete ground session</Button>
-      )}
+      <div className="sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Log ground session'}</Button>
+        {id && (
+          <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete ground session</Button>
+        )}
+      </div>
 
       <ConfirmDialog open={confirmDelete} title="Delete ground session?" description="This cannot be undone."
         confirmLabel="Delete" busy={deleting} onConfirm={remove} onClose={() => setConfirmDelete(false)} />
