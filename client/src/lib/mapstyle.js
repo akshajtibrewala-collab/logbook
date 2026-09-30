@@ -18,9 +18,31 @@ export function usState(airport) {
   return m ? m[1] : null;
 }
 
+// A coarse last-resort guess from an ICAO-style code, used only when the airports table's own `country`
+// column is blank for a row (a data-quality gap, not the normal case — every airport OurAirports ships
+// carries a country). Deliberately short: these are the few prefixes unambiguous enough to guess safely.
+const ICAO_PREFIX_COUNTRY = [[/^[KP]/, 'US'], [/^C/, 'CA'], [/^EG/, 'GB']];
+
+/**
+ * The country an airport counts toward for the "countries visited" stat: its own `country` column when
+ * present, else a guess from its ICAO/ident prefix, else the literal string "Unknown" — so an airport with
+ * genuinely unresolvable country data still contributes exactly one bucket to the count instead of being
+ * silently dropped (undercounting) or left to `undefined` (which would collapse every unresolved airport
+ * into the same falsy bucket, undercounting a different way).
+ */
+export function countryOf(airport) {
+  const known = String(airport?.country ?? '').trim().toUpperCase();
+  if (known) return known;
+  const code = String(airport?.icao || airport?.ident || '').toUpperCase();
+  for (const [prefix, country] of ICAO_PREFIX_COUNTRY) if (prefix.test(code)) return country;
+  return 'Unknown';
+}
+
 /**
  * Counters for the map header. `regionsKnown` is false when none of the airports carry region data yet
- * (the airports table hasn't been re-seeded), so the UI can hide the states counter instead of showing 0.
+ * (the airports table hasn't been re-seeded), so the UI can hide the states counter instead of showing 0 —
+ * this flag is about *state* data specifically and must never gate the countries count, which comes from
+ * the airports table's separate, normally-always-present `country` column (see `countryOf`).
  */
 export function visitedCounts(stops) {
   const states = new Set();
@@ -30,7 +52,7 @@ export function visitedCounts(stops) {
     if (s.region) regionsKnown = true;
     const st = usState(s);
     if (st) states.add(st);
-    if (s.country) countries.add(s.country);
+    countries.add(countryOf(s));
   }
   return { airports: stops.length, states: states.size, countries: countries.size, regionsKnown };
 }

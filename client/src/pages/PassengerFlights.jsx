@@ -80,7 +80,7 @@ export default function PassengerFlights() {
       flights: visible.length,
       hours: visible.reduce((s, f) => s + (Number(f.total_time) || 0), 0),
       airports: counts.airports,
-      countries: counts.regionsKnown ? counts.countries : null,
+      countries: counts.countries,
       airlines: new Set(visible.map((f) => f.airline).filter(Boolean)).size,
       aircraft: new Set(visible.map((f) => f.aircraft_type).filter(Boolean)).size,
     };
@@ -108,7 +108,7 @@ export default function PassengerFlights() {
             <Stat label="Flights" value={summary.flights} />
             <Stat label={summary.hours === 1 ? 'hour' : 'hours'} value={fmtHours(summary.hours)} />
             <Stat label={summary.airports === 1 ? 'airport' : 'airports'} value={summary.airports} />
-            {summary.countries !== null && <Stat label={summary.countries === 1 ? 'country' : 'countries'} value={summary.countries} />}
+            <Stat label={summary.countries === 1 ? 'country' : 'countries'} value={summary.countries} />
             <Stat label={summary.airlines === 1 ? 'airline' : 'airlines'} value={summary.airlines} />
             <Stat label="aircraft types" value={summary.aircraft} />
           </div>
