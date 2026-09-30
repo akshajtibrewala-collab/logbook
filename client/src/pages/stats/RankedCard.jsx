@@ -9,15 +9,15 @@ const PREVIEW_COUNT = 5;
  * Collapsed by default (these lists are the ones that felt heaviest on a long scroll) — the top result
  * still shows as a one-line teaser next to the title even while collapsed.
  */
-export default function RankedCard({ title, note, rows, defaultOpen = false }) {
+export default function RankedCard({ title, note, icon, rows, tint, defaultOpen = false }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? rows : rows.slice(0, PREVIEW_COUNT);
   const teaser = note ?? (rows[0] ? `Top: ${rows[0].label} · ${rows[0].count}×` : 'Nothing to rank yet.');
   return (
-    <CollapsibleStatCard title={title} note={teaser} defaultOpen={defaultOpen}>
-      {rows.length > 0 && <Ranked rows={visible} />}
+    <CollapsibleStatCard title={title} note={teaser} icon={icon} defaultOpen={defaultOpen}>
+      {rows.length > 0 && <Ranked rows={visible} tint={tint} />}
       {rows.length > PREVIEW_COUNT && (
-        <button type="button" onClick={() => setExpanded((e) => !e)} className="mt-3 text-sm font-medium text-accent">
+        <button type="button" onClick={() => setExpanded((e) => !e)} className="pressable mt-3 text-sm font-medium text-accent">
           {expanded ? 'Show top 5' : `Show all ${rows.length}`}
         </button>
       )}

@@ -17,6 +17,10 @@ const TABS = [
   ['places', 'Places & aircraft'],
 ];
 
+// Each tab's active pill is tinted with its role color, so which section you're in reads at a glance —
+// Places mixes both roles and deliberately stays neutral rather than picking a side.
+const ACTIVE_TAB_STYLE = { pilot: 'bg-accent text-ink', travel: `bg-[rgb(var(--role-pax))] text-ink`, places: 'bg-navy-700 text-slate-100' };
+
 const SCOPE_LABEL = { all: 'All flights — every role.', pilot: 'Pilot flights only.', passenger: 'Passenger flights only.' };
 
 export default function Stats() {
@@ -74,11 +78,13 @@ export default function Stats() {
 
       {flights && flights.length > 0 && (
         <>
-          <div className="flex gap-1 rounded-2xl border border-edge bg-navy-950/60 p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]" role="tablist" aria-label="Stats section">
-            {TABS.map(([k, l]) => (
-              <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                className={`h-11 flex-1 rounded-xl text-sm font-medium transition-all ${tab === k ? 'card-elevated bg-navy-700 text-accent' : 'text-slate-400 hover:text-slate-300'}`}>{l}</button>
-            ))}
+          <div className="sticky top-0 z-20 -mx-4 bg-navy-950/90 px-4 pb-3 pt-1 backdrop-blur-xl md:static md:mx-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+            <div className="flex gap-1 rounded-2xl border border-edge bg-navy-950/60 p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]" role="tablist" aria-label="Stats section">
+              {TABS.map(([k, l]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+                  className={`pressable h-11 flex-1 rounded-xl text-sm font-medium shadow-sm transition-all ${tab === k ? ACTIVE_TAB_STYLE[k] : 'text-slate-400 hover:text-slate-300 shadow-none'}`}>{l}</button>
+              ))}
+            </div>
           </div>
           <p className="text-xs text-slate-500">{scopeLabel}</p>
           {tab === 'places' && <RoleFilter value={placesRole} onChange={setPlacesRole} />}

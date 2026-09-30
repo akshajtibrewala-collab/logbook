@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Luggage } from 'lucide-react';
+import { Luggage, Route } from 'lucide-react';
 import { fmtHours } from '../../lib/hours.js';
 import { fmtNm } from '../../lib/geo.js';
 import { hoursByAircraft, hoursByAirline, topRoutes } from '../../lib/stats.js';
@@ -42,16 +42,15 @@ export default function TravelTab({ passengerFlights, airports }) {
 
   return (
     <div className="stagger space-y-4">
-      <SummaryStrip items={[
+      <SummaryStrip icon={Luggage} tint="pax" primary={{ label: 'Total hours', value: fmtHours(data.hours) }} items={[
         { label: 'Flights', value: data.flights },
-        { label: 'Hours', value: fmtHours(data.hours) },
         { label: 'Airports', value: data.airports },
         { label: 'Countries', value: data.countries ?? '—' },
       ]} />
       <FlightsPerYearChart rows={data.byYear} note={`By calendar year · ${fmtNm(data.distanceNm)} flown in total.`} />
       <AirlinesCard airlines={data.airlines} />
-      <AircraftBarChart title="Aircraft types" byType={data.aircraft} />
-      <RankedCard title="Most flown routes" rows={data.routes} />
+      <AircraftBarChart title="Aircraft types" byType={data.aircraft} tint="pax" />
+      <RankedCard title="Most flown routes" icon={Route} tint="pax" rows={data.routes} />
     </div>
   );
 }
