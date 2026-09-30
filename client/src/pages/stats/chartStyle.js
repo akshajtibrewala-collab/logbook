@@ -13,6 +13,11 @@ export const tooltipStyle = {
 
 export const axisTick = { fontSize: 11, fill: 'rgb(var(--slate-400))' };
 
+// The hover/tap highlight behind a bar column, shared by every bar chart on the Stats page so they can't
+// drift apart again. Uses the same --edge token as hairline borders (0.06 alpha in both themes) rather
+// than a hardcoded white, which was invisible on the light theme's white card background.
+export const barCursor = { fill: 'rgb(var(--edge) / var(--edge-a))' };
+
 // A little extra right margin than recharts' own defaults so the last x-axis tick label (e.g. "Sep 26")
 // doesn't get clipped by the card edge on a narrow phone screen.
 export const chartMargin = { left: -18, right: 16, top: 8, bottom: 0 };

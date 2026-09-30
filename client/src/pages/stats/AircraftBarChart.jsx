@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, LabelList, Tooltip, ResponsiveContainer } from 'recharts';
 import { fmtHours } from '../../lib/hours.js';
-import { tooltipStyle } from './chartStyle.js';
+import { tooltipStyle, barCursor } from './chartStyle.js';
 import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 
 // Tall enough per row that a single bar isn't stranded in a mostly-empty card, short enough that a dozen
@@ -33,7 +33,7 @@ export default function AircraftBarChart({ title, note, byType, byTail, defaultO
             <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 16, top: 0, bottom: 0 }}>
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="type" width={72} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-              <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v) => `${fmtHours(v)} h`} />
+              <Tooltip {...tooltipStyle} cursor={barCursor} formatter={(v) => `${fmtHours(v)} h`} />
               <Bar dataKey="hours" fill="rgb(var(--accent))" radius={[0, 6, 6, 0]} barSize={22} isAnimationActive={false}>
                 <LabelList dataKey="hours" position="right" fontSize={12} formatter={(v) => fmtHours(v)} />
               </Bar>

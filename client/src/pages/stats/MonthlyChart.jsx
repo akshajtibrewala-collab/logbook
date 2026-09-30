@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fmtHours } from '../../lib/hours.js';
 import { hoursByMonth } from '../../lib/charts.js';
-import { axisTick, tooltipStyle, chartMargin } from './chartStyle.js';
+import { axisTick, tooltipStyle, chartMargin, barCursor } from './chartStyle.js';
 import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 
 const localToday = () => new Date().toLocaleDateString('en-CA');
@@ -19,7 +19,7 @@ export default function MonthlyChart({ flights, note, defaultOpen = true }) {
               <CartesianGrid vertical={false} stroke="rgb(var(--edge) / var(--edge-a))" />
               <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={14} />
               <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v) => `${fmtHours(v)} h`} />
+              <Tooltip {...tooltipStyle} cursor={barCursor} formatter={(v) => `${fmtHours(v)} h`} />
               <Bar dataKey="hours" name="Hours" fill="rgb(var(--accent))" radius={[6, 6, 0, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
