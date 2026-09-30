@@ -26,6 +26,7 @@ test('export then import round-trips every field, including tricky text', () => 
     ground_time: 0.5, night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
     day_landings: 3, night_landings: 1, day_landings_full_stop: 2, night_landings_full_stop: 1,
     approaches: 3, holds: 1, approach_types: [{ approach_type: 'ILS', count: 2 }, { approach_type: 'RNAV (GPS)', count: 1 }],
+    dep_time: '16:25', arr_time: '19:15', arr_day_offset: 0,
   };
   const csv = flightsToCsv([flight]);
   assert.match(csv, /"'=cmd/); // formula guard on export

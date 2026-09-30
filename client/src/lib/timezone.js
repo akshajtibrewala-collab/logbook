@@ -63,6 +63,21 @@ export function zoneAbbreviation(date, timeZone) {
   return abbr;
 }
 
+/**
+ * "CDT, UTC-5" for a zone at a reference instant, or null if the zone isn't known. The sign matters: a
+ * zone behind UTC (like US Central, CDT) must read "UTC-5", never "UTC+5" — tzOffsetMinutes already
+ * returns the conventionally-signed offset (negative west of UTC), so the sign here is used as-is, not
+ * inverted.
+ */
+export function zoneSummary(tz, refDate) {
+  if (!tz) return null;
+  const offset = tzOffsetMinutes(refDate, tz); // e.g. -300 for CDT (UTC-5), +330 for IST (UTC+5:30)
+  const sign = offset < 0 ? '-' : '+';
+  const hours = Math.abs(offset) / 60;
+  const offsetLabel = Number.isInteger(hours) ? `${hours}` : hours.toFixed(1);
+  return `${zoneAbbreviation(refDate, tz)}, UTC${sign}${offsetLabel}`;
+}
+
 const pad2 = (n) => String(n).padStart(2, '0');
 
 /** "HH:mm" in `timeZone` at `date`. */

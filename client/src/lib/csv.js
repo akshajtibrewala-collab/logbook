@@ -43,11 +43,13 @@ export const EXPORT_COLUMNS = [
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
   'day_landings', 'full_stop_day_landings', 'night_landings', 'full_stop_night_landings',
   'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'seat_class',
+  'dep_time', 'arr_time', 'arr_day_offset',
 ];
 const TIME_COLUMNS = new Set(['total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time',
   'simulator_time', 'ground_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
 const TEXT_COLUMNS = new Set(['aircraft_type', 'tail_number', 'remarks', 'departure_airport', 'arrival_airport', 'route',
-  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'role', 'seat_class']);
+  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'role', 'seat_class',
+  'dep_time', 'arr_time', 'arr_day_offset']);
 // full_stop_day_landings/full_stop_night_landings deliberately don't reuse the app's own
 // day_landings_full_stop/night_landings_full_stop names: those normalise (lowercase, strip punctuation)
 // to the same string ForeFlight's "Landing Full-Stop Day/Night" columns already alias to day_landings/
@@ -129,6 +131,9 @@ const ALIASES = {
   entry_type: ['entrytype'],
   role: ['role', 'flightrole'],
   seat_class: ['seatclass'],
+  dep_time: ['deptime', 'departuretime'],
+  arr_time: ['arrtime', 'arrivaltime'],
+  arr_day_offset: ['arrdayoffset', 'arrivaldayoffset'],
   instructor: ['instructor'],
   topics: ['topics'],
   ground_time: ['groundtime', 'groundinstructiontime', 'groundinstruction'],
@@ -204,7 +209,10 @@ function extractForeFlight(rows) {
 }
 
 const groundKey = (g) => [g.date, Number(g.hours || 0).toFixed(2), g.instructor ?? ''].join('|');
-const dupKey = (f) => [f.date, f.departure_airport ?? '', f.arrival_airport ?? '', f.tail_number ?? '', Number(f.total_time || 0).toFixed(2)].join('|');
+// Keyed on date/departure/arrival/flight_number/tail_number — never total_time, which changes when a
+// passenger flight's local times are recalculated (see passengerDuration.js), so a re-import of the same
+// flight after that recalculation must still be recognized as the same flight, not a "new" duplicate.
+const dupKey = (f) => [f.date, f.departure_airport ?? '', f.arrival_airport ?? '', f.flight_number ?? '', f.tail_number ?? ''].join('|');
 
 /**
  * Parses a CSV/TSV into flights ready for import.
@@ -292,6 +300,17 @@ export function parseImport(text, existing = [], existingGround = []) {
     f.debrief_work_on = unguard(cell(r, 'debrief_work_on')) || null;
     f.instructor = unguard(cell(r, 'instructor')) || null;
     f.seat_class = unguard(cell(r, 'seat_class')) || null;
+
+    const depTimeRaw = cell(r, 'dep_time');
+    const arrTimeRaw = cell(r, 'arr_time');
+    f.dep_time = depTimeRaw || null;
+    f.arr_time = arrTimeRaw || null;
+    if (depTimeRaw && !/^([01]\d|2[0-3]):[0-5]\d$/.test(depTimeRaw)) errors.push(`Invalid dep_time "${depTimeRaw}"`);
+    if (arrTimeRaw && !/^([01]\d|2[0-3]):[0-5]\d$/.test(arrTimeRaw)) errors.push(`Invalid arr_time "${arrTimeRaw}"`);
+    const offsetRaw = cell(r, 'arr_day_offset');
+    if (offsetRaw === '') f.arr_day_offset = null;
+    else if (/^\d+$/.test(offsetRaw)) f.arr_day_offset = Number(offsetRaw);
+    else { errors.push(`Invalid arr_day_offset "${offsetRaw}"`); f.arr_day_offset = null; }
 
     for (const field of TIME_FIELDS) {
       const raw = cell(r, field);

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ageMinutes, localAndZulu, observedAgeLabel, tzOffsetMinutes, utcToZonedParts, zonedToUtc, zoneAbbreviation, zonedHHMM, zuluHHMM,
+  ageMinutes, localAndZulu, observedAgeLabel, tzOffsetMinutes, utcToZonedParts, zonedToUtc, zoneAbbreviation, zonedHHMM, zoneSummary, zuluHHMM,
 } from './timezone.js';
 
 test('utcToZonedParts reads the correct local wall clock in standard and daylight time', () => {
@@ -50,6 +50,18 @@ test('DST fall-back: 2026-11-01 America/Denver repeats the 01:00-02:00 hour', ()
   const beforeFallback = zonedToUtc({ y: 2026, m: 11, d: 1, hour: 0, minute: 30 }, 'America/Denver');
   const afterFallback = zonedToUtc({ y: 2026, m: 11, d: 1, hour: 3, minute: 30 }, 'America/Denver');
   assert.equal(afterFallback.getTime() - beforeFallback.getTime(), 4 * 3600 * 1000);
+});
+
+test('zoneSummary signs the UTC offset correctly: a zone behind UTC reads "-", never "+"', () => {
+  // A zone west of UTC (like every US zone) must show a minus sign: "UTC-5", not "UTC+5" — this exact
+  // sign was inverted once during development and caught by browser testing, not a type system.
+  assert.equal(zoneSummary('America/Chicago', new Date('2026-07-15T12:00:00Z')), 'CDT, UTC-5');
+  assert.equal(zoneSummary('America/New_York', new Date('2026-07-15T12:00:00Z')), 'EDT, UTC-4');
+  assert.equal(zoneSummary('America/Denver', new Date('2026-01-15T12:00:00Z')), 'MST, UTC-7');
+  // A zone ahead of UTC must show a plus sign, including a half-hour offset (Node's Intl reports Asia/
+  // Kolkata's short name as "GMT+5:30" rather than "IST" — asserting the offset half, not the name).
+  assert.match(zoneSummary('Asia/Kolkata', new Date('2026-07-15T12:00:00Z')), /, UTC\+5\.5$/);
+  assert.equal(zoneSummary(null, new Date()), null);
 });
 
 test('zoneAbbreviation names standard vs daylight time correctly', () => {

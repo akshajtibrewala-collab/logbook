@@ -31,16 +31,17 @@ export async function resolveAirportRow(code) {
   return null;
 }
 
-// GET /api/airports/resolve?codes=KPAO,KSQL,SFO -> { KPAO: {...}, SFO: {...} } (unknown codes omitted).
-// Lookups are batched, so any number of codes costs one or two round trips to the database.
-router.get('/resolve', async (req, res) => {
-  const codes = [...new Set(String(req.query.codes ?? '').split(',').map((c) => c.trim().toUpperCase()).filter(Boolean))].slice(0, 500);
+// Resolves any number of codes in one or two round trips (batched), regardless of how many — used by
+// /resolve below and by routes/flights.js's bulk import so 73 rows referencing ~26 distinct airports costs
+// a couple of round trips total, not one lookup per row.
+export async function resolveAirportRows(codes) {
+  const clean = [...new Set(codes.map((c) => String(c ?? '').trim().toUpperCase()).filter(Boolean))];
   const out = {};
-  if (!codes.length) return res.json(out);
+  if (!clean.length) return out;
 
-  const first = await batchAll(codes.map((c) => ({ sql: BY_CODE, args: { c } })));
+  const first = await batchAll(clean.map((c) => ({ sql: BY_CODE, args: { c } })));
   const retry = [];
-  codes.forEach((c, i) => {
+  clean.forEach((c, i) => {
     if (first[i][0]) out[c] = withTz(first[i][0]);
     else if (/^K[A-Z0-9]{3}$/.test(c)) retry.push(c);
   });
@@ -48,7 +49,14 @@ router.get('/resolve', async (req, res) => {
     const second = await batchAll(retry.map((c) => ({ sql: BY_US_LOCAL, args: { local: c.slice(1) } })));
     retry.forEach((c, i) => { if (second[i][0]) out[c] = withTz(second[i][0]); });
   }
-  res.json(out);
+  return out;
+}
+
+// GET /api/airports/resolve?codes=KPAO,KSQL,SFO -> { KPAO: {...}, SFO: {...} } (unknown codes omitted).
+// Lookups are batched, so any number of codes costs one or two round trips to the database.
+router.get('/resolve', async (req, res) => {
+  const codes = String(req.query.codes ?? '').split(',').slice(0, 500);
+  res.json(await resolveAirportRows(codes));
 });
 
 // GET /api/airports/search?q=palo -> up to 10 matches by code or name (for autocomplete).

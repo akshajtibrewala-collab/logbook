@@ -97,9 +97,11 @@ export default function PassengerFlights() {
 
         <FlightRoleTabs />
 
-        <div className="mt-3 hidden md:flex">
-          <Link to="/logbook/new?role=passenger&from=travel" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
-        </div>
+        {flights && flights.length > 0 && (
+          <div className="mt-3 hidden md:flex">
+            <Link to="/logbook/new?role=passenger&from=travel" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
+          </div>
+        )}
 
         {flights && flights.length > 0 && (
           <div className="mt-4 grid grid-cols-3 gap-3 card p-4">
@@ -112,14 +114,16 @@ export default function PassengerFlights() {
           </div>
         )}
 
-        <div className="mt-3 flex gap-2">
-          <button onClick={() => setShowFilters((s) => !s)}
-            className={`h-12 flex-1 rounded-xl border px-4 text-sm ${activeFilters ? 'border-accent text-accent' : 'border-edge text-slate-300'}`}>
-            <SlidersHorizontal size={16} className="mr-2 inline" />Filter{activeFilters ? ` (${activeFilters})` : ''}
-          </button>
-        </div>
+        {flights && flights.length > 0 && (
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => setShowFilters((s) => !s)}
+              className={`h-12 flex-1 rounded-xl border px-4 text-sm ${activeFilters ? 'border-accent text-accent' : 'border-edge text-slate-300'}`}>
+              <SlidersHorizontal size={16} className="mr-2 inline" />Filter{activeFilters ? ` (${activeFilters})` : ''}
+            </button>
+          </div>
+        )}
 
-        {showFilters && (
+        {showFilters && flights && flights.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-3 card p-4">
             <label className="text-xs text-slate-400">Year
               <select value={filters.year} onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value }))} className={`${selectCls} mt-1`}>
@@ -144,8 +148,8 @@ export default function PassengerFlights() {
 
         {flights && flights.length === 0 && (
           <EmptyState icon={Luggage} title="No passenger flights yet."
-            description="Riding along, not flying — commercial trips, jumpseats, anything you weren't the pilot on. They show up here, on the map and in your travel history, but never in your logbook hours."
-            action={<Button as={Link} to="/logbook/new?role=passenger&from=travel" size="md">Add a flight</Button>} />
+            description="Riding along, not flying — commercial trips, anything you weren't the pilot on. They show up here, on the map and in your travel history, but never in your logbook hours."
+            action={<Button as={Link} to="/logbook/new?role=passenger&from=travel" size="md">Add flight</Button>} />
         )}
         {flights && flights.length > 0 && visible.length === 0 && (
           <EmptyState title="Nothing matches these filters." />
@@ -170,10 +174,13 @@ export default function PassengerFlights() {
                           <span className="truncate">{fmtDate(f.date)}{f.flight_number ? ` · ${f.flight_number}` : ''}</span>
                         </span>
                       </div>
-                      {(f.aircraft_type || f.tail_number || f.seat_class) && (
+                      {(f.aircraft_type || f.tail_number || f.seat_class || (f.dep_time && f.arr_time)) && (
                         <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-500">
                           {(f.aircraft_type || f.tail_number) && <span>{[f.aircraft_type, f.tail_number].filter(Boolean).join(' · ')}</span>}
                           {f.seat_class && <span>{labelFor(SEAT_CLASSES, f.seat_class)}</span>}
+                          {f.dep_time && f.arr_time && (
+                            <span>{f.dep_time} → {f.arr_time}{f.arr_day_offset > 0 ? ` +${f.arr_day_offset}` : ''}</span>
+                          )}
                         </div>
                       )}
                     </Card>
@@ -184,7 +191,9 @@ export default function PassengerFlights() {
           ))}
         </div>
 
-        <AddFab onClick={() => navigate('/logbook/new?role=passenger&from=travel')} label="Add passenger flight" />
+        {flights && flights.length > 0 && (
+          <AddFab onClick={() => navigate('/logbook/new?role=passenger&from=travel')} label="Add passenger flight" />
+        )}
       </div>
 
       <div className={`${selected ? 'block' : 'hidden lg:block'} min-w-0 flex-1`}>

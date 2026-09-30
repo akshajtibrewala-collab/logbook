@@ -18,6 +18,7 @@ import AirlineBadge from '../components/AirlineBadge.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import AircraftPicker from '../components/AircraftPicker.jsx';
+import PassengerTimeFields from '../components/PassengerTimeFields.jsx';
 import StopsEditor from '../components/StopsEditor.jsx';
 import ApproachesEditor from '../components/ApproachesEditor.jsx';
 import Disclosure from '../components/Disclosure.jsx';
@@ -40,6 +41,7 @@ const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in loc
 const blank = (role) => ({
   date: today(), role: role === 'passenger' ? 'passenger' : 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
   airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
+  dep_time: '', arr_time: '', arr_day_offset: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
 });
@@ -324,7 +326,14 @@ export default function FlightForm() {
       )}
       {form.role !== 'pilot' && (
         <Section title="Time">
-          <div className="col-span-2"><HoursInput label="Total time" value={form.total_time} onChange={set('total_time')} error={errors.total_time} /></div>
+          <PassengerTimeFields
+            value={{
+              date: form.date, departure_airport: form.departure_airport, arrival_airport: form.arrival_airport,
+              dep_time: form.dep_time, arr_time: form.arr_time, arr_day_offset: form.arr_day_offset, total_time: form.total_time,
+            }}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            errors={errors}
+          />
         </Section>
       )}
 
