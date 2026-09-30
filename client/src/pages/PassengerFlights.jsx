@@ -91,8 +91,6 @@ export default function PassengerFlights() {
   return (
     <div className="lg:flex lg:items-start lg:gap-6">
       <div className={`${selected ? 'hidden lg:block' : 'block'} lg:w-[380px] lg:shrink-0`}>
-        {/* Deliberately doesn't wrap AddFab below — the phone floating "+" button stays sky blue for now,
-            pending a decision on it (see the passenger-accent PR notes). */}
         <div className="role-pax-scope">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Passenger flights</h1>
@@ -193,11 +191,11 @@ export default function PassengerFlights() {
             </div>
           ))}
         </div>
-        </div>
 
         {flights && flights.length > 0 && (
           <AddFab onClick={() => navigate('/logbook/new?role=passenger&from=travel')} label="Add passenger flight" />
         )}
+        </div>
       </div>
 
       <div className={`${selected ? 'block' : 'hidden lg:block'} min-w-0 flex-1`}>
