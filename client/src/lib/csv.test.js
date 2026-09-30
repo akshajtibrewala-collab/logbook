@@ -20,7 +20,7 @@ test('export then import round-trips every field, including tricky text', () => 
   const flight = {
     date: '2026-03-14', role: 'pilot', departure_airport: 'KPAO', arrival_airport: 'KSQL', route: 'KCOU KJEF',
     stops: [{ airport_code: 'KCOU', stop_type: 'full_stop' }, { airport_code: 'KJEF', stop_type: 'full_stop' }],
-    tail_number: 'N123AB', aircraft_type: 'C172', airline: 'Delta', flight_number: 'DL123', instructor: 'Jane Smith',
+    tail_number: 'N123AB', aircraft_type: 'C172', airline: 'Delta', flight_number: 'DL123', instructor: 'Jane Smith', seat_class: null,
     remarks: '=cmd|"x", with comma\nand newline', debrief_went_well: 'Smooth, stable approach', debrief_work_on: 'Crosswind landings',
     total_time: 1.5, pic_time: 1.5, sic_time: 0, dual_received: 0, dual_given: 0.5, solo_time: 0, simulator_time: 0.2,
     ground_time: 0.5, night_time: 0.25, instrument_actual: 0, instrument_simulated: 0.3, cross_country_time: 0,
@@ -47,6 +47,13 @@ test('role round-trips through CSV export/import, and a missing/unknown role col
   // No role column at all (an older export, or another tool's file) defaults every row to pilot.
   const noRoleCsv = 'date,departure_airport,arrival_airport,total_time\r\n2026-05-02,KPAO,KSQL,1\r\n';
   assert.equal(parseImport(noRoleCsv).rows[0].flight.role, 'pilot');
+});
+
+test('seat_class round-trips through CSV export/import; missing is null', () => {
+  const base = { date: '2026-05-01', role: 'passenger', departure_airport: 'KPAO', arrival_airport: 'KSQL', total_time: 1 };
+  const csv = flightsToCsv([{ ...base, seat_class: 'business' }]);
+  assert.equal(parseImport(csv).rows[0].flight.seat_class, 'business');
+  assert.equal(parseImport(flightsToCsv([base])).rows[0].flight.seat_class, null);
 });
 
 test('approach type cells parse leniently: missing counts default to 1, junk parts are dropped', () => {

@@ -13,3 +13,6 @@ server/backups/
 
 # Local Claude Code dev-server launch config (machine-specific, not part of the app)
 .claude/
+
+# Personal data imports (source CSVs and generated app-format CSVs) — never committed
+server/imports/

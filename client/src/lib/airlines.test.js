@@ -25,6 +25,21 @@ test('blank input has no airline', () => {
   assert.equal(resolveAirline(null), null);
 });
 
+test('newly added international airlines resolve by name, code, or alias, with known: true', () => {
+  for (const [input, name, code] of [
+    ['Air India', 'Air India', 'AI'],
+    ['Etihad', 'Etihad Airways', 'EY'],
+    ['IndiGo', 'IndiGo', '6E'],
+    ['Indigo', 'IndiGo', '6E'],
+    ['LOT', 'LOT Polish Airlines', 'LO'],
+    ['Swiss International Airlines', 'Swiss International Airlines', 'LX'],
+    ['SWISS', 'Swiss International Airlines', 'LX'],
+  ]) {
+    const a = resolveAirline(input);
+    assert.deepEqual([a.name, a.code, a.known], [name, code, true]);
+  }
+});
+
 test('every listed airline is unique by name and code', () => {
   assert.equal(new Set(AIRLINE_NAMES).size, AIRLINE_NAMES.length);
   const codes = AIRLINE_NAMES.map((n) => resolveAirline(n).code);

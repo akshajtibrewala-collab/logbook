@@ -42,12 +42,12 @@ export const EXPORT_COLUMNS = [
   'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time', 'ground_time',
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
   'day_landings', 'full_stop_day_landings', 'night_landings', 'full_stop_night_landings',
-  'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics',
+  'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'seat_class',
 ];
 const TIME_COLUMNS = new Set(['total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time',
   'simulator_time', 'ground_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
 const TEXT_COLUMNS = new Set(['aircraft_type', 'tail_number', 'remarks', 'departure_airport', 'arrival_airport', 'route',
-  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'role']);
+  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'role', 'seat_class']);
 // full_stop_day_landings/full_stop_night_landings deliberately don't reuse the app's own
 // day_landings_full_stop/night_landings_full_stop names: those normalise (lowercase, strip punctuation)
 // to the same string ForeFlight's "Landing Full-Stop Day/Night" columns already alias to day_landings/
@@ -128,6 +128,7 @@ const ALIASES = {
   simulator_time: ['simulatortime', 'simtime', 'flightsimulatortime'],
   entry_type: ['entrytype'],
   role: ['role', 'flightrole'],
+  seat_class: ['seatclass'],
   instructor: ['instructor'],
   topics: ['topics'],
   ground_time: ['groundtime', 'groundinstructiontime', 'groundinstruction'],
@@ -287,6 +288,7 @@ export function parseImport(text, existing = [], existingGround = []) {
     f.debrief_went_well = unguard(cell(r, 'debrief_went_well')) || null;
     f.debrief_work_on = unguard(cell(r, 'debrief_work_on')) || null;
     f.instructor = unguard(cell(r, 'instructor')) || null;
+    f.seat_class = unguard(cell(r, 'seat_class')) || null;
 
     for (const field of TIME_FIELDS) {
       const raw = cell(r, field);
