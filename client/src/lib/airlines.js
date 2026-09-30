@@ -28,6 +28,11 @@ const AIRLINES = [
   { name: 'Cathay Pacific', code: 'CX', color: '#00645A', aliases: ['Cathay'] },
   { name: 'All Nippon Airways', code: 'NH', color: '#13448F', aliases: ['ANA'] },
   { name: 'Japan Airlines', code: 'JL', color: '#C8102E', aliases: ['JAL'] },
+  { name: 'Air India', code: 'AI', color: '#B7292F' },
+  { name: 'Etihad Airways', code: 'EY', color: '#BFA46F', fg: '#0B1F2A', aliases: ['Etihad'] },
+  { name: 'IndiGo', code: '6E', color: '#28348A', aliases: ['Indigo'] },
+  { name: 'LOT Polish Airlines', code: 'LO', color: '#8C1D40', aliases: ['LOT'] },
+  { name: 'Swiss International Airlines', code: 'LX', color: '#E30613', aliases: ['Swiss', 'SWISS', 'Swiss International Air Lines'] },
 ];
 
 const NEUTRAL = { color: '#475569', fg: '#f1f5f9' };

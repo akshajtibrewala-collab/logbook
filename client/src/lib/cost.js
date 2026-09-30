@@ -97,7 +97,7 @@ const hasValue = (v) => v !== null && v !== undefined && v !== '';
  * cost at all, and callers should exclude it from totals/projections rather than treat it as free.
  */
 export function computeFlightCost(flight, rates, phases) {
-  // A passenger/observer flight gets no cost calculation at all — not even a manual override — since it's
+  // A passenger flight gets no cost calculation at all — not even a manual override — since it's
   // not training and was never billed at a training rate; cost tracking exists for the pilot's own flying.
   if (!isPilotFlight(flight)) return EXCLUDED;
   if (isPastCostCutoff(flight.date, rates?.cost_cutoff_date)) return EXCLUDED;

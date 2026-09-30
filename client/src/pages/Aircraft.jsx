@@ -41,7 +41,7 @@ export default function Aircraft() {
   }, [showArchived]);
   useEffect(load, [load]);
 
-  // How each aircraft has actually been used: flown as pilot, or only ridden as a passenger/observer —
+  // How each aircraft has actually been used: flown as pilot, or only ridden as a passenger —
   // an airliner added from a passenger flight's aircraft picker should never look like something you fly.
   const usageById = useMemo(() => {
     const byId = new Map();

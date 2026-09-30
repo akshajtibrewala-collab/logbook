@@ -27,6 +27,7 @@ const GroundSessionForm = lazy(() => import('./pages/GroundSessionForm.jsx'));
 const QuickFlight = lazy(() => import('./pages/QuickFlight.jsx'));
 const ShareSettings = lazy(() => import('./pages/ShareSettings.jsx'));
 const PrintSummary = lazy(() => import('./pages/PrintSummary.jsx'));
+const PassengerFlights = lazy(() => import('./pages/PassengerFlights.jsx'));
 
 export default function App() {
   const location = useLocation();
@@ -42,6 +43,9 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/logbook" element={<Logbook />}>
               <Route path="ground/:id" element={<GroundSessionDetail />} />
+              <Route path=":id" element={<FlightDetail />} />
+            </Route>
+            <Route path="/travel" element={<PassengerFlights />}>
               <Route path=":id" element={<FlightDetail />} />
             </Route>
             <Route path="/logbook/data" element={<ImportExport />} />

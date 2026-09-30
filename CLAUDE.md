@@ -17,14 +17,18 @@ deliberately narrow, revocable summary, never raw records).
 
 ## Flight roles
 
-Every flight has a role: `pilot`, `passenger`, or `observer`. Every flight that exists today is a `pilot` flight
-(the column doesn't exist yet — see "Data safety" for how to add it).
+Every flight has a role: `pilot` or `passenger`. The `flights.role` column (migration 022) still has a CHECK
+constraint that also allows `'observer'` at the database level, but the app no longer offers or accepts it —
+no flight has ever used it, and an incoming role of `'observer'` (the API, CSV import) is rejected as an error
+rather than falling back to `pilot`.
 
-- **Logbook hours, currency, and pilot milestones count `role = 'pilot'` flights only.** Passenger and observer
-  flights must never contribute to these, now or after the role column is added.
+- **Logbook hours, currency, and pilot milestones count `role = 'pilot'` flights only.** Passenger flights must
+  never contribute to these.
 - **Map, airports visited, aircraft, countries, and distance count every role**, with a role filter the pilot can
   use to narrow the view. Whenever a stat is shown, it must be visually clear which role(s) it covers (e.g. "as
   pilot" vs. "all flights") — never an ambiguous number that silently mixes roles.
+- **The Logbook page (`/logbook`) shows only `pilot` flights** (plus ground sessions); passenger flights live on
+  their own page (`/travel`), with a two-tab switcher between the two.
 
 ## Data safety (highest priority)
 

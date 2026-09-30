@@ -52,7 +52,7 @@ export default function ImportExport() {
   const [confirmReplace, setConfirmReplace] = useState(false);
 
   // The main CSV export is pilot flights only, the same logbook a ForeFlight/LogTen export would cover —
-  // passenger/observer flights are personal travel history, not logbook time, so they don't belong in the
+  // passenger flights are personal travel history, not logbook time, so they don't belong in the
   // file used for insurance or job applications. "Export all flights" below is the escape hatch for anyone
   // who wants every row, with `role` so they round-trip back in correctly.
   async function exportCsv() {

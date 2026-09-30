@@ -8,19 +8,18 @@ test('roleOf/isPilotFlight: a missing role (old data, before this feature) is tr
   assert.ok(isPilotFlight({}));
   assert.ok(isPilotFlight({ role: 'pilot' }));
   assert.ok(!isPilotFlight({ role: 'passenger' }));
-  assert.ok(!isPilotFlight({ role: 'observer' }));
 });
 
-test('pilotFlights: keeps pilot (and role-less) flights, drops passenger/observer', () => {
+test('pilotFlights: keeps pilot (and role-less) flights, drops passenger', () => {
   const flights = [
-    { id: 1, role: 'pilot' }, { id: 2, role: 'passenger' }, { id: 3 }, { id: 4, role: 'observer' },
+    { id: 1, role: 'pilot' }, { id: 2, role: 'passenger' }, { id: 3 },
   ];
   assert.deepEqual(pilotFlights(flights).map((f) => f.id), [1, 3]);
   assert.deepEqual(pilotFlights([]), []);
   assert.deepEqual(pilotFlights(undefined), []);
 });
 
-test('FLIGHT_ROLES lists exactly pilot/passenger/observer, in that order, each with a label', () => {
-  assert.deepEqual(FLIGHT_ROLES.map((r) => r.value), ['pilot', 'passenger', 'observer']);
+test('FLIGHT_ROLES lists exactly pilot/passenger, in that order, each with a label', () => {
+  assert.deepEqual(FLIGHT_ROLES.map((r) => r.value), ['pilot', 'passenger']);
   assert.ok(FLIGHT_ROLES.every((r) => typeof r.label === 'string' && r.label.length > 0));
 });

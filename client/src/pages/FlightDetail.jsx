@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Pencil, Plane } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
@@ -58,6 +58,9 @@ function PhotosSection({ flightId }) {
 export default function FlightDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  // Nested under either /logbook or /travel (App.jsx) — reused as-is for both, so back/edit stay on
+  // whichever page the flight was opened from rather than always returning to the pilot logbook.
+  const base = useLocation().pathname.startsWith('/travel') ? '/travel' : '/logbook';
   const [flight, setFlight] = useState(null);
   const [error, setError] = useState('');
   const [rates, setRates] = useState(null);
@@ -81,10 +84,10 @@ export default function FlightDetail() {
   return (
     <div className="stagger space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate(base)} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Flight</h1>
         {flight && (
-          <Link to={`/logbook/${id}/edit`} aria-label="Edit flight" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} aria-label="Edit flight" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Pencil size={18} />
           </Link>
         )}

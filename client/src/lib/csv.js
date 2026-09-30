@@ -42,12 +42,12 @@ export const EXPORT_COLUMNS = [
   'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time', 'ground_time',
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
   'day_landings', 'full_stop_day_landings', 'night_landings', 'full_stop_night_landings',
-  'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics',
+  'approaches', 'approach_types', 'holds', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'seat_class',
 ];
 const TIME_COLUMNS = new Set(['total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time',
   'simulator_time', 'ground_time', 'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time']);
 const TEXT_COLUMNS = new Set(['aircraft_type', 'tail_number', 'remarks', 'departure_airport', 'arrival_airport', 'route',
-  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'role']);
+  'airline', 'flight_number', 'debrief_went_well', 'debrief_work_on', 'instructor', 'topics', 'role', 'seat_class']);
 // full_stop_day_landings/full_stop_night_landings deliberately don't reuse the app's own
 // day_landings_full_stop/night_landings_full_stop names: those normalise (lowercase, strip punctuation)
 // to the same string ForeFlight's "Landing Full-Stop Day/Night" columns already alias to day_landings/
@@ -128,6 +128,7 @@ const ALIASES = {
   simulator_time: ['simulatortime', 'simtime', 'flightsimulatortime'],
   entry_type: ['entrytype'],
   role: ['role', 'flightrole'],
+  seat_class: ['seatclass'],
   instructor: ['instructor'],
   topics: ['topics'],
   ground_time: ['groundtime', 'groundinstructiontime', 'groundinstruction'],
@@ -265,8 +266,11 @@ export function parseImport(text, existing = [], existingGround = []) {
     if (!f.date) errors.push(`Invalid date "${cell(r, 'date')}"`);
     // A missing or unrecognized role column (this app's own older exports, or another tool's file)
     // defaults to pilot — the only role a flight could have been logged as before roles existed.
+    // 'observer' was removed as a role, so unlike any other unrecognized value it's flagged as an error
+    // rather than silently relabeled pilot.
     const roleCell = cell(r, 'role').toLowerCase();
-    f.role = ['pilot', 'passenger', 'observer'].includes(roleCell) ? roleCell : 'pilot';
+    if (roleCell === 'observer') { errors.push('Role "observer" is no longer supported'); f.role = 'pilot'; }
+    else f.role = ['pilot', 'passenger'].includes(roleCell) ? roleCell : 'pilot';
 
     for (const field of ['departure_airport', 'arrival_airport']) {
       const v = cell(r, field).toUpperCase();
@@ -287,6 +291,7 @@ export function parseImport(text, existing = [], existingGround = []) {
     f.debrief_went_well = unguard(cell(r, 'debrief_went_well')) || null;
     f.debrief_work_on = unguard(cell(r, 'debrief_work_on')) || null;
     f.instructor = unguard(cell(r, 'instructor')) || null;
+    f.seat_class = unguard(cell(r, 'seat_class')) || null;
 
     for (const field of TIME_FIELDS) {
       const raw = cell(r, field);
@@ -314,9 +319,9 @@ export function parseImport(text, existing = [], existingGround = []) {
     f.approach_types = parseApproachTypesCell(cell(r, 'approach_types'));
     if (f.approach_types.length) f.approaches = f.approach_types.reduce((s, a) => s + a.count, 0);
 
-    // A passenger/observer row has no PIC/dual/solo/night/instrument/cross-country/ground time, no
-    // landings, no approaches or holds — zeroed here too (mirroring server/src/validate.js) so the import
-    // preview already shows exactly what will be saved, rather than surprising the pilot after import.
+    // A passenger row has no PIC/dual/solo/night/instrument/cross-country/ground time, no landings, no
+    // approaches or holds — zeroed here too (mirroring server/src/validate.js) so the import preview
+    // already shows exactly what will be saved, rather than surprising the pilot after import.
     if (f.role !== 'pilot') {
       for (const field of TIME_FIELDS) if (field !== 'total_time') f[field] = 0;
       f.day_landings = 0; f.night_landings = 0; f.day_landings_full_stop = 0; f.night_landings_full_stop = 0;

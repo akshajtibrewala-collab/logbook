@@ -51,7 +51,7 @@ export default function QuickFlight() {
         setNotice('Restored your unsaved entry.');
       } else {
         // Quick log always creates a pilot flight, so its defaults come from the most recent PILOT
-        // flight — never a passenger/observer one, whose airports/aircraft don't belong here.
+        // flight — never a passenger one, whose airports/aircraft don't belong here.
         const last = mostRecentFlight(pilotFlights(flights));
         const ordered = sortByRecency(aircraft, getRecents('aircraft'));
         const byLast = last?.aircraft_id ? aircraft.find((a) => a.id === last.aircraft_id) : null;

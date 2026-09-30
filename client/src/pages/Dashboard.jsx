@@ -74,7 +74,7 @@ export default function Dashboard() {
 
   // Total ground training hours: ground instruction logged with a flight, plus ground-only sessions —
   // the same total the cost tracker bills at the ground rate, shown here regardless of cost tracking.
-  // Pilot-only: a passenger/observer flight always has ground_time forced to 0 (see validate.js), but
+  // Pilot-only: a passenger flight always has ground_time forced to 0 (see validate.js), but
   // filtering explicitly here keeps this in step with every other logbook-time total on this page.
   const totalGroundHours = useMemo(() => {
     if (!flights) return 0;
