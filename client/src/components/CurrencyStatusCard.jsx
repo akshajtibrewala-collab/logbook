@@ -18,7 +18,7 @@ export default function CurrencyStatusCard({ title, Icon, result, detail, childr
   const tone = TONE[result.status];
   const days = daysText(result);
   return (
-    <section className="card relative overflow-hidden p-4">
+    <section className="card card-elevated relative overflow-hidden p-4">
       <span className={`absolute inset-y-0 left-0 w-1 ${tone.bar}`} />
       <div className="flex items-start justify-between gap-3 pl-2">
         <div className="min-w-0">
@@ -29,7 +29,7 @@ export default function CurrencyStatusCard({ title, Icon, result, detail, childr
           {detail && <p className="mt-1 text-sm text-slate-400">{detail}</p>}
         </div>
         <div className="shrink-0 text-right">
-          <div className={`text-4xl font-semibold leading-none ${tone.text}`}>{days.big}</div>
+          <div className={`stat-value text-4xl ${tone.text}`}>{days.big}</div>
           <div className="mt-1 text-xs text-slate-400">{days.small}</div>
         </div>
       </div>
