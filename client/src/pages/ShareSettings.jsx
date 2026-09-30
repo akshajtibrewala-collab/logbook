@@ -46,22 +46,22 @@ export default function ShareSettings() {
   return (
     <div className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Share & print</h1>
       </div>
 
       {error && <ErrorNote message={error} onRetry={load} />}
       {!share && !error && <Skeleton className="h-40" />}
 
-      <section className="card p-4">
-        <h2 className="text-sm font-medium text-accent">Printable summary</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title text-sm text-accent">Printable summary</h2>
         <p className="mt-1 text-sm text-slate-400">Totals, goal and certificate progress, and recent flights — print it or save it as a PDF.</p>
         <Button as={Link} to="/logbook/print" variant="secondary" size="md" icon={Printer} iconSize={18} className="mt-3">Open printable summary</Button>
       </section>
 
       {share && (
-        <section className="card p-4">
-          <h2 className="text-sm font-medium text-accent">Public link</h2>
+        <section className="card card-elevated p-4">
+          <h2 className="stat-title text-sm text-accent">Public link</h2>
           <p className="mt-1 text-sm text-slate-400">Anyone with the link can view a read-only summary — never edit anything, and never costs, instructors or debriefs. No sign-in needed.</p>
 
           {!share.enabled ? (
