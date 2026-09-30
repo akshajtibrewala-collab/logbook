@@ -27,8 +27,8 @@ const COUNT_FIELDS = [
 
 function Section({ title, children }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-accent-strong">{title}</h2>
+    <section className="card card-elevated p-4">
+      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
       {children}
     </section>
   );
@@ -37,7 +37,7 @@ function Section({ title, children }) {
 function Stat({ label, value }) {
   return (
     <div>
-      <div className="text-lg font-semibold">{fmtHours(value)}</div>
+      <div className="stat-value text-lg">{fmtHours(value)}</div>
       <div className="text-xs text-slate-400">{label}</div>
     </div>
   );
@@ -96,10 +96,10 @@ export default function FlightDetail() {
   return (
     <div className={`stagger space-y-4 ${flight && !isPilotFlight(flight) ? 'role-pax-scope' : ''}`}>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(base)} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate(base)} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Flight</h1>
         {flight && (
-          <Link to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} aria-label="Edit flight" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} aria-label="Edit flight" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Pencil size={18} />
           </Link>
         )}
@@ -112,13 +112,13 @@ export default function FlightDetail() {
 
       {flight && (
         <>
-          <section className="card p-4">
+          <section className="card card-hero p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-lg font-semibold">{route.length > 1 ? route.join(' → ') : (flight.departure_airport || flight.arrival_airport || 'Local flight')}</div>
+                <div className="stat-title text-lg">{route.length > 1 ? route.join(' → ') : (flight.departure_airport || flight.arrival_airport || 'Local flight')}</div>
                 <div className="mt-0.5 text-sm text-slate-400">{fmtDate(flight.date)}</div>
               </div>
-              <div className="shrink-0 text-right text-3xl font-semibold text-accent-strong">{fmtHours(flight.total_time)}</div>
+              <div className="stat-value shrink-0 text-right text-3xl text-accent-strong">{fmtHours(flight.total_time)}</div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {!isPilotFlight(flight) && <Badge tone="accent" className="capitalize">{roleOf(flight)}</Badge>}
@@ -184,7 +184,7 @@ export default function FlightDetail() {
           {isPilotFlight(flight) && cost && (cost.total > 0 || cost.override) && (
             <Section title="Cost">
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-semibold">{fmtMoney(cost.total)}</span>
+                <span className="stat-value text-2xl">{fmtMoney(cost.total)}</span>
                 {cost.override && (
                   <span className="text-xs text-slate-400">
                     Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}
@@ -200,7 +200,7 @@ export default function FlightDetail() {
               <div className="grid grid-cols-4 gap-3">
                 {counts.map(([k, label]) => (
                   <div key={k}>
-                    <div className="text-lg font-semibold">{flight[k]}</div>
+                    <div className="stat-value text-lg">{flight[k]}</div>
                     <div className="text-xs text-slate-400">
                       {label}
                       {k === 'day_landings' && flight.day_landings_full_stop > 0 && ` (${flight.day_landings_full_stop} full stop)`}

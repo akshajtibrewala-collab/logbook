@@ -46,7 +46,7 @@ function ManualRequirement({ req, onComplete, onUndo }) {
   return (
     <li className="py-2.5">
       <button type="button" onClick={() => (req.met ? onUndo(req) : onComplete(req))}
-        className="flex w-full items-start justify-between gap-3 text-left active:opacity-70">
+        className="pressable flex w-full items-start justify-between gap-3 text-left active:opacity-70">
         <div className="min-w-0">
           <span className="text-sm">{req.label}</span>
           {req.met && (
@@ -105,10 +105,10 @@ function CertificateCard({ certificate, requirements, expanded, onToggle, hideCo
   return (
     <Card padded={false}>
       <button type="button" onClick={onToggle} aria-expanded={expanded}
-        className="flex w-full items-center gap-3 p-4 text-left active:bg-navy-800">
+        className="pressable flex w-full items-center gap-3 p-4 text-left active:bg-navy-800">
         <RingProgress percent={percent} tone={tone}>{Math.round(percent)}%</RingProgress>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-base font-semibold">
+          <div className="stat-title flex items-center gap-2 text-base">
             <GraduationCap size={18} className="text-accent shrink-0" />
             <span className="truncate">{certificateLabel(certificate)}</span>
           </div>
@@ -208,7 +208,7 @@ export default function Milestones() {
         <h1 className="text-2xl font-semibold">Milestones</h1>
         {grouped && grouped.size > 0 && (
           <button onClick={() => setHideCompleted((v) => !v)}
-            className={`flex h-10 items-center gap-1.5 rounded-xl border px-3 text-sm ${hideCompleted ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
+            className={`pressable flex h-10 items-center gap-1.5 rounded-xl border px-3 text-sm transition-colors ${hideCompleted ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
             <EyeOff size={15} />{hideCompleted ? 'Hiding completed' : 'Hide completed'}
           </button>
         )}

@@ -29,8 +29,8 @@ const StatusCard = CurrencyStatusCard;
 
 function Stat({ label, value }) {
   return (
-    <div className="card p-3 text-center md:p-4">
-      <div className="text-xl font-semibold md:text-2xl">{fmtHours(value)}</div>
+    <div className="card card-elevated p-3 text-center md:p-4">
+      <div className="stat-value text-xl md:text-2xl">{fmtHours(value)}</div>
       <div className="mt-0.5 text-xs text-slate-400">{label}</div>
     </div>
   );
@@ -191,9 +191,9 @@ export default function Dashboard() {
       )}
 
       {data && flights.length === 0 && (
-        <section className="card p-5 text-center">
+        <section className="card card-elevated p-5 text-center">
           <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-600" />
-          <h2 className="mt-3 text-lg font-semibold">Welcome to AeroTrail</h2>
+          <h2 className="stat-title mt-3 text-lg">Welcome to AeroTrail</h2>
           <p className="mt-1 text-sm text-slate-400">Log a flight or import a CSV and your currency status, hours and map fill in here.</p>
           <div className="mt-4 grid gap-2">
             <Button as={Link} to="/logbook/new" size="md">Add your first flight</Button>

@@ -41,22 +41,22 @@ function LogChoiceModal({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Log">
       <div className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => navigate('/logbook/new')}
-          className="flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
+          className="pressable flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
           <Plane size={28} className="text-accent" />
           <span className="text-sm font-medium">Log flight</span>
         </button>
         <button type="button" onClick={() => navigate('/logbook/quick')}
-          className="flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
+          className="pressable flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
           <Zap size={28} className="text-accent" />
           <span className="text-sm font-medium">Quick log</span>
         </button>
         <button type="button" onClick={() => navigate('/logbook/new?copy=last')}
-          className="flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
+          className="pressable flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
           <Copy size={28} className="text-accent" />
           <span className="text-sm font-medium">Copy last flight</span>
         </button>
         <button type="button" onClick={() => navigate('/logbook/ground/new')}
-          className="col-span-2 flex flex-col items-center gap-2 rounded-2xl border border-edge p-4 active:bg-navy-800">
+          className="pressable col-span-2 flex flex-col items-center gap-2 rounded-2xl border border-edge p-4 active:bg-navy-800">
           <GraduationCap size={24} className="text-accent" />
           <span className="text-sm font-medium">Log ground session</span>
         </button>
@@ -140,16 +140,16 @@ export default function Logbook() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Logbook</h1>
         <div className="flex gap-2">
-          <Link to="/logbook/share" aria-label="Share and print" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/logbook/share" aria-label="Share and print" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Share2 size={20} />
           </Link>
-          <Link to="/costs" aria-label="Costs" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/costs" aria-label="Costs" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <DollarSign size={20} />
           </Link>
-          <Link to="/aircraft" aria-label="Aircraft" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/aircraft" aria-label="Aircraft" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <PlaneTakeoff size={20} />
           </Link>
-          <Link to="/logbook/data" aria-label="Import and export" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/logbook/data" aria-label="Import and export" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <ArrowLeftRight size={20} />
           </Link>
         </div>
@@ -167,7 +167,7 @@ export default function Logbook() {
       <div className="mt-4 flex gap-1 rounded-xl bg-navy-800 p-1">
         {KINDS.map(([k, label]) => (
           <button key={k} onClick={() => setFilters((f) => ({ ...f, kind: k }))}
-            className={`h-9 flex-1 rounded-lg text-sm font-medium transition-colors ${filters.kind === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>
+            className={`pressable h-9 flex-1 rounded-lg text-sm font-medium transition-colors ${filters.kind === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>
             {label}
           </button>
         ))}
@@ -180,13 +180,13 @@ export default function Logbook() {
           <option value="longest">Longest first</option>
         </select>
         <button onClick={() => setShowFilters((s) => !s)}
-          className={`h-12 shrink-0 rounded-xl border px-4 text-sm ${activeFilters ? 'border-accent text-accent' : 'border-edge text-slate-300'}`}>
+          className={`pressable h-12 shrink-0 rounded-xl border px-4 text-sm transition-colors ${activeFilters ? 'border-accent text-accent' : 'border-edge text-slate-300'}`}>
           <SlidersHorizontal size={16} className="mr-2 inline" />Filter{activeFilters ? ` (${activeFilters})` : ''}
         </button>
       </div>
 
       {showFilters && (
-        <div className="mt-3 grid grid-cols-2 gap-3 card p-4">
+        <div className="mt-3 grid grid-cols-2 gap-3 card card-elevated p-4">
           <DatePicker label="From" clearable placeholder="Any" value={filters.from} onChange={(v) => setFilters((f) => ({ ...f, from: v }))} />
           <DatePicker label="To" clearable placeholder="Any" value={filters.to} onChange={(v) => setFilters((f) => ({ ...f, to: v }))} />
           <label className="text-xs text-slate-400">Aircraft
@@ -221,14 +221,14 @@ export default function Logbook() {
           return (
             <li key={`${e.kind}-${e.id}`}>
               <Card as="button" onClick={() => navigate(to)} aria-current={isSelected ? 'true' : undefined}
-                className={`w-full text-left transition duration-150 active:scale-[0.985] active:bg-navy-800 ${isSelected ? 'lg:border-accent' : ''}`}>
+                className={`w-full text-left transition-colors active:bg-navy-800 ${isSelected ? 'lg:border-accent' : ''}`}>
                 {e.kind === 'flight' ? (
                   <>
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="flex min-w-0 items-baseline gap-2">
                         <span className="truncate text-base font-medium">{e.data.departure_airport || '—'} → {e.data.arrival_airport || '—'}</span>
                       </span>
-                      <span className="shrink-0 text-lg font-semibold text-accent">{fmtHours(e.data.total_time)}</span>
+                      <span className="shrink-0 stat-value text-lg text-accent">{fmtHours(e.data.total_time)}</span>
                     </div>
                     <div className="mt-1 flex justify-between text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.route ? ` · via ${e.data.route}` : ''}</span>
@@ -245,7 +245,7 @@ export default function Logbook() {
                       <span className="flex items-center gap-1.5 text-base font-medium">
                         <GraduationCap size={16} className="shrink-0 text-accent" />Ground session
                       </span>
-                      <span className="text-lg font-semibold text-accent">{fmtHours(e.data.hours)}</span>
+                      <span className="stat-value text-lg text-accent">{fmtHours(e.data.hours)}</span>
                     </div>
                     <div className="mt-1 flex justify-between text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.instructor ? ` · ${e.data.instructor}` : ''}</span>

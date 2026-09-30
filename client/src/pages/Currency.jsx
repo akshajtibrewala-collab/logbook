@@ -44,7 +44,7 @@ export default function Currency() {
   return (
     <div className="stagger space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Currency & expirations</h1>
       </div>
 
@@ -100,7 +100,7 @@ export default function Currency() {
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <div className="text-right">
-                              <div className={`text-lg font-semibold leading-none ${tone.text}`}>{days.big}</div>
+                              <div className={`stat-value text-lg ${tone.text}`}>{days.big}</div>
                               <div className="text-xs text-slate-400">{days.small}</div>
                             </div>
                             <ChevronRight size={18} className="text-slate-600" />
