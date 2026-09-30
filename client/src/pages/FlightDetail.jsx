@@ -9,9 +9,10 @@ import ErrorNote from '../components/ErrorNote.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Badge from '../components/Badge.jsx';
 import PhotoGallery from '../components/PhotoGallery.jsx';
-import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
+import { formatDateWithWeekday as fmtDate, parseISO } from '../lib/calendar.js';
 import { isPilotFlight, roleOf } from '../lib/flightRoles.js';
 import { labelFor, SEAT_CLASSES } from '../lib/aviationEnums.js';
+import { zonedToUtc, zuluHHMM } from '../lib/timezone.js';
 
 const TIME_FIELDS = [
   ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
@@ -65,6 +66,7 @@ export default function FlightDetail() {
   const [error, setError] = useState('');
   const [rates, setRates] = useState(null);
   const [phases, setPhases] = useState(null);
+  const [tz, setTz] = useState({});
 
   const load = useCallback(() => {
     setError('');
@@ -74,6 +76,16 @@ export default function FlightDetail() {
   useEffect(load, [load]);
   useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
   useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
+  // Local departure/arrival times are stored in wall-clock form (dep_time/arr_time); the airports' zones
+  // are only looked up here to also show the UTC instant, same as the flight form's live preview.
+  useEffect(() => {
+    if (!flight?.dep_time || !flight?.arr_time) return;
+    const codes = [...new Set([flight.departure_airport, flight.arrival_airport].filter(Boolean))];
+    if (!codes.length) return;
+    api.resolveAirports(codes).then((found) => {
+      setTz(Object.fromEntries(Object.entries(found).map(([c, a]) => [c, a.tz ?? null])));
+    }).catch(() => {});
+  }, [flight?.dep_time, flight?.arr_time, flight?.departure_airport, flight?.arrival_airport]);
 
   const cost = flight && rates && phases ? computeFlightCost(flight, rates, phases) : null;
 
@@ -120,6 +132,33 @@ export default function FlightDetail() {
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-edge pt-3 text-sm text-slate-400">
                 {flight.seat_class && <span>Seat: {labelFor(SEAT_CLASSES, flight.seat_class)}</span>}
                 {flight.confirmation_code && <span>Confirmation: {flight.confirmation_code}</span>}
+              </div>
+            )}
+            {!isPilotFlight(flight) && flight.dep_time && flight.arr_time && (
+              <div className="mt-3 border-t border-edge pt-3 text-sm text-slate-300">
+                <div>
+                  {flight.dep_time} → {flight.arr_time}
+                  {flight.arr_day_offset > 0 && ` +${flight.arr_day_offset}`}
+                  <span className="ml-1 text-slate-500">local</span>
+                </div>
+                {(() => {
+                  const depTz = tz[flight.departure_airport];
+                  const arrTz = tz[flight.arrival_airport];
+                  if (!depTz || !arrTz) return null;
+                  const day = parseISO(flight.date);
+                  if (!day) return null;
+                  const [dh, dm] = flight.dep_time.split(':').map(Number);
+                  const [ah, am] = flight.arr_time.split(':').map(Number);
+                  const depUtc = zonedToUtc({ ...day, hour: dh, minute: dm }, depTz);
+                  const arrDay = new Date(Date.UTC(day.y, day.m - 1, day.d + (flight.arr_day_offset || 0)));
+                  const arrUtc = zonedToUtc({ y: arrDay.getUTCFullYear(), m: arrDay.getUTCMonth() + 1, d: arrDay.getUTCDate(), hour: ah, minute: am }, arrTz);
+                  const dayDiff = Math.round((Date.UTC(arrDay.getUTCFullYear(), arrDay.getUTCMonth(), arrDay.getUTCDate()) - Date.UTC(day.y, day.m - 1, day.d)) / 86400000);
+                  return (
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      UTC: {zuluHHMM(depUtc)}Z → {zuluHHMM(arrUtc)}{dayDiff > 0 ? `+${dayDiff}` : ''}Z
+                    </div>
+                  );
+                })()}
               </div>
             )}
             {flight.stops.length > 0 && (

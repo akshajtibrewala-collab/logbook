@@ -43,6 +43,7 @@ export default function ImportExport() {
   const navigate = useNavigate();
   const fileRef = useRef(null);
   const [existing, setExisting] = useState(null);
+  const [existingAircraft, setExistingAircraft] = useState(null);
   const [preview, setPreview] = useState(null); // { name, result }
   const [includeDupes, setIncludeDupes] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -98,6 +99,8 @@ export default function ImportExport() {
     try {
       const flights = existing ?? (await api.listFlights());
       setExisting(flights);
+      const aircraft = existingAircraft ?? (await api.listAircraft(true));
+      setExistingAircraft(aircraft);
       const sessions = await api.listGroundSessions();
       const result = parseImport(await file.text(), flights, sessions);
       setPreview({ name: file.name, result });
@@ -113,8 +116,22 @@ export default function ImportExport() {
     const rows = preview?.result.rows ?? [];
     const count = (s) => rows.filter((r) => r.status === s).length;
     const gCount = (st) => (preview?.result.ground ?? []).filter((r) => r.status === st).length;
-    return { ready: count('ready'), duplicate: count('duplicate'), error: count('error'), gReady: gCount('ready'), gDuplicate: gCount('duplicate'), gError: gCount('error') };
-  }, [preview]);
+    const ready = rows.filter((r) => r.status === 'ready');
+    const totalHours = Math.round(ready.reduce((s, r) => s + (Number(r.flight.total_time) || 0), 0) * 100) / 100;
+    // Aircraft impact mirrors server/scripts/import-passenger-flights.js's own dry-run report: only rows
+    // with a tail_number ever touch the aircraft table (the bulk endpoint finds-or-creates by registration
+    // for passenger rows — see routes/flights.js's findOrCreateAircraftByTail).
+    const normTail = (t) => (t ? String(t).trim().toUpperCase() : null);
+    const existingTails = new Set((existingAircraft ?? []).map((a) => normTail(a.tail_number)).filter(Boolean));
+    const tailsInImport = new Set(ready.filter((r) => r.flight.role === 'passenger').map((r) => normTail(r.flight.tail_number)).filter(Boolean));
+    const newAircraft = [...tailsInImport].filter((t) => !existingTails.has(t)).length;
+    const matchedAircraft = [...tailsInImport].filter((t) => existingTails.has(t)).length;
+    return {
+      ready: count('ready'), duplicate: count('duplicate'), error: count('error'),
+      gReady: gCount('ready'), gDuplicate: gCount('duplicate'), gError: gCount('error'),
+      totalHours, newAircraft, matchedAircraft,
+    };
+  }, [preview, existingAircraft]);
   const toImport = summary.ready + (includeDupes ? summary.duplicate : 0);
   const groundToImport = summary.gReady + (includeDupes ? summary.gDuplicate : 0);
 
@@ -132,6 +149,7 @@ export default function ImportExport() {
       for (const d of newReviews) await api.addReview(d);
       setPreview(null);
       setExisting(null);
+      setExistingAircraft(null);
       const extra = [
         newReviews.length && `${newReviews.length} flight review${newReviews.length === 1 ? '' : 's'} logged`,
         failed.length && `${failed.length} rejected by the server`,
@@ -302,6 +320,14 @@ export default function ImportExport() {
                 </div>
               ))}
             </div>
+            {summary.ready > 0 && (
+              <p className="mt-3 text-sm text-slate-300">
+                {fmtHours(summary.totalHours)} total hours ready to import
+                {(summary.newAircraft > 0 || summary.matchedAircraft > 0) && (
+                  <> · {summary.newAircraft} new aircraft will be created, {summary.matchedAircraft} matched existing</>
+                )}
+              </p>
+            )}
             {result.reviews.length > 0 && <p className="mt-3 text-xs text-slate-400">{result.reviews.length} flight review date{result.reviews.length === 1 ? '' : 's'} found — they'll be added to the Dashboard.</p>}
             {result.ignored.length > 0 && <p className="mt-2 text-xs text-slate-500">Columns not imported: {result.ignored.slice(0, 12).join(', ')}{result.ignored.length > 12 ? '…' : ''}</p>}
             {summary.duplicate > 0 && (

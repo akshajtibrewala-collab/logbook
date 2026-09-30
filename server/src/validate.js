@@ -14,6 +14,12 @@ export const AIRPORT_FIELDS = ['departure_airport', 'arrival_airport'];
 export const GROUND_TIME_FIELD = 'ground_time';
 export const COST_OVERRIDE_FIELD = 'cost_override';
 export const FLIGHT_ROLES = ['pilot', 'passenger'];
+// Local wall-clock departure/arrival time ("HH:MM", 24h) and how many days after `date` the arrival
+// lands, local time — passenger-flight-only fields used to derive total_time (see
+// server/src/lib/passengerDuration.js and routes/flights.js's applyPassengerDuration). Both dep_time and
+// arr_time must be present for the duration to be (re)computed; either blank means "manual total_time
+// entry", the pre-existing behavior, which is why there's no separate override flag.
+export const PASSENGER_TIME_FIELDS = ['dep_time', 'arr_time'];
 // Every logbook/legal-time field EXCEPT total_time: for a passenger flight these are always zero,
 // regardless of what's sent, rather than rejected — a passenger flight simply has no PIC time, no
 // landings, no approaches to log, the same way FlightForm hides these fields entirely for that role.
@@ -24,7 +30,7 @@ export const FLIGHT_ROLES = ['pilot', 'passenger'];
 const PILOT_ONLY_NUMERIC_FIELDS = [...TIME_FIELDS.filter((f) => f !== 'total_time'), GROUND_TIME_FIELD, ...COUNT_FIELDS];
 export const FLIGHT_FIELDS = [
   'date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', 'role', ...TEXT_FIELDS, ...TIME_FIELDS,
-  GROUND_TIME_FIELD, COST_OVERRIDE_FIELD, ...COUNT_FIELDS,
+  GROUND_TIME_FIELD, COST_OVERRIDE_FIELD, ...COUNT_FIELDS, ...PASSENGER_TIME_FIELDS, 'arr_day_offset',
 ];
 
 export function isIsoDate(s) {
@@ -106,11 +112,28 @@ export function parseFlight(body) {
     else v[COST_OVERRIDE_FIELD] = round2(n);
   }
 
+  for (const f of PASSENGER_TIME_FIELDS) {
+    const s = String(b[f] ?? '').trim();
+    if (s && !/^([01]\d|2[0-3]):[0-5]\d$/.test(s)) errors[f] = 'Use 24h HH:MM';
+    else v[f] = s || null;
+  }
+  if (isBlank(b.arr_day_offset)) {
+    v.arr_day_offset = null;
+  } else {
+    const n = Number(b.arr_day_offset);
+    if (!Number.isInteger(n) || n < 0 || n > 10) errors.arr_day_offset = 'Must be a whole number, 0 or more';
+    else v.arr_day_offset = n;
+  }
+
   // A passenger flight has no PIC/dual/solo/night/instrument/cross-country/ground time, no landings, no
   // approaches or holds to log — force these to 0 regardless of what was sent, rather than rejecting a
-  // stray value (e.g. from an old CSV row or a role change after the fact).
+  // stray value (e.g. from an old CSV row or a role change after the fact). Local departure/arrival times
+  // are pilot-flight-exempt the same way: a pilot flight's duration is only ever total_time.
   if (v.role !== 'pilot') {
     for (const f of PILOT_ONLY_NUMERIC_FIELDS) { v[f] = 0; delete errors[f]; }
+  } else {
+    for (const f of PASSENGER_TIME_FIELDS) { v[f] = null; delete errors[f]; }
+    v.arr_day_offset = null; delete errors.arr_day_offset;
   }
 
   if (!errors.total_time) {

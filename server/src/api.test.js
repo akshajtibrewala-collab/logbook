@@ -192,6 +192,77 @@ test('a flight review date can be edited', async () => {
   assert.equal((await call('PUT', '/reviews/999999', { date: '2025-02-01' })).status, 404);
 });
 
+test('passenger flight: total_time is recomputed server-side from local dep/arr times across a time zone change', async () => {
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('KSTL','KSTL','STL','STL','St Louis Lambert','St Louis','US','large_airport',38.75,-90.37)");
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('KRDU','KRDU','RDU','RDU','Raleigh-Durham','Raleigh','US','large_airport',35.88,-78.79)");
+  const res = await call('POST', '/flights', {
+    date: '2026-07-01', role: 'passenger', departure_airport: 'KSTL', arrival_airport: 'KRDU',
+    dep_time: '16:25', arr_time: '19:15', total_time: 5, // a bogus client-sent total_time must be overwritten
+  });
+  assert.equal(res.status, 201);
+  const created = await res.json();
+  assert.equal(created.total_time, 1.83); // 2h50m wall clock, minus the Central->Eastern hour
+  assert.equal(created.arr_day_offset, 0);
+});
+
+test('passenger flight: missing arr_time falls back to the manually-entered total_time (no recompute)', async () => {
+  const res = await call('POST', '/flights', {
+    date: '2026-07-02', role: 'passenger', departure_airport: 'KSTL', arrival_airport: 'KRDU',
+    dep_time: '16:25', total_time: 2.5,
+  });
+  assert.equal(res.status, 201);
+  assert.equal((await res.json()).total_time, 2.5);
+});
+
+test('pilot flight: dep_time/arr_time/arr_day_offset are always cleared, even if sent', async () => {
+  const res = await call('POST', '/flights', {
+    date: '2026-07-03', role: 'pilot', departure_airport: 'KSTL', arrival_airport: 'KRDU',
+    dep_time: '16:25', arr_time: '19:15', total_time: 1.5,
+  });
+  assert.equal(res.status, 201);
+  const created = await res.json();
+  assert.equal(created.dep_time, null);
+  assert.equal(created.arr_time, null);
+  assert.equal(created.arr_day_offset, null);
+  assert.equal(created.total_time, 1.5); // not recomputed — pilot flights only ever use total_time
+});
+
+test('a manually-set arr_day_offset that makes the duration non-positive is rejected, not silently adjusted', async () => {
+  const res = await call('POST', '/flights', {
+    date: '2026-07-04', role: 'passenger', departure_airport: 'KSTL', arrival_airport: 'KRDU',
+    dep_time: '20:00', arr_time: '19:00', arr_day_offset: 0, total_time: 1,
+  });
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).errors.arr_day_offset);
+});
+
+test('bulk import: a passenger row with a new tail number creates an aircraft and links it; a repeated tail reuses it', async () => {
+  const res = await call('POST', '/flights/bulk', { flights: [
+    { date: '2026-08-01', role: 'passenger', departure_airport: 'KSTL', arrival_airport: 'KRDU', tail_number: 'n999zz', aircraft_type: 'A320', total_time: 2 },
+    { date: '2026-08-02', role: 'passenger', departure_airport: 'KRDU', arrival_airport: 'KSTL', tail_number: 'N999ZZ', aircraft_type: 'A320', total_time: 2 },
+  ] });
+  const body = await res.json();
+  assert.equal(body.inserted, 2);
+  const flights = (await (await call('GET', '/flights')).json()).filter((f) => f.date === '2026-08-01' || f.date === '2026-08-02');
+  assert.equal(flights.length, 2);
+  assert.ok(flights[0].aircraft_id);
+  assert.equal(flights[0].aircraft_id, flights[1].aircraft_id); // same registration, one aircraft record
+  const aircraft = (await (await call('GET', '/aircraft')).json()).filter((a) => a.tail_number === 'N999ZZ');
+  assert.equal(aircraft.length, 1); // not duplicated
+});
+
+test('bulk import: a pilot row with a tail number is NOT auto-linked to an aircraft (unchanged behavior)', async () => {
+  const res = await call('POST', '/flights/bulk', { flights: [
+    { date: '2026-08-03', role: 'pilot', departure_airport: 'KSTL', arrival_airport: 'KRDU', tail_number: 'N888YY', aircraft_type: 'C172', total_time: 1.5, pic_time: 1.5 },
+  ] });
+  assert.equal((await res.json()).inserted, 1);
+  const flight = (await (await call('GET', '/flights')).json()).find((f) => f.date === '2026-08-03');
+  assert.equal(flight.aircraft_id, null);
+  assert.equal(flight.tail_number, 'N888YY'); // text still saved, just not linked
+  const aircraft = (await (await call('GET', '/aircraft')).json()).filter((a) => a.tail_number === 'N888YY');
+  assert.equal(aircraft.length, 0);
+});
+
 test('the API is locked without the passcode, but health and session stay public', async () => {
   const none = {};
   assert.equal((await call('GET', '/flights', undefined, none)).status, 401);

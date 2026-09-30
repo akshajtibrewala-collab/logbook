@@ -1,7 +1,54 @@
 import { Router } from 'express';
 import { all, batchRun, get, run } from '../db.js';
 import { ensureAircraftRate } from '../lib/default-rate.js';
-import { parseFlight, parseStops, parseApproaches, FLIGHT_FIELDS } from '../validate.js';
+import { parseFlight, parseStops, parseApproaches, parseAircraft, AIRCRAFT_FIELDS, FLIGHT_FIELDS } from '../validate.js';
+import { resolveAirportRow } from './airports.js';
+import { passengerDuration } from '../lib/passengerDuration.js';
+
+const INSERT_AIRCRAFT = `INSERT INTO aircraft (${AIRCRAFT_FIELDS.join(',')}) VALUES (${AIRCRAFT_FIELDS.map((c) => ':' + c).join(',')})`;
+const normTail = (t) => (t ? String(t).trim().toUpperCase() : null);
+
+/**
+ * Finds an aircraft by registration (case/whitespace-insensitive, including archived ones — the same
+ * matching server/scripts/import-passenger-flights.js used, moved into the app itself), or creates one
+ * from aircraft_type (never marked a simulator or training device). `cache` is a Map the caller keeps
+ * across the whole bulk request, so a tail number repeated across many rows is only looked up/created once.
+ */
+async function findOrCreateAircraftByTail(tailNumber, aircraftType, cache) {
+  const tail = normTail(tailNumber);
+  if (!tail) return null;
+  if (cache.has(tail)) return cache.get(tail);
+  const existing = await get('SELECT id FROM aircraft WHERE UPPER(TRIM(tail_number)) = ?', [tail]);
+  if (existing) { cache.set(tail, existing.id); return existing.id; }
+  const { value } = parseAircraft({ tail_number: tail, model: aircraftType || '' });
+  const { lastId } = await run(INSERT_AIRCRAFT, value);
+  cache.set(tail, lastId);
+  return lastId;
+}
+
+/**
+ * For a passenger flight with both dep_time and arr_time set, recomputes total_time (and resolves
+ * arr_day_offset if the caller left it blank) from those local times — the server-side half of "Server-
+ * side validation must enforce the same rules and recompute total_time from the times on save" (see
+ * client/src/lib/passengerDuration.js for the shared calculation). Either time blank means manual
+ * total_time entry: left alone. Mutates `value` in place; returns an error string, or null on success (or
+ * when nothing needed recomputing — e.g. an airport with no resolvable time zone falls back to the manual
+ * total_time already on the payload, per the "Airports without coordinates" rule).
+ */
+export async function applyPassengerDuration(value) {
+  if (value.role !== 'passenger' || !value.dep_time || !value.arr_time) return null;
+  const [dep, arr] = await Promise.all([resolveAirportRow(value.departure_airport), resolveAirportRow(value.arrival_airport)]);
+  if (!dep?.tz || !arr?.tz) return null; // no usable time zone on one end: keep the manually-entered total_time
+  const result = passengerDuration({
+    date: value.date, depTime: value.dep_time, arrTime: value.arr_time,
+    depTz: dep.tz, arrTz: arr.tz, arrDayOffset: value.arr_day_offset,
+  });
+  if (!result) return null;
+  if (result.hours <= 0) return 'Arrival must be after departure — adjust the arrival day';
+  value.total_time = result.hours;
+  value.arr_day_offset = result.arrDayOffset;
+  return null;
+}
 
 const STOPS_SELECT = 'SELECT airport_code, stop_type FROM flight_stops WHERE flight_id = ? ORDER BY sequence';
 const APPROACHES_SELECT = 'SELECT id, approach_type, count FROM flight_approaches WHERE flight_id = ? ORDER BY id';
@@ -89,6 +136,8 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }), ...(approachErrors && { approach_types: approachErrors }) } });
   }
   if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
+  const durationError = await applyPassengerDuration(value);
+  if (durationError) return res.status(400).json({ errors: { arr_day_offset: durationError } });
   const { lastId } = await run(INSERT, value);
   await ensureAircraftRate(value.aircraft_id, value.date);
   if (stops) await saveStops(lastId, stops);
@@ -109,6 +158,7 @@ router.post('/bulk', async (req, res) => {
   if (list.length > 5000) return res.status(400).json({ error: 'Too many flights in one import (max 5000)' });
   const failed = [];
   let inserted = 0;
+  const aircraftCache = new Map(); // tail -> aircraft id, reused across every row in this request
   for (let index = 0; index < list.length; index++) {
     const item = list[index];
     const { value, errors } = parseFlight(item);
@@ -119,6 +169,16 @@ router.post('/bulk', async (req, res) => {
       continue;
     }
     if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : value.route;
+    const durationError = await applyPassengerDuration(value);
+    if (durationError) { failed.push({ index, errors: { arr_day_offset: durationError } }); continue; }
+    // Passenger rows with a tail number but no already-linked aircraft_id (every CSV-import row: the CSV
+    // only ever carries the aircraft as text) get linked here — find-or-create by registration, the same
+    // matching AircraftPicker's own "+ Add new aircraft" step uses, just without the interactive UI. Scoped
+    // to role='passenger' only: a pilot flight imported through this same screen must behave exactly as
+    // before (no new aircraft_id, so cost tracking and milestones see the same input they always did).
+    if (value.role === 'passenger' && !value.aircraft_id && value.tail_number) {
+      value.aircraft_id = await findOrCreateAircraftByTail(value.tail_number, value.aircraft_type, aircraftCache);
+    }
     const { lastId } = await run(INSERT, value);
     await ensureAircraftRate(value.aircraft_id, value.date);
     if (stops) await saveStops(lastId, stops);
@@ -136,6 +196,8 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ errors: { ...errors, ...(stopErrors && { stops: stopErrors }), ...(approachErrors && { approach_types: approachErrors }) } });
   }
   if (stops) value.route = stops.length ? stops.map((s) => s.airport_code).join(' ') : null;
+  const durationError = await applyPassengerDuration(value);
+  if (durationError) return res.status(400).json({ errors: { arr_day_offset: durationError } });
   const set = FLIGHT_FIELDS.map((c) => `${c} = :${c}`).join(', ');
   const { changes } = await run(`UPDATE flights SET ${set}, updated_at = datetime('now') WHERE id = :id`, { ...value, id: req.params.id });
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
