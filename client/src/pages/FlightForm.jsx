@@ -37,8 +37,8 @@ const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings'
 
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
-const blank = () => ({
-  date: today(), role: 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
+const blank = (role) => ({
+  date: today(), role: role === 'passenger' ? 'passenger' : 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
   airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
@@ -69,7 +69,10 @@ function Section({ title, children }) {
 export default function FlightForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [form, setForm] = useState(blank);
+  // ?role=passenger preselects the role for a brand-new flight (the Passenger flights page's add
+  // button); read eagerly from the raw URL so the first render already shows the right selection,
+  // rather than flashing Pilot and then switching once useSearchParams settles.
+  const [form, setForm] = useState(() => blank(new URLSearchParams(window.location.search).get('role')));
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
@@ -83,6 +86,9 @@ export default function FlightForm() {
   const [params] = useSearchParams();
   const [notice, setNotice] = useState('');
   const [pendingPhotos, setPendingPhotos] = useState([]);
+  // ?from=travel means this form was opened from the Passenger flights page, so back/save/delete should
+  // return there instead of the pilot logbook.
+  const base = params.get('from') === 'travel' ? '/travel' : '/logbook';
   const draftReady = useRef(false); // autosave starts only after any restore/prefill has happened
 
   useEffect(() => {
@@ -119,7 +125,7 @@ export default function FlightForm() {
     }
     const draft = loadDraft(DRAFT_NAME);
     if (draft?.value) {
-      setForm({ ...blank(), ...draft.value });
+      setForm({ ...blank(params.get('role')), ...draft.value });
       setNotice('Restored your unsaved flight from earlier.');
     }
     draftReady.current = true;
@@ -195,17 +201,17 @@ export default function FlightForm() {
           setPendingPhotos([]);
           setMessage(`Flight saved, but ${failed} photo${failed === 1 ? '' : 's'} didn’t upload. Add ${failed === 1 ? 'it' : 'them'} again below.`);
           setSaving(false);
-          navigate(`/logbook/${savedId}/edit`, { replace: true });
+          navigate(`/logbook/${savedId}/edit${base === '/travel' ? '?from=travel' : ''}`, { replace: true });
           return undefined;
         }
       }
-      navigate(id ? `/logbook/${id}` : '/logbook');
+      navigate(id ? `${base}/${id}` : base);
     } catch (err) {
       if (isNetworkError(err) && !id && !pendingPhotos.length && enqueue(payload)) {
         // Offline: keep the entry safely on the device and retry automatically (OutboxBanner).
         clearDraft(DRAFT_NAME);
         window.dispatchEvent(new Event(OUTBOX_CHANGED));
-        navigate('/logbook');
+        navigate(base);
         return undefined;
       }
       setErrors(err.fieldErrors || {});
@@ -220,7 +226,7 @@ export default function FlightForm() {
     setDeleting(true);
     try {
       await api.deleteFlight(id);
-      navigate('/logbook');
+      navigate(base);
     } catch (err) {
       setMessage(err.message);
       setDeleting(false);
@@ -234,10 +240,10 @@ export default function FlightForm() {
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(id ? `/logbook/${id}` : '/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate(id ? `${base}/${id}` : base)} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
         {!id && (
-          <button type="button" onClick={() => navigate('/logbook/new?copy=last', { replace: true })}
+          <button type="button" onClick={() => navigate(`/logbook/new?copy=last${base === '/travel' ? '&from=travel' : ''}`, { replace: true })}
             className="flex h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 active:text-accent">
             <Copy size={16} />Copy last
           </button>
