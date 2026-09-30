@@ -174,10 +174,10 @@ export default function Costs() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Costs</h1>
         <div className="flex gap-2">
-          <Link to="/logbook/ground/new" aria-label="Add ground session" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/logbook/ground/new" aria-label="Add ground session" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <GraduationCap size={20} />
           </Link>
-          <Link to="/costs/settings" aria-label="Rates & settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/costs/settings" aria-label="Rates & settings" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Settings size={20} />
           </Link>
         </div>
@@ -191,22 +191,22 @@ export default function Costs() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Card>
               <div className="text-xs text-slate-400">Total spent</div>
-              <div className="mt-1 text-xl font-semibold">{fmtMoney(computed.total)}</div>
+              <div className="stat-value mt-1 text-xl">{fmtMoney(computed.total)}</div>
               {computed.cutoffNote && <div className="mt-1 text-[11px] leading-snug text-slate-500">{computed.cutoffNote}</div>}
             </Card>
             <Card>
               <div className="text-xs text-slate-400">Cost per flight hour</div>
-              <div className="mt-1 text-xl font-semibold">{fmtMoney(computed.perHour)}</div>
+              <div className="stat-value mt-1 text-xl">{fmtMoney(computed.perHour)}</div>
               <div className="text-[11px] text-slate-500">total spent ÷ all flight hours</div>
             </Card>
             <Card>
               <div className="text-xs text-slate-400">Total ground hours</div>
-              <div className="mt-1 text-xl font-semibold">{fmtHours(computed.groundHours)}h</div>
+              <div className="stat-value mt-1 text-xl">{fmtHours(computed.groundHours)}h</div>
             </Card>
           </div>
 
           <Card>
-            <h2 className="mb-3 text-sm font-medium text-accent">Spend per training phase</h2>
+            <h2 className="stat-title mb-3 text-sm text-accent">Spend per training phase</h2>
             <div className="space-y-2">
               {data.phases.length === 0 ? (
                 <p className="text-sm text-slate-400">No training phases set up yet. <Link to="/costs/settings" className="text-accent underline">Set one up</Link>.</p>
@@ -219,7 +219,7 @@ export default function Costs() {
                         {formatDate(p.start_date)} – {p.end_date ? formatDate(p.end_date) : 'ongoing'}{p.end_date ? ' · closed' : ''}{!p.track_costs ? ' · not tracked' : ''}
                       </div>
                     </div>
-                    <span className="text-base font-semibold">{fmtMoney(computed.perCert[p.certificate] ?? 0)}</span>
+                    <span className="stat-value text-base">{fmtMoney(computed.perCert[p.certificate] ?? 0)}</span>
                   </div>
                 ))
               )}
@@ -234,13 +234,13 @@ export default function Costs() {
           )}
 
           <Card>
-            <h2 className="mb-3 text-sm font-medium text-accent">Spending, last 12 months</h2>
+            <h2 className="stat-title mb-3 text-sm text-accent">Spending, last 12 months</h2>
             <SpendChart data={computed.chart} />
           </Card>
 
           <Card>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium text-accent">Projected remaining cost</h2>
+              <h2 className="stat-title text-sm text-accent">Projected remaining cost</h2>
               {certOptions.length > 1 && (
                 <Select value={projectCert} onChange={setProjectCert} options={certOptions} className="w-40" />
               )}
@@ -254,12 +254,12 @@ export default function Costs() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <div className="text-xs text-slate-400">Estimate — FAA minimum</div>
-                      <div className="mt-1 text-lg font-semibold">{fmtMoney(p.faaMinEstimate.cost)}</div>
+                      <div className="stat-value mt-1 text-lg">{fmtMoney(p.faaMinEstimate.cost)}</div>
                       <div className="text-xs text-slate-500">{line(p.faaMinEstimate)}</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-400">Estimate — realistic ({fmtHours(bd.targetTotalHours)}h total)</div>
-                      <div className="mt-1 text-lg font-semibold">{fmtMoney(p.realisticEstimate.cost)}</div>
+                      <div className="stat-value mt-1 text-lg">{fmtMoney(p.realisticEstimate.cost)}</div>
                       <div className="text-xs text-slate-500">{line(p.realisticEstimate)}</div>
                     </div>
                   </div>
@@ -288,8 +288,8 @@ export default function Costs() {
 
           <Card padded={false}>
             <div className="flex items-center justify-between p-4 pb-0">
-              <h2 className="text-sm font-medium text-accent">Other expenses</h2>
-              <button type="button" onClick={() => setExpenseModal(blankExpense())} aria-label="Add expense" className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-accent active:opacity-70"><Plus size={16} /></button>
+              <h2 className="stat-title text-sm text-accent">Other expenses</h2>
+              <button type="button" onClick={() => setExpenseModal(blankExpense())} aria-label="Add expense" className="pressable flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-accent active:opacity-70"><Plus size={16} /></button>
             </div>
             {data.expenses.length === 0 ? (
               <EmptyState icon={DollarSign} title="No expenses logged" className="py-8" />
@@ -297,13 +297,13 @@ export default function Costs() {
               <ul className="divide-y divide-white/5 px-4">
                 {data.expenses.map((e) => (
                   <li key={e.id} className="flex items-center justify-between gap-3 py-3">
-                    <button type="button" onClick={() => setExpenseModal({ ...e, amount: String(e.amount) })} className="min-w-0 flex-1 text-left">
+                    <button type="button" onClick={() => setExpenseModal({ ...e, amount: String(e.amount) })} className="pressable min-w-0 flex-1 text-left">
                       <div className="text-sm">{categoryLabel(e.category)}{e.note ? ` — ${e.note}` : ''}</div>
                       <div className="text-xs text-slate-500">{formatDate(e.date)}</div>
                     </button>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{fmtMoney(e.amount)}</span>
-                      <button type="button" onClick={() => setConfirmDelete({ id: e.id })} aria-label="Delete expense" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={16} /></button>
+                      <span className="stat-value text-sm">{fmtMoney(e.amount)}</span>
+                      <button type="button" onClick={() => setConfirmDelete({ id: e.id })} aria-label="Delete expense" className="pressable flex h-9 w-9 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={16} /></button>
                     </div>
                   </li>
                 ))}

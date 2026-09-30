@@ -61,7 +61,7 @@ function AttributionToggle() {
       )}
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-credits"
         aria-label={open ? 'Hide map credits' : 'Show map credits'}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent">
+        className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent">
         {open ? <X size={16} /> : <Info size={16} />}
       </button>
     </div>
@@ -336,23 +336,23 @@ export default function MapPage() {
         <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2">
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-stats"
-              className="flex h-10 items-center gap-1.5 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 text-xs font-medium text-slate-100 backdrop-blur active:bg-navy-800">
+              className="pressable flex h-10 items-center gap-1.5 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 text-xs font-medium text-slate-100 backdrop-blur active:bg-navy-800">
               <span>{counts.airports} airport{counts.airports === 1 ? '' : 's'}</span>
               {counts.regionsKnown && <><span aria-hidden="true" className="text-slate-500">·</span><span>{counts.states} state{counts.states === 1 ? '' : 's'}</span></>}
               <ChevronDown size={14} aria-hidden="true" className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
             <button type="button" onClick={replay} aria-label="Replay route animation" disabled={!affordable}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent disabled:opacity-40">
+              className="pressable flex h-10 w-10 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent disabled:opacity-40">
               <RotateCcw size={16} />
             </button>
           </div>
 
           {open && (
-            <section id="map-stats" aria-label="Map details and options" className="w-64 max-w-full rounded-2xl border border-edge-strong bg-navy-900/95 p-3 text-sm backdrop-blur">
+            <section id="map-stats" aria-label="Map details and options" className="card-elevated w-64 max-w-full border border-edge-strong bg-navy-900/95 p-3 text-sm backdrop-blur">
               <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by role">
                 {ROLE_FILTERS.map(([k, l]) => (
                   <button key={k} type="button" onClick={() => setRoleFilter(k)} aria-pressed={roleFilter === k}
-                    className={`h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${roleFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+                    className={`pressable h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${roleFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
                 ))}
               </div>
 
@@ -377,9 +377,9 @@ export default function MapPage() {
           )}
 
           {hasPassengerRoutes && (
-            <div className="flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/90 px-3 py-1.5 text-[11px] text-slate-300 backdrop-blur">
-              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Flown</span>
-              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Ridden</span>
+            <div className="flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/90 px-3 py-1.5 text-[11px] text-slate-300 shadow-[var(--shadow-card)] backdrop-blur">
+              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Pilot</span>
+              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Passenger</span>
             </div>
           )}
         </div>
@@ -405,7 +405,7 @@ export default function MapPage() {
 
       {!data && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
-          <div className="rounded-2xl border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+          <div className="card-elevated border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
             <Plane size={36} strokeWidth={1.5} className="mx-auto animate-pulse text-slate-500" />
             <p className="mt-3 font-medium">Loading your flights…</p>
           </div>
@@ -414,7 +414,7 @@ export default function MapPage() {
 
       {data && data.stops.length === 0 && flights?.length === 0 && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
-          <div className="rounded-2xl border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+          <div className="card-elevated border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
             <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-500" />
             <p className="mt-3 font-medium">Nothing to plot yet</p>
             <p className="text-sm text-slate-400">Log a flight with departure and arrival airports.</p>
@@ -424,7 +424,7 @@ export default function MapPage() {
 
       {data && data.stops.length === 0 && flights?.length > 0 && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
-          <div className="rounded-2xl border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+          <div className="card-elevated border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
             <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-500" />
             <p className="mt-3 font-medium">Nothing to plot for this filter</p>
             <p className="text-sm text-slate-400">Try "All" — no {roleFilter} flights have a placeable airport yet.</p>

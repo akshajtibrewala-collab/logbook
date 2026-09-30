@@ -69,9 +69,9 @@ export default function Aircraft() {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="min-w-0 flex-1 text-2xl font-semibold">Aircraft</h1>
-        <button type="button" onClick={() => navigate('/aircraft/new')} className="hidden h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">
+        <button type="button" onClick={() => navigate('/aircraft/new')} className="pressable hidden h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">
           <Plus size={16} />Add aircraft
         </button>
       </div>
@@ -80,11 +80,11 @@ export default function Aircraft() {
         <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by usage">
           {USAGE_FILTERS.map(([k, l]) => (
             <button key={k} type="button" onClick={() => setUsageFilter(k)} aria-pressed={usageFilter === k}
-              className={`h-9 rounded-lg px-3 text-sm font-medium transition-colors ${usageFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+              className={`pressable h-9 rounded-lg px-3 text-sm font-medium transition-colors ${usageFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
           ))}
         </div>
         <button onClick={() => setShowArchived((v) => !v)}
-          className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm ${showArchived ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
+          className={`pressable flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm transition-colors ${showArchived ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
           <Archive size={15} />{showArchived ? 'Showing archived' : 'Show archived'}
         </button>
       </div>
@@ -100,7 +100,7 @@ export default function Aircraft() {
           <li key={a.id}>
             <Card as="button" onClick={() => navigate(`/aircraft/${a.id}`)} className="w-full text-left active:bg-navy-800">
               <div className="flex items-baseline justify-between">
-                <span className="text-base font-semibold">
+                <span className="stat-title text-base">
                   {a.is_simulator ? (a.model || 'Simulator') : (a.tail_number || a.model || 'Aircraft')}
                 </span>
                 <div className="flex shrink-0 gap-1.5">

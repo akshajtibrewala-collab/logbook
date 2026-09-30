@@ -17,8 +17,8 @@ const blank = () => ({
 
 function Section({ title, children }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 text-sm font-medium text-accent">{title}</h2>
+    <section className="card card-elevated p-4">
+      <h2 className="stat-title mb-3 text-sm text-accent">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -86,7 +86,7 @@ export default function AircraftForm() {
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/aircraft')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/aircraft')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">{id ? 'Edit aircraft' : 'Add aircraft'}</h1>
       </div>
 
@@ -132,18 +132,20 @@ export default function AircraftForm() {
         )}
       </Section>
 
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-medium text-accent">Notes</h2>
+      <section className="card card-elevated p-4">
+        <h2 className="stat-title mb-3 text-sm text-accent">Notes</h2>
         <textarea value={form.notes} onChange={(e) => set('notes')(e.target.value)} rows={3}
           className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
       </section>
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add aircraft'}</Button>
-      {id && (
-        <Button type="button" variant="danger" onClick={() => setConfirmArchive(true)}>Archive aircraft</Button>
-      )}
+      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add aircraft'}</Button>
+        {id && (
+          <Button type="button" variant="danger" onClick={() => setConfirmArchive(true)}>Archive aircraft</Button>
+        )}
+      </div>
 
       <ConfirmDialog open={confirmArchive} title="Archive this aircraft?"
         description="It will no longer appear when logging a new flight, but existing flights and their history are untouched. You can unarchive it later."
