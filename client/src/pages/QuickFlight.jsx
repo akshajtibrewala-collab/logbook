@@ -5,6 +5,7 @@ import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { getRecents, recordRecent, sortByRecency } from '../lib/recents.js';
 import { mostRecentFlight, quickFlightPayload, stepHours, validateQuickFlight } from '../lib/flightDraft.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 import { clearDraft, enqueue, isNetworkError, loadDraft, saveDraft } from '../lib/outbox.js';
 import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
 import AirportSearchField from '../components/AirportSearchField.jsx';
@@ -49,7 +50,9 @@ export default function QuickFlight() {
         setForm((f) => ({ ...f, ...draft }));
         setNotice('Restored your unsaved entry.');
       } else {
-        const last = mostRecentFlight(flights);
+        // Quick log always creates a pilot flight, so its defaults come from the most recent PILOT
+        // flight — never a passenger/observer one, whose airports/aircraft don't belong here.
+        const last = mostRecentFlight(pilotFlights(flights));
         const ordered = sortByRecency(aircraft, getRecents('aircraft'));
         const byLast = last?.aircraft_id ? aircraft.find((a) => a.id === last.aircraft_id) : null;
         setForm((f) => ({

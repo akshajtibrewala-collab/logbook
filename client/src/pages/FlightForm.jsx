@@ -23,7 +23,7 @@ import ApproachesEditor from '../components/ApproachesEditor.jsx';
 import Disclosure from '../components/Disclosure.jsx';
 import Select from '../components/Select.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
-import { FLIGHT_ROLES } from '../lib/flightRoles.js';
+import { FLIGHT_ROLES, pilotFlights } from '../lib/flightRoles.js';
 import { SEAT_CLASSES } from '../lib/aviationEnums.js';
 
 const TIME_FIELDS = [
@@ -104,7 +104,10 @@ export default function FlightForm() {
       setLoading(true);
       api.listFlights()
         .then(async (list) => {
-          const last = mostRecentFlight(list);
+          // Copy last is for repeating your own flying — the most recent PILOT flight, never a
+          // passenger/observer one, so an airline/flight_number/aircraft from a commercial trip never
+          // leaks into what's meant to become a new logged-time flight.
+          const last = mostRecentFlight(pilotFlights(list));
           if (!last) { setNotice('There’s no previous flight to copy yet.'); return; }
           const full = await api.getFlight(last.id);
           setForm(fromFlight(prefillFromFlight(full, today())));

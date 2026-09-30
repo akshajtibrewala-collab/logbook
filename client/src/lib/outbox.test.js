@@ -57,6 +57,27 @@ test('a server rejection is kept (flagged), not deleted or retried forever', asy
   assert.equal(outboxList(s).length, 0);
 });
 
+test('a draft/outbox entry queued before flight roles existed (no role key at all) survives a deploy untouched', () => {
+  const s = fakeStorage();
+  // Simulates data written by an older app version, before `role` existed on a flight payload —
+  // outbox.js does no schema validation of its own, so this must round-trip byte-for-byte.
+  const oldPayload = { date: '2026-01-01', departure_airport: 'KPAO', arrival_airport: 'KSQL', total_time: 1.5, pic_time: 1.5 };
+  s.setItem('aerotrail-outbox', JSON.stringify([{ id: 'old-1', queuedAt: 1700000000000, payload: oldPayload, attempts: 0 }]));
+  s.setItem('aerotrail-draft:flight-new', JSON.stringify({ savedAt: 1700000000000, value: oldPayload }));
+
+  assert.deepEqual(outboxList(s)[0].payload, oldPayload);
+  assert.ok(!('role' in outboxList(s)[0].payload));
+  assert.deepEqual(loadDraft('flight-new', s).value, oldPayload);
+});
+
+test('flushOutbox passes a role-less queued payload through unchanged (the server, not the client, defaults it to pilot)', async () => {
+  const s = fakeStorage();
+  enqueue({ date: '2026-01-01', total_time: 1.5 }, s); // no role key, same as a pre-feature queued entry
+  let received;
+  await flushOutbox(async (p) => { received = p; }, s);
+  assert.ok(!('role' in received));
+});
+
 test('isNetworkError recognises fetch failures only', () => {
   assert.equal(isNetworkError(new TypeError('Failed to fetch')), true);
   assert.equal(isNetworkError(Object.assign(new Error('x'), { network: true })), true);

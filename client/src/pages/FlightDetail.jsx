@@ -10,6 +10,8 @@ import AirlineBadge from '../components/AirlineBadge.jsx';
 import Badge from '../components/Badge.jsx';
 import PhotoGallery from '../components/PhotoGallery.jsx';
 import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
+import { isPilotFlight, roleOf } from '../lib/flightRoles.js';
+import { labelFor, SEAT_CLASSES } from '../lib/aviationEnums.js';
 
 const TIME_FIELDS = [
   ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
@@ -104,12 +106,19 @@ export default function FlightDetail() {
               <div className="shrink-0 text-right text-3xl font-semibold text-accent">{fmtHours(flight.total_time)}</div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {!isPilotFlight(flight) && <Badge tone="accent" className="capitalize">{roleOf(flight)}</Badge>}
               {flight.airline && <AirlineBadge airline={flight.airline} />}
               {flight.flight_number && <Badge tone="neutral">{flight.flight_number}</Badge>}
               {(flight.aircraft_type || flight.tail_number) && (
                 <Badge tone="neutral" icon={Plane}>{[flight.aircraft_type, flight.tail_number].filter(Boolean).join(' · ')}</Badge>
               )}
             </div>
+            {!isPilotFlight(flight) && (flight.seat_class || flight.confirmation_code) && (
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-edge pt-3 text-sm text-slate-400">
+                {flight.seat_class && <span>Seat: {labelFor(SEAT_CLASSES, flight.seat_class)}</span>}
+                {flight.confirmation_code && <span>Confirmation: {flight.confirmation_code}</span>}
+              </div>
+            )}
             {flight.stops.length > 0 && (
               <ul className="mt-3 space-y-1 border-t border-edge pt-3 text-sm">
                 {flight.stops.map((s, i) => (
@@ -122,7 +131,7 @@ export default function FlightDetail() {
             )}
           </section>
 
-          {times.length > 0 && (
+          {isPilotFlight(flight) && times.length > 0 && (
             <Section title="Time">
               <div className="grid grid-cols-2 gap-3">
                 {times.map(([k, label]) => <Stat key={k} label={label} value={flight[k]} />)}
@@ -130,7 +139,7 @@ export default function FlightDetail() {
             </Section>
           )}
 
-          {cost && (cost.total > 0 || cost.override) && (
+          {isPilotFlight(flight) && cost && (cost.total > 0 || cost.override) && (
             <Section title="Cost">
               <div className="flex items-baseline justify-between">
                 <span className="text-2xl font-semibold">{fmtMoney(cost.total)}</span>
@@ -144,7 +153,7 @@ export default function FlightDetail() {
             </Section>
           )}
 
-          {counts.length > 0 && (
+          {isPilotFlight(flight) && counts.length > 0 && (
             <Section title="Landings & approaches">
               <div className="grid grid-cols-4 gap-3">
                 {counts.map(([k, label]) => (
@@ -179,7 +188,7 @@ export default function FlightDetail() {
 
           <PhotosSection flightId={flight.id} />
 
-          {(flight.debrief_went_well || flight.debrief_work_on) && (
+          {isPilotFlight(flight) && (flight.debrief_went_well || flight.debrief_work_on) && (
             <Section title="Debrief">
               <div className="space-y-3">
                 {flight.debrief_went_well && (

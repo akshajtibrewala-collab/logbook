@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { prefillFromFlight, mostRecentFlight, validateFlightPayload, validateQuickFlight, quickFlightPayload, stepHours } from './flightDraft.js';
+import { pilotFlights } from './flightRoles.js';
 
 const last = {
   id: 9, date: '2026-01-05', departure_airport: 'KPAO', arrival_airport: 'KSQL', route: 'KFYG', aircraft_id: 3, aircraft_type: 'C172', tail_number: 'N1',
@@ -8,13 +9,13 @@ const last = {
   stops: [{ airport_code: 'KFYG', stop_type: 'touch_and_go', id: 5 }], approach_types: [{ approach_type: 'ILS', count: 1, id: 2 }],
 };
 
-test('copy last: keeps route/aircraft/times, sets today, drops notes, invoice and cost override', () => {
+test('copy last: keeps route/aircraft/times, sets today, drops notes, invoice, cost override, and never sets role/seat_class/confirmation_code', () => {
   const d = prefillFromFlight(last, '2026-09-23');
   assert.equal(d.date, '2026-09-23');
   assert.equal(d.tail_number, 'N1');
   assert.equal(d.total_time, 1.4);
   assert.deepEqual(d.stops, [{ airport_code: 'KFYG', stop_type: 'touch_and_go' }]);
-  for (const k of ['remarks', 'debrief_work_on', 'invoice_ref', 'cost_override', 'id']) assert.ok(!(k in d), k);
+  for (const k of ['remarks', 'debrief_work_on', 'invoice_ref', 'cost_override', 'id', 'role', 'seat_class', 'confirmation_code']) assert.ok(!(k in d), k);
   assert.equal(prefillFromFlight(null, 'x'), null);
 });
 
@@ -22,6 +23,20 @@ test('mostRecentFlight orders by date then id', () => {
   const list = [{ id: 1, date: '2026-01-01' }, { id: 3, date: '2026-02-01' }, { id: 4, date: '2026-02-01' }];
   assert.equal(mostRecentFlight(list).id, 4);
   assert.equal(mostRecentFlight([]), null);
+});
+
+test('copy last / quick log defaults: a trailing passenger flight is skipped in favor of the most recent pilot flight', () => {
+  const list = [
+    { id: 10, date: '2026-01-01', role: 'pilot', departure_airport: 'KPAO', arrival_airport: 'KSQL', airline: null },
+    { id: 11, date: '2026-02-01', role: 'passenger', departure_airport: 'KJFK', arrival_airport: 'KLAX', airline: 'United' },
+  ];
+  const last = mostRecentFlight(pilotFlights(list));
+  assert.equal(last.id, 10); // the passenger flight (id 11, later date) is never picked
+  assert.equal(prefillFromFlight(last, '2026-09-23').departure_airport, 'KPAO');
+
+  // No pilot flight at all: falls back to null, same as an empty logbook — never the passenger flight.
+  const onlyPassenger = [{ id: 12, date: '2026-03-01', role: 'passenger' }];
+  assert.equal(mostRecentFlight(pilotFlights(onlyPassenger)), null);
 });
 
 test('validateFlightPayload catches negative hours, fake dates, sub-times above total, bad landings', () => {

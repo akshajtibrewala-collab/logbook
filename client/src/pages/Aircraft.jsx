@@ -23,11 +23,14 @@ function FlagBadges({ a }) {
   );
 }
 
+const USAGE_FILTERS = [['all', 'All'], ['flown', 'Flown'], ['ridden', 'Ridden']];
+
 export default function Aircraft() {
   const navigate = useNavigate();
   const [aircraft, setAircraft] = useState(null);
   const [flights, setFlights] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
+  const [usageFilter, setUsageFilter] = useState('all');
   const [error, setError] = useState('');
 
   const load = useCallback(() => {
@@ -51,6 +54,18 @@ export default function Aircraft() {
     return byId;
   }, [flights]);
 
+  // Flown: ever flown as pilot. Ridden: linked to a flight but never as pilot — surfaces exactly the
+  // "airliner added from a passenger flight" case the Aircraft list must not present as something you fly.
+  const visible = useMemo(() => {
+    if (!aircraft) return aircraft;
+    if (usageFilter === 'all') return aircraft;
+    return aircraft.filter((a) => {
+      const u = usageById.get(a.id);
+      if (usageFilter === 'flown') return Boolean(u?.flown);
+      return Boolean(u?.ridden) && !u.flown;
+    });
+  }, [aircraft, usageById, usageFilter]);
+
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -61,9 +76,15 @@ export default function Aircraft() {
         </button>
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by usage">
+          {USAGE_FILTERS.map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setUsageFilter(k)} aria-pressed={usageFilter === k}
+              className={`h-9 rounded-lg px-3 text-sm font-medium transition-colors ${usageFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+          ))}
+        </div>
         <button onClick={() => setShowArchived((v) => !v)}
-          className={`flex h-10 items-center gap-1.5 rounded-xl border px-3 text-sm ${showArchived ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
+          className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm ${showArchived ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
           <Archive size={15} />{showArchived ? 'Showing archived' : 'Show archived'}
         </button>
       </div>
@@ -72,37 +93,43 @@ export default function Aircraft() {
       {!aircraft && !error && <div className="mt-4 space-y-2"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>}
 
       <ul className="stagger mt-4 space-y-2">
-        {aircraft?.map((a) => (
+        {visible?.map((a) => {
+          const u = usageById.get(a.id);
+          const riddenOnly = Boolean(u?.ridden) && !u?.flown;
+          return (
           <li key={a.id}>
             <Card as="button" onClick={() => navigate(`/aircraft/${a.id}`)} className="w-full text-left active:bg-navy-800">
               <div className="flex items-baseline justify-between">
                 <span className="text-base font-semibold">
                   {a.is_simulator ? (a.model || 'Simulator') : (a.tail_number || a.model || 'Aircraft')}
                 </span>
-                {a.archived_at && <Badge tone="neutral">Archived</Badge>}
+                <div className="flex shrink-0 gap-1.5">
+                  {riddenOnly && <Badge tone="neutral">Ridden only</Badge>}
+                  {a.archived_at && <Badge tone="neutral">Archived</Badge>}
+                </div>
               </div>
               <div className="mt-0.5 text-sm text-slate-400">
                 {[a.is_simulator ? a.simulator_device_type : a.tail_number && a.model, a.category, a.class].filter(Boolean).join(' · ') || 'No details yet'}
               </div>
-              {(() => {
-                const u = usageById.get(a.id);
-                if (!u) return null;
-                return (
-                  <div className="mt-1.5 flex gap-3 text-xs text-slate-500">
-                    {u.flown > 0 && <span>Flown {u.flown}×</span>}
-                    {u.ridden > 0 && <span>Ridden {u.ridden}×</span>}
-                  </div>
-                );
-              })()}
+              {u && (
+                <div className="mt-1.5 flex gap-3 text-xs text-slate-500">
+                  {u.flown > 0 && <span>Flown {u.flown}×</span>}
+                  {u.ridden > 0 && <span>Ridden {u.ridden}×</span>}
+                </div>
+              )}
               <FlagBadges a={a} />
             </Card>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       {aircraft && aircraft.length === 0 && (
         <EmptyState icon={PlaneTakeoff} title="No aircraft yet"
           description="Add the aircraft you fly, or add one straight from the flight form." />
+      )}
+      {aircraft && aircraft.length > 0 && visible.length === 0 && (
+        <EmptyState title="Nothing matches this filter." />
       )}
 
       <AddFab onClick={() => navigate('/aircraft/new')} label="Add aircraft" />
