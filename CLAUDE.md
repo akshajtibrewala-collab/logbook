@@ -1,11 +1,83 @@
 # AeroTrail
 
-A personal pilot flight logbook and career-tracking app: flights (with structured stops and typed
-approaches), aircraft, currency/expirations, milestone progress toward certificates, a map and stats,
-manual milestone completions, a weather go/no-go checker against personal minimums, and a training cost
-tracker (per-phase rates, ground-only sessions, expenses, projections), plus fast logging (Quick log, copy last
-flight, offline retry), photos/notes, stats charts, an animated map, and a read-only share link/print view.
-Everything through migration 021 is merged and live — see `docs/ROADMAP.md` for details and what's next.
+AeroTrail is my private, lifelong, one-stop personal aviation system — not just a logbook. It's meant to hold
+everything aviation in my life over time: pilot logbook, passenger flights, a map, aircraft, airports, airlines,
+photos, trips, pilot progress, a journal, knowledge, and a timeline. Currently built out: flights (with
+structured stops and typed approaches), aircraft, currency/expirations, milestone progress toward certificates,
+a map and stats, manual milestone completions, a weather go/no-go checker against personal minimums, a training
+cost tracker (per-phase rates, ground-only sessions, expenses, projections, a cost cutoff date), fast logging
+(Quick log, copy last flight, offline retry), photos/notes, stats charts, an animated map, and a read-only share
+link/print view. Everything through migration 021 is merged and live — see `docs/ROADMAP.md` for details and
+what's next.
+
+**Aircraft Paradise is a separate, public aviation-photography website. Never merge it into this app.** AeroTrail
+is private data; nothing here becomes public unless a feature explicitly marks it published (today, only the
+opt-in read-only share link at `/share/:token` — see "Sharing" below — exposes anything, and even that is a
+deliberately narrow, revocable summary, never raw records).
+
+## Flight roles
+
+Every flight has a role: `pilot`, `passenger`, or `observer`. Every flight that exists today is a `pilot` flight
+(the column doesn't exist yet — see "Data safety" for how to add it).
+
+- **Logbook hours, currency, and pilot milestones count `role = 'pilot'` flights only.** Passenger and observer
+  flights must never contribute to these, now or after the role column is added.
+- **Map, airports visited, aircraft, countries, and distance count every role**, with a role filter the pilot can
+  use to narrow the view. Whenever a stat is shown, it must be visually clear which role(s) it covers (e.g. "as
+  pilot" vs. "all flights") — never an ambiguous number that silently mixes roles.
+
+## Data safety (highest priority)
+
+The database holds real flight records, not sample data. This overrides convenience or speed every time:
+
+- **Never delete, reset, reseed, or overwrite the database.** Never replace real data with demo/placeholder data,
+  in any environment.
+- **All schema changes go through numbered SQL migration files** (see "Folder structure") that work on both local
+  SQLite and Turso — the existing `server/src/migrations/NNN_name.js`/`.sql` pattern, never a one-off script or a
+  hand-run statement.
+- **Before running any migration against a real database, back it up and show the migration SQL** — this is in
+  addition to, not instead of, the existing `db:backup:prod`-before-merging rule under "Branch and deploy safety".
+- **New columns are nullable or have a default.** Keep an old column in place until the pilot has confirmed a
+  backfill is correct — don't drop or rename it as part of the same change (this matches the existing migration
+  rule in `server/src/migrations/README.md`).
+- **Derived stats are always computed, never stored.** Hours, flight counts, visit counts, distance, and anything
+  else derivable from the underlying rows are computed by a query from the real relationships each time, never
+  entered twice or cached as a stored total that could drift out of sync.
+
+## Architecture
+
+- **Extend what's here; don't rewrite it.** Reuse existing components, styling and the existing Leaflet map setup
+  (`client/src/pages/Map.jsx`, `client/src/lib/mapstyle.js`, `mapdata.js`) rather than introducing a parallel
+  version.
+- **Normalized relationships with foreign keys.** Cross-entity links (e.g. a photo to a trip, a flight to a
+  journal entry) go through a generic `entity_links` table rather than a bespoke join table per pair of entity
+  types; tags go through `tags`/`entity_tags`. (Neither exists yet — add both as numbered migrations, following
+  the rules above, when the feature that needs them is actually being built.)
+- **Small, focused files.** Prefer reusable forms, entity pages and a shared search over one large page per
+  feature — the existing `client/src/pages/`/`components/`/`lib/` split (see "Folder structure") is the pattern
+  to keep following.
+- **Every write endpoint validates server-side**, the same way `server/src/validate.js` does today — never trust
+  client-side validation alone.
+- **Every API route authenticates and scopes its queries to the owner.** AeroTrail is currently single-pilot
+  behind one shared passcode (`server/src/auth.js`); if real per-user accounts are ever added, every route must
+  filter by the authenticated owner, not just check that a passcode was supplied.
+- **Private photos are never served from a public URL.** `flight_photos` are served today only behind the app
+  passcode or through the narrow, revocable public-share routes (`server/src/routes/share.js`) that already
+  control exactly what a link can expose — any new photo-serving route must follow that same pattern, never a
+  bare, guessable, or permanently-public URL.
+
+## Workflow
+
+- **Work one phase at a time.** After each phase: run the app, test the existing logbook features that phase
+  touches, test the new feature, check phone width (~375px), verify database integrity (row counts/spot checks
+  before and after, as already practiced for migrations — see "Branch and deploy safety"), fix errors, then
+  summarize and stop rather than rolling straight into the next phase.
+- **Don't invent features that aren't in the repo.** If unsure whether something exists or how it currently
+  works, inspect the code first rather than assuming.
+- **UI stays clean, minimal, and responsive**, following the existing design language — including dark/light mode
+  (see "Stack") and the personalized greeting on the Dashboard (`client/src/lib/greeting.js`). No clutter, no
+  filler stats, no HUD gimmicks (the map's stats panel was deliberately trimmed for this — see "Status"). The
+  flight logbook must stay fast and usable on a phone above everything else.
 
 ## Stack
 
