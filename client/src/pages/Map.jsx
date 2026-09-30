@@ -5,7 +5,7 @@ import { Plane, Info, X, ChevronDown, RotateCcw } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flightCodes, airportCode } from '../lib/flightpath.js';
 import { useTheme } from '../lib/theme.js';
-import { greatCircle } from '../lib/geo.js';
+import { greatCircle, fmtNm } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
 import { airportSummary, routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
@@ -14,7 +14,6 @@ import { formatDate as fmtDate } from '../lib/calendar.js';
 import { pilotFlights, roleOf } from '../lib/flightRoles.js';
 
 const ROLE_FILTERS = [['all', 'All'], ['pilot', 'Pilot'], ['passenger', 'Passenger']];
-const fmtNm = (nm) => `${Math.round(nm).toLocaleString()} nm`;
 
 
 // Frequency -> size and color (cool sky for one-offs, warming to amber for home bases).

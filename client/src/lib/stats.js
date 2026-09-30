@@ -99,12 +99,17 @@ export function topAirports(flights, airports = {}, limit = 10) {
     .slice(0, limit);
 }
 
-/** Commercial flights grouped by airline (spellings like "Delta" and "DL" merge), most hours first. GA flights are ignored. */
+const UNKNOWN_AIRLINE = { name: 'Unknown', code: '?', color: '#475569', fg: '#f1f5f9' };
+
+/**
+ * Flights grouped by airline (spellings like "Delta" and "DL" merge), most hours first. A flight with no
+ * airline recorded groups under "Unknown" rather than being dropped, so counts and totals still add up to
+ * every flight passed in.
+ */
 export function hoursByAirline(flights) {
   const totals = new Map();
   for (const f of flights) {
-    const a = resolveAirline(f.airline);
-    if (!a) continue;
+    const a = resolveAirline(f.airline) ?? UNKNOWN_AIRLINE;
     const t = totals.get(a.name) ?? { name: a.name, code: a.code, color: a.color, fg: a.fg, flights: 0, hours: 0 };
     t.flights++;
     t.hours += Number(f.total_time) || 0;

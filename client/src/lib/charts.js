@@ -30,6 +30,20 @@ export function hoursByMonth(flights, { months = 12, now } = {}) {
   return slots.map((s) => ({ ...s, hours: round2(s.hours) }));
 }
 
+/** Flight count and hours per calendar year, earliest first. Years with no flights are simply absent. */
+export function flightsByYear(flights) {
+  const totals = new Map();
+  for (const f of flights) {
+    const year = String(f.date).slice(0, 4);
+    if (!/^\d{4}$/.test(year)) continue;
+    const t = totals.get(year) ?? { year, flights: 0, hours: 0 };
+    t.flights++;
+    t.hours += hoursOf(f);
+    totals.set(year, t);
+  }
+  return [...totals.values()].sort((a, b) => a.year.localeCompare(b.year)).map((t) => ({ ...t, hours: round2(t.hours) }));
+}
+
 /** Hours per individual aircraft (tail number, falling back to type, then "Unknown"), most first. */
 export function hoursByTail(flights) {
   const totals = new Map();

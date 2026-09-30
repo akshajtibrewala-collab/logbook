@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hoursByCategory, hoursByAircraft, topRoutes, topAirports } from './stats.js';
+import { hoursByCategory, hoursByAircraft, hoursByAirline, topRoutes, topAirports } from './stats.js';
 
 const fl = (o) => ({ total_time: 1, ...o });
 
@@ -20,6 +20,30 @@ test('hours by aircraft groups case-insensitively, sorted by hours, blanks as Un
     fl({ aircraft_type: '', total_time: 0.5 }),
   ]);
   assert.deepEqual(out, [{ type: 'PA28', hours: 3 }, { type: 'C172', hours: 2.5 }, { type: 'Unknown', hours: 0.5 }]);
+});
+
+test('hours by airline merges known spellings, most hours first', () => {
+  const out = hoursByAirline([
+    fl({ airline: 'Delta', total_time: 1 }),
+    fl({ airline: 'DL', total_time: 2 }),
+    fl({ airline: 'Some Regional Co', total_time: 5 }),
+  ]);
+  assert.deepEqual(out.map((a) => [a.name, a.flights, a.hours]), [
+    ['Some Regional Co', 1, 5], ['Delta Air Lines', 2, 3],
+  ]);
+});
+
+test('hours by airline groups flights with no airline recorded as Unknown instead of dropping them', () => {
+  const out = hoursByAirline([
+    fl({ airline: '', total_time: 1 }),
+    fl({ airline: null, total_time: 0.5 }),
+    fl({ airline: 'United', total_time: 2 }),
+  ]);
+  assert.deepEqual(out.map((a) => [a.name, a.flights, a.hours]), [
+    ['United Airlines', 1, 2], ['Unknown', 2, 1.5],
+  ]);
+  const totalFlights = out.reduce((s, a) => s + a.flights, 0);
+  assert.equal(totalFlights, 3); // every flight is accounted for, none silently dropped
 });
 
 test('top routes ignores direction and handles local flights and missing codes', () => {
