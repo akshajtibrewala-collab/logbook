@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { convertRow, convertFlightdiary, cleanAircraftType } from './convert-flightdiary-import.js';
+
+process.env.DB_FILE = ':memory:';
+const { convertRow, convertFlightdiary, resolveDurations, cleanAircraftType } = await import('./convert-flightdiary-import.js');
+const { migrate } = await import('../src/migrate.js');
+const { run } = await import('../src/db.js');
 
 // Synthetic fixture rows only — no real personal flight data. Column order matches a real Flightdiary export.
 const HEAD = [
@@ -80,4 +84,35 @@ test('convertFlightdiary: reports airlines with no branded badge, others are sil
   assert.equal(rowCount, 2);
   assert.deepEqual(unresolvedAirlines, ['Not A Real Airline']);
   assert.match(csv, /^role,date,departure_airport/);
+});
+
+test('convertRow: dep_time/arr_time keep Flightdiary\'s local HH:MM (seconds dropped); arr_day_offset starts blank', () => {
+  const out = convertRow(row({ 'Dep time': '16:25:00', 'Arr time': '19:15:00' }), col);
+  assert.equal(out[28], '16:25'); // dep_time
+  assert.equal(out[29], '19:15'); // arr_time
+  assert.equal(out[30], ''); // arr_day_offset, filled in by resolveDurations()
+});
+
+test('resolveDurations: recomputes total_time and arr_day_offset from local times across a time zone change', async () => {
+  await migrate();
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('KSTL','KSTL','STL','STL','St Louis Lambert','St Louis','US','large_airport',38.75,-90.37)");
+  await run("INSERT INTO airports (ident, icao, iata, local_code, name, city, country, type, lat, lon) VALUES ('KRDU','KRDU','RDU','RDU','Raleigh-Durham','Raleigh','US','large_airport',35.88,-78.79)");
+
+  const body = [row({ From: 'St Louis / St Louis (STL/KSTL)', To: 'Raleigh / Durham (RDU/KRDU)', 'Dep time': '16:25:00', 'Arr time': '19:15:00', Duration: '02:50:00' })];
+  const { rows } = convertFlightdiary(HEAD, body);
+  const { comparisons } = await resolveDurations(rows);
+
+  assert.equal(rows[0][8], '1.83'); // total_time recomputed to the real 1h50m elapsed, not Flightdiary's naive 2h50m
+  assert.equal(rows[0][30], '0'); // arr_day_offset
+  assert.equal(comparisons.length, 1);
+  assert.equal(comparisons[0].matched, false); // Flightdiary's own naive Duration was off by an hour here
+  assert.equal(comparisons[0].diffMinutes, 60);
+});
+
+test('resolveDurations: an airport not in the local table leaves total_time as Flightdiary gave it (manual fallback)', async () => {
+  const body = [row({ From: 'Nowhere / Nowhere (ZZZ/ZZZZ)', To: 'Raleigh / Durham (RDU/KRDU)', 'Dep time': '16:25:00', 'Arr time': '19:15:00', Duration: '02:50:00' })];
+  const { rows } = convertFlightdiary(HEAD, body);
+  await resolveDurations(rows);
+  assert.equal(rows[0][8], '2.83'); // unchanged: Flightdiary's own Duration
+  assert.equal(rows[0][30], ''); // arr_day_offset stays blank
 });
