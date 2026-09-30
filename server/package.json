@@ -16,7 +16,8 @@
     "db:copy-local:prod": "node --env-file=../.env.production scripts/prod/copy-local.js",
     "db:backup": "node scripts/backup.js",
     "db:backup:prod": "node --env-file=../.env.production scripts/prod/backup.js",
-    "db:reconcile:prod": "node --env-file=../.env.production scripts/prod/reconcile.js"
+    "db:reconcile:prod": "node --env-file=../.env.production scripts/prod/reconcile.js",
+    "verify-baseline:prod": "node --env-file=../.env.production scripts/prod/verify-baseline.js"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
