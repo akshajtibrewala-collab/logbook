@@ -24,6 +24,7 @@ import {
 import {
   computeMilestones, certificateSummary, completionsByKey, certificateLabel,
 } from '../../client/src/lib/milestones.js';
+import { pilotFlights } from '../../client/src/lib/flightRoles.js';
 
 const TIME_COLUMNS = [
   'total_time', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time',
@@ -40,7 +41,12 @@ const round2 = (n) => Math.round(n * 100) / 100;
  * from an already-taken JSON backup file (baseline-from-backup.js), which matters when you want a
  * production baseline without a second live round trip to production.
  */
-export function summarizeFlightData({ flights, reviews, expirations, aircraftRows, config, completions }, today) {
+export function summarizeFlightData({ flights: allFlights, reviews, expirations, aircraftRows, config, completions }, today) {
+  // Logbook hours, currency and milestones count role='pilot' flights only (see CLAUDE.md's "Flight
+  // roles") — a passenger/observer flight must never move any number this script checks. all_roles_
+  // flight_count is kept alongside purely for visibility (e.g. after an import), never diffed against
+  // the pilot-only numbers below.
+  const flights = pilotFlights(allFlights);
   const aircraftById = Object.fromEntries(aircraftRows.map((a) => [a.id, a]));
   const completionsIndex = completionsByKey(completions);
 
@@ -55,6 +61,7 @@ export function summarizeFlightData({ flights, reviews, expirations, aircraftRow
   return {
     today,
     flight_count: flights.length,
+    all_roles_flight_count: allFlights.length,
     totals,
     currency: {
       day_passenger: dayCurrency(flights, today),
@@ -107,7 +114,12 @@ async function main() {
   if (!file) throw new Error('Usage: verify-baseline.js <path-to-baseline.json>  (or --save <path>)');
   const saved = JSON.parse(readFileSync(file, 'utf8'));
   const current = await computeBaseline(saved.today);
-  const diffs = diffPaths(saved, current);
+  // all_roles_flight_count is informational only (it's expected to grow as passenger/observer flights
+  // are added) — never part of the pilot-only "must not change" comparison below.
+  const { all_roles_flight_count: currentAllRoles, ...currentForDiff } = current;
+  const { all_roles_flight_count: savedAllRoles, ...savedForDiff } = saved;
+  const diffs = diffPaths(savedForDiff, currentForDiff);
+  console.log(`All-roles flight count: ${savedAllRoles ?? 'n/a'} -> ${currentAllRoles} (informational, not diffed)`);
   if (diffs.length === 0) {
     console.log(`No differences from ${path.basename(file)} (recomputed as of its own reference date ${saved.today}).`);
   } else {
