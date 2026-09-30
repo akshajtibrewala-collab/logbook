@@ -3,15 +3,27 @@ export const TIME_FIELDS = [
   'night_time', 'instrument_actual', 'instrument_simulated', 'cross_country_time',
 ];
 export const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
-export const TEXT_FIELDS = ['aircraft_type', 'tail_number', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on', 'instructor', 'invoice_ref'];
+export const TEXT_FIELDS = [
+  'aircraft_type', 'tail_number', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on',
+  'instructor', 'invoice_ref', 'seat_class', 'confirmation_code',
+];
 export const AIRPORT_FIELDS = ['departure_airport', 'arrival_airport'];
 // ground_time is hours like TIME_FIELDS but kept separate from it: ground instruction isn't flight time,
 // so (unlike TIME_FIELDS) it's never checked against total_time. cost_override is a nullable dollar
 // amount, not hours, validated on its own.
 export const GROUND_TIME_FIELD = 'ground_time';
 export const COST_OVERRIDE_FIELD = 'cost_override';
+export const FLIGHT_ROLES = ['pilot', 'passenger', 'observer'];
+// Every logbook/legal-time field EXCEPT total_time: for a passenger or observer flight these are always
+// zero, regardless of what's sent, rather than rejected — a passenger flight simply has no PIC time, no
+// landings, no approaches to log, the same way FlightForm hides these fields entirely for those roles.
+// total_time is exempt because it's simply "how long the flight was" (shown on a passenger flight's
+// Logbook card and counted toward all-roles aircraft/airline stats), not a logbook/legal-time category.
+// This mirrors parseFlight's existing "missing numeric field defaults to 0" normalization rather than
+// adding a new way to fail validation.
+const PILOT_ONLY_NUMERIC_FIELDS = [...TIME_FIELDS.filter((f) => f !== 'total_time'), GROUND_TIME_FIELD, ...COUNT_FIELDS];
 export const FLIGHT_FIELDS = [
-  'date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', ...TEXT_FIELDS, ...TIME_FIELDS,
+  'date', ...AIRPORT_FIELDS, 'route', 'aircraft_id', 'role', ...TEXT_FIELDS, ...TIME_FIELDS,
   GROUND_TIME_FIELD, COST_OVERRIDE_FIELD, ...COUNT_FIELDS,
 ];
 
@@ -35,6 +47,8 @@ export function parseFlight(body) {
 
   if (!isIsoDate(b.date)) errors.date = 'Date must be YYYY-MM-DD';
   else v.date = b.date;
+
+  v.role = FLIGHT_ROLES.includes(b.role) ? b.role : 'pilot';
 
   for (const f of AIRPORT_FIELDS) {
     const s = String(b[f] ?? '').trim().toUpperCase();
@@ -81,6 +95,13 @@ export function parseFlight(body) {
     const n = Number(b[COST_OVERRIDE_FIELD]);
     if (!Number.isFinite(n) || n < 0 || n > 999999) errors[COST_OVERRIDE_FIELD] = 'Must be a number, 0 or more';
     else v[COST_OVERRIDE_FIELD] = round2(n);
+  }
+
+  // A passenger/observer flight has no PIC/dual/solo/night/instrument/cross-country/ground time, no
+  // landings, no approaches or holds to log — force these to 0 regardless of what was sent, rather than
+  // rejecting a stray value (e.g. from an old CSV row or a role change after the fact).
+  if (v.role !== 'pilot') {
+    for (const f of PILOT_ONLY_NUMERIC_FIELDS) { v[f] = 0; delete errors[f]; }
   }
 
   if (!errors.total_time) {

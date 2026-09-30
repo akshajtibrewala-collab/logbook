@@ -9,6 +9,7 @@
 
 import { addDays, daysBetween } from './currency.js';
 import { formatDate } from './calendar.js';
+import { isPilotFlight } from './flightRoles.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -96,6 +97,9 @@ const hasValue = (v) => v !== null && v !== undefined && v !== '';
  * cost at all, and callers should exclude it from totals/projections rather than treat it as free.
  */
 export function computeFlightCost(flight, rates, phases) {
+  // A passenger/observer flight gets no cost calculation at all — not even a manual override — since it's
+  // not training and was never billed at a training rate; cost tracking exists for the pilot's own flying.
+  if (!isPilotFlight(flight)) return EXCLUDED;
   if (isPastCostCutoff(flight.date, rates?.cost_cutoff_date)) return EXCLUDED;
   const phase = findPhaseForDate(phases, flight.date);
   const tracked = Boolean(phase?.track_costs);

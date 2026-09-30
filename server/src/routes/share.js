@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { all, get, run } from '../db.js';
 import { buildShareSummary, recentFlights } from '../lib/share-summary.js';
+import { pilotFlights } from '../lib/flightRoles.js';
 
 const FLAGS = ['show_notes', 'show_photos', 'show_recent_flights', 'show_aircraft'];
 const newToken = () => randomBytes(24).toString('base64url'); // 192 bits: not guessable
@@ -47,7 +48,7 @@ shareAdminRouter.put('/', async (req, res) => {
 // The pilot's own printable summary (behind the passcode): the same builder as the public link, with
 // every section on except what the query turns off, and a longer recent-flights list.
 shareAdminRouter.get('/summary', async (req, res) => {
-  const flights = await all('SELECT * FROM flights');
+  const flights = await pilotFlights();
   const settings = await get('SELECT hours_target, hours_target_label FROM pilot_settings WHERE id = 1');
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
   const share = { show_recent_flights: 1, show_aircraft: 1, show_notes: req.query.notes === '0' ? 0 : 1, show_photos: 0 };
@@ -78,7 +79,7 @@ async function activeShare(token) {
 publicRouter.get('/:token', async (req, res) => {
   const share = await activeShare(req.params.token);
   if (!share) return res.status(404).json({ error: 'This link is not valid.' });
-  const flights = await all('SELECT * FROM flights');
+  const flights = await pilotFlights();
   const settings = await get('SELECT hours_target, hours_target_label FROM pilot_settings WHERE id = 1');
   const photoIdsByFlight = {};
   if (share.show_photos) {
@@ -98,7 +99,7 @@ publicRouter.get('/:token/photos/:id', async (req, res) => {
   if (!share || !share.show_photos) return res.status(404).end();
   const photo = await get('SELECT flight_id, data_url FROM flight_photos WHERE id = ?', [req.params.id]);
   if (!photo) return res.status(404).end();
-  const listed = recentFlights(await all('SELECT id, date FROM flights')).some((f) => f.id === photo.flight_id);
+  const listed = recentFlights(await all("SELECT id, date FROM flights WHERE role = 'pilot'")).some((f) => f.id === photo.flight_id);
   if (!listed) return res.status(404).end();
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(photo.data_url);
   if (!m) return res.status(404).end();
