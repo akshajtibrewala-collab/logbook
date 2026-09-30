@@ -43,7 +43,7 @@ export default function PrintSummary() {
   return (
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <label className="flex min-h-11 items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" checked={notes} onChange={(e) => setNotes(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />Include notes
         </label>
