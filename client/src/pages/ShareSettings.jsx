@@ -54,14 +54,14 @@ export default function ShareSettings() {
       {!share && !error && <Skeleton className="h-40" />}
 
       <section className="card card-elevated p-4">
-        <h2 className="stat-title text-sm text-accent">Printable summary</h2>
+        <h2 className="stat-title text-sm text-accent-strong">Printable summary</h2>
         <p className="mt-1 text-sm text-slate-400">Totals, goal and certificate progress, and recent flights — print it or save it as a PDF.</p>
         <Button as={Link} to="/logbook/print" variant="secondary" size="md" icon={Printer} iconSize={18} className="mt-3">Open printable summary</Button>
       </section>
 
       {share && (
         <section className="card card-elevated p-4">
-          <h2 className="stat-title text-sm text-accent">Public link</h2>
+          <h2 className="stat-title text-sm text-accent-strong">Public link</h2>
           <p className="mt-1 text-sm text-slate-400">Anyone with the link can view a read-only summary — never edit anything, and never costs, instructors or debriefs. No sign-in needed.</p>
 
           {!share.enabled ? (

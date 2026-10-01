@@ -12,7 +12,7 @@ import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
 function Section({ title, children }) {
   return (
     <section className="card card-elevated p-4">
-      <h2 className="stat-title mb-3 text-sm text-accent">{title}</h2>
+      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
       {children}
     </section>
   );

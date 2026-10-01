@@ -18,7 +18,7 @@ const blank = () => ({
 function Section({ title, children }) {
   return (
     <section className="card card-elevated p-4">
-      <h2 className="stat-title mb-3 text-sm text-accent">{title}</h2>
+      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -133,7 +133,7 @@ export default function AircraftForm() {
       </Section>
 
       <section className="card card-elevated p-4">
-        <h2 className="stat-title mb-3 text-sm text-accent">Notes</h2>
+        <h2 className="stat-title mb-3 text-sm text-accent-strong">Notes</h2>
         <textarea value={form.notes} onChange={(e) => set('notes')(e.target.value)} rows={3}
           className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
       </section>

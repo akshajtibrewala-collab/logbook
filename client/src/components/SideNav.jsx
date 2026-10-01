@@ -17,7 +17,7 @@ export default function SideNav() {
             className={({ isActive }) =>
               `pressable flex w-16 flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
                 isActive
-                  ? pax ? 'bg-navy-800 text-[rgb(var(--role-pax))]' : 'bg-navy-800 text-accent'
+                  ? pax ? 'bg-navy-800 text-[rgb(var(--role-pax))]' : 'bg-navy-800 text-accent-strong'
                   : 'text-slate-500 hover:bg-navy-900 hover:text-slate-300'
               }`}>
             <Icon size={22} strokeWidth={1.75} />{label}

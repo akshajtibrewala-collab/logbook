@@ -123,7 +123,7 @@ export default function QuickFlight() {
         <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Quick log</h1>
       </div>
-      {notice && <p role="status" className="rounded-xl bg-accent/10 p-3 text-sm text-accent">{notice}</p>}
+      {notice && <p role="status" className="rounded-xl bg-accent/10 p-3 text-sm text-accent-strong">{notice}</p>}
 
       <section className="card card-elevated space-y-3 p-4">
         <span className="block text-xs text-slate-400">Date</span>
@@ -142,7 +142,7 @@ export default function QuickFlight() {
           <AirportSearchField label="To" value={form.arrival_airport} onChange={(v) => set({ arrival_airport: v })} error={errors.arrival_airport} placeholder="KSQL" />
         </div>
         <button type="button" onClick={() => set({ departure_airport: form.arrival_airport, arrival_airport: form.departure_airport })}
-          className="pressable h-11 text-sm text-accent">Swap From and To</button>
+          className="pressable h-11 text-sm text-accent-strong">Swap From and To</button>
       </section>
 
       <section className="card card-elevated space-y-3 p-4">

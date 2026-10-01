@@ -1,7 +1,7 @@
 // A small status pill (Current / Expiring / Expired, Ready / Duplicate / Error, and so on). Distinct
 // from AirlineBadge, which has its own per-brand coloring — this is for the app's own status tones.
 const TONES = {
-  ok: 'bg-ok/10 text-ok',
+  ok: 'bg-ok/10 text-ok-strong',
   warn: 'bg-warn/10 text-warn',
   bad: 'bg-bad/10 text-bad',
   accent: 'bg-accent/10 text-accent-strong',

@@ -17,7 +17,7 @@ export default function RankedCard({ title, note, icon, rows, tint, defaultOpen 
     <CollapsibleStatCard title={title} note={teaser} icon={icon} defaultOpen={defaultOpen}>
       {rows.length > 0 && <Ranked rows={visible} tint={tint} />}
       {rows.length > PREVIEW_COUNT && (
-        <button type="button" onClick={() => setExpanded((e) => !e)} className="pressable mt-3 text-sm font-medium text-accent">
+        <button type="button" onClick={() => setExpanded((e) => !e)} className="pressable mt-3 text-sm font-medium text-accent-strong">
           {expanded ? 'Show top 5' : `Show all ${rows.length}`}
         </button>
       )}

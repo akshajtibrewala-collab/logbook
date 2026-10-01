@@ -51,7 +51,7 @@ export default function CumulativeChart({ flights, settings, onSaveTarget, note,
           {fmtHours(series.remaining)} h to go{series.projectedDate ? ` · at your recent pace, about ${formatDate(series.projectedDate)}` : ''}.
         </p>
       )}
-      {series.target && series.remaining === 0 && <p className="mt-2 text-sm text-ok">Goal reached.</p>}
+      {series.target && series.remaining === 0 && <p className="mt-2 text-sm text-ok-strong">Goal reached.</p>}
 
       {editing ? (
         <form onSubmit={save} className="mt-3 space-y-2">

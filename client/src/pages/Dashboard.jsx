@@ -175,7 +175,7 @@ export default function Dashboard() {
             <p className="mt-2 text-sm text-slate-300">
               {subline.text}
               {subline.action && (
-                <Link to={subline.action.to} className="ml-2 font-medium text-accent">{subline.action.label}</Link>
+                <Link to={subline.action.to} className="ml-2 font-medium text-accent-strong">{subline.action.label}</Link>
               )}
             </p>
           )}
@@ -211,7 +211,7 @@ export default function Dashboard() {
 
             <StatusCard title="Passenger currency" Icon={Plane} result={data.pax.day}
               detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`}>
-              <div className={`flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm ${TONE[data.pax.night.status].text}`}>
+              <div className={`flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2 text-sm ${TONE[data.pax.night.status].textStrong}`}>
                 <span>Night</span>
                 <span>{data.pax.night.daysRemaining === null ? 'Not current'
                   : data.pax.night.daysRemaining < 0 ? `Lapsed ${-data.pax.night.daysRemaining}d ago`
@@ -249,7 +249,7 @@ export default function Dashboard() {
               detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
           </div>
 
-          <Link to="/currency" className="flex items-center justify-between rounded-xl px-1 py-1 text-sm text-accent active:opacity-70">
+          <Link to="/currency" className="flex items-center justify-between rounded-xl px-1 py-1 text-sm text-accent-strong active:opacity-70">
             See all currency & expirations<ChevronRight size={16} />
           </Link>
 

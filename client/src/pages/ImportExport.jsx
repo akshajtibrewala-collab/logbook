@@ -251,7 +251,7 @@ export default function ImportExport() {
       </div>
 
       {message && (
-        <p className={`rounded-xl p-3 text-sm ${message.kind === 'ok' ? 'bg-ok/10 text-ok' : 'bg-bad/10 text-bad'}`}>{message.text}</p>
+        <p className={`rounded-xl p-3 text-sm ${message.kind === 'ok' ? 'bg-ok/10 text-ok-strong' : 'bg-bad/10 text-bad'}`}>{message.text}</p>
       )}
 
       <section className="card card-elevated space-y-3 p-4">
@@ -267,7 +267,7 @@ export default function ImportExport() {
           Choose a CSV from ForeFlight or LogTen, or use this app's template. You'll see a preview and can fix problems before anything is added.
         </p>
         <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv" onChange={onFile} className="hidden" />
-        <button onClick={() => fileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent active:bg-navy-800`}><Upload size={20} />Choose CSV file</button>
+        <button onClick={() => fileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent-strong active:bg-navy-800`}><Upload size={20} />Choose CSV file</button>
         <button onClick={() => download('logbook-template.csv', TEMPLATE_CSV)} className="pressable flex h-10 w-full items-center justify-center gap-2 text-sm text-slate-400">
           <FileText size={16} />Download the template
         </button>
@@ -284,7 +284,7 @@ export default function ImportExport() {
           <DatabaseBackup size={20} />Export everything
         </button>
         <input ref={backupFileRef} type="file" accept="application/json,.json" onChange={onBackupFile} className="hidden" />
-        <button onClick={() => backupFileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent active:bg-navy-800`}>
+        <button onClick={() => backupFileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent-strong active:bg-navy-800`}>
           <RotateCcw size={20} />Restore from backup
         </button>
       </section>

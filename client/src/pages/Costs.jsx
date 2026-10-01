@@ -206,10 +206,10 @@ export default function Costs() {
           </div>
 
           <Card>
-            <h2 className="stat-title mb-3 text-sm text-accent">Spend per training phase</h2>
+            <h2 className="stat-title mb-3 text-sm text-accent-strong">Spend per training phase</h2>
             <div className="space-y-2">
               {data.phases.length === 0 ? (
-                <p className="text-sm text-slate-400">No training phases set up yet. <Link to="/costs/settings" className="text-accent underline">Set one up</Link>.</p>
+                <p className="text-sm text-slate-400">No training phases set up yet. <Link to="/costs/settings" className="text-accent-strong underline">Set one up</Link>.</p>
               ) : (
                 [...data.phases].sort((a, b) => a.start_date.localeCompare(b.start_date)).map((p) => (
                   <div key={p.certificate} className="flex items-center justify-between rounded-xl bg-navy-800 px-3 py-2.5 text-sm">
@@ -234,13 +234,13 @@ export default function Costs() {
           )}
 
           <Card>
-            <h2 className="stat-title mb-3 text-sm text-accent">Spending, last 12 months</h2>
+            <h2 className="stat-title mb-3 text-sm text-accent-strong">Spending, last 12 months</h2>
             <SpendChart data={computed.chart} />
           </Card>
 
           <Card>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="stat-title text-sm text-accent">Projected remaining cost</h2>
+              <h2 className="stat-title text-sm text-accent-strong">Projected remaining cost</h2>
               {certOptions.length > 1 && (
                 <Select value={projectCert} onChange={setProjectCert} options={certOptions} className="w-40" />
               )}
@@ -268,7 +268,7 @@ export default function Costs() {
                       <span className="text-xs text-slate-500"> (at your recent pace of {bd.frequency.lessonsPerWeek} flights/week)</span></p>
                   )}
                   <details className="text-xs text-slate-400">
-                    <summary className="cursor-pointer text-accent">How this is calculated</summary>
+                    <summary className="cursor-pointer text-accent-strong">How this is calculated</summary>
                     <ul className="mt-2 list-disc space-y-1 pl-4">
                       <li>Remaining hours come from your Milestones: the largest remaining dual requirement, the largest remaining solo requirement, plus 3.00h dual for checkride prep if not done.</li>
                       <li>Solo hours cost aircraft only ({fmtMoney(bd.rentalPerHr)}/h); dual hours add the instructor ({fmtMoney(bd.instructorPerHr)}/h). Rates are this phase's current rates.</li>
@@ -288,7 +288,7 @@ export default function Costs() {
 
           <Card padded={false}>
             <div className="flex items-center justify-between p-4 pb-0">
-              <h2 className="stat-title text-sm text-accent">Other expenses</h2>
+              <h2 className="stat-title text-sm text-accent-strong">Other expenses</h2>
               <button type="button" onClick={() => setExpenseModal(blankExpense())} aria-label="Add expense" className="pressable flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-accent active:opacity-70"><Plus size={16} /></button>
             </div>
             {data.expenses.length === 0 ? (

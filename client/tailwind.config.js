@@ -10,7 +10,7 @@ export default {
         // Text scale used across the app: 100 = primary, 300/400/500 = secondary, 600 = faint icons.
         slate: { 100: v('slate-100'), 300: v('slate-300'), 400: v('slate-400'), 500: v('slate-500'), 600: v('slate-600') },
         accent: { DEFAULT: v('accent'), dark: v('accent-dark'), strong: v('accent-strong') },
-        ok: v('ok'),
+        ok: { DEFAULT: v('ok'), strong: v('ok-strong') },
         warn: v('warn'),
         bad: v('bad'),
         ink: v('ink'), // text on accent-colored buttons, dark in both themes

@@ -58,7 +58,7 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a rate change</button>
+        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a rate change</button>
       )}
     </div>
   );
@@ -94,7 +94,7 @@ function PlannedCosts({ certificate, rows, onCreate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a one-time cost</button>
+        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a one-time cost</button>
       )}
     </div>
   );
@@ -137,7 +137,7 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a rate change</button>
+        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a rate change</button>
       )}
     </div>
   );

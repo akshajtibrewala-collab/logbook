@@ -75,7 +75,7 @@ export default function Currency() {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-medium text-slate-400">Other expirations</h2>
-              <button onClick={() => navigate('/currency/new')} className="flex items-center gap-1 text-sm text-accent">
+              <button onClick={() => navigate('/currency/new')} className="flex items-center gap-1 text-sm text-accent-strong">
                 <Plus size={15} />Add
               </button>
             </div>
@@ -94,13 +94,13 @@ export default function Currency() {
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="font-medium">{r.item.label}</div>
-                            <div className={`mt-0.5 flex items-center gap-1.5 text-sm ${tone.text}`}>
+                            <div className={`mt-0.5 flex items-center gap-1.5 text-sm ${tone.textStrong}`}>
                               <tone.Icon size={14} />{tone.label} · {fmtDate(r.expires)}
                             </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <div className="text-right">
-                              <div className={`stat-value text-lg ${tone.text}`}>{days.big}</div>
+                              <div className={`stat-value text-lg ${tone.textStrong}`}>{days.big}</div>
                               <div className="text-xs text-slate-400">{days.small}</div>
                             </div>
                             <ChevronRight size={18} className="text-slate-600" />

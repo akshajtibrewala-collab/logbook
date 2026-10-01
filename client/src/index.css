@@ -64,6 +64,9 @@ body {
   /* Falls back to the plain accent everywhere --accent-strong isn't overridden by .role-pax-scope, so
      using it (e.g. Badge's "accent" tone, a Section title) never changes a pilot-side screen's color. */
   --accent-strong: var(--accent);
+  /* Text-only "ok" (success/current) green, same idea as --accent-strong — see below for why light mode
+     needs a separate value here and --ok itself (backgrounds, icons, large text) is untouched. */
+  --ok-strong: var(--ok);
 }
 :root.light {
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px -6px rgba(15, 23, 42, 0.12);
@@ -76,7 +79,14 @@ body {
      ~4.2:1 against white, below AA; -600 clears ~5.7:1. */
   --role-pax-dark: 124 58 237;
   --role-pax-strong: 124 58 237;
-  --accent-strong: var(--accent);
+  /* sky-700: plain --accent (sky-600, 2 132 199) is only 4.10:1 against white — below the 4.5:1 AA floor
+     for normal text — because it's tuned to work as a background/border/icon color too, which pulls it
+     lighter than pure text wants. sky-700 is for text only: 5.93:1 on white, 5.24:1 on the --navy-800
+     card surface. --accent itself (buttons, icons, borders, large text) is unchanged. */
+  --accent-strong: 3 105 161;
+  /* emerald-800: plain --ok (emerald-600, 5 150 105) is 3.77:1 against white, the same background/icon/
+     large-text-only problem as --accent-strong above. emerald-800 clears 7.68:1 on white, 6.79:1 on card. */
+  --ok-strong: 6 95 70;
 }
 
 /* Passenger/travel role-color scope: wrap the /travel page, a passenger flight's detail panel, and the

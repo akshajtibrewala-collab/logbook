@@ -26,7 +26,7 @@ function fromSession(s) {
 function Section({ title, children }) {
   return (
     <section className="card card-elevated p-4">
-      <h2 className="stat-title mb-3 text-sm text-accent">{title}</h2>
+      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -117,14 +117,14 @@ export default function GroundSessionForm() {
 
       {costOff ? (
         <section className="card card-elevated p-4">
-          <h2 className="stat-title text-sm text-accent">Cost</h2>
+          <h2 className="stat-title text-sm text-accent-strong">Cost</h2>
           <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
         </section>
       ) : (
       <>
       <section className="card card-elevated p-4">
         <div className="flex items-center justify-between">
-          <h2 className="stat-title text-sm text-accent">Cost</h2>
+          <h2 className="stat-title text-sm text-accent-strong">Cost</h2>
           <span className="stat-value text-xl">
             {!previewCost ? '—'
               : previewCost.total !== null ? fmtMoney(previewCost.total)

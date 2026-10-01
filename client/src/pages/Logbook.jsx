@@ -200,7 +200,7 @@ export default function Logbook() {
             </select>
           </label>
           {activeFilters > 0 && (
-            <button onClick={() => setFilters((f) => ({ ...f, from: '', to: '', type: '', category: '' }))} className="col-span-2 h-10 text-sm text-accent">Clear filters</button>
+            <button onClick={() => setFilters((f) => ({ ...f, from: '', to: '', type: '', category: '' }))} className="col-span-2 h-10 text-sm text-accent-strong">Clear filters</button>
           )}
         </div>
       )}
@@ -228,7 +228,7 @@ export default function Logbook() {
                       <span className="flex min-w-0 items-baseline gap-2">
                         <span className="truncate text-base font-medium">{e.data.departure_airport || '—'} → {e.data.arrival_airport || '—'}</span>
                       </span>
-                      <span className="shrink-0 stat-value text-lg text-accent">{fmtHours(e.data.total_time)}</span>
+                      <span className="shrink-0 stat-value text-lg text-accent-strong">{fmtHours(e.data.total_time)}</span>
                     </div>
                     <div className="mt-1 flex justify-between text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.route ? ` · via ${e.data.route}` : ''}</span>
@@ -245,7 +245,7 @@ export default function Logbook() {
                       <span className="flex items-center gap-1.5 text-base font-medium">
                         <GraduationCap size={16} className="shrink-0 text-accent" />Ground session
                       </span>
-                      <span className="stat-value text-lg text-accent">{fmtHours(e.data.hours)}</span>
+                      <span className="stat-value text-lg text-accent-strong">{fmtHours(e.data.hours)}</span>
                     </div>
                     <div className="mt-1 flex justify-between text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.instructor ? ` · ${e.data.instructor}` : ''}</span>
