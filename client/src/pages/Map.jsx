@@ -152,11 +152,11 @@ function RouteLine({ positions, pathOptions, mode, playKey, delay, children }) {
   return <Polyline ref={ref} positions={positions} interactive={false} pathOptions={pathOptions}>{children}</Polyline>;
 }
 
-// Mini-summary shown when an airport pin is tapped: visits, total hours, last visit, and (when the most
-// recent flights there have them) a note snippet and a photo, fetched only when the popup is open.
+// Mini-summary shown when an airport pin is tapped: visits, total hours, last visit, and (when a recent
+// flight there has one) a photo, fetched only when the popup is open. Deliberately no note/remarks
+// snippet here — the flight's note still shows on Flight Detail and the printable/share summary as before.
 function PinSummary({ stop, photoCounts }) {
   const s = airportSummary(stop);
-  const withNote = stop.flights.find((f) => f.note);
   const withPhoto = stop.flights.find((f) => photoCounts[f.id] > 0);
   const [photo, setPhoto] = useState(null); // { data_url, width, height }
   useEffect(() => {
@@ -174,7 +174,6 @@ function PinSummary({ stop, photoCounts }) {
         <div><dt className="text-[10px] uppercase tracking-wide text-slate-500">Hours</dt><dd className="text-base font-semibold">{fmtHours(s.hours)}</dd></div>
         <div><dt className="text-[10px] uppercase tracking-wide text-slate-500">Last</dt><dd className="text-sm font-semibold">{fmtDate(s.last)}</dd></div>
       </dl>
-      {withNote && <p className="mt-2 line-clamp-3 text-xs text-slate-300">“{withNote.note}”</p>}
       {photo && <PhotoImage className="mt-2" src={photo.data_url} width={photo.width} height={photo.height} alt="From a flight here" maxHeight={140} />}
     </div>
   );
