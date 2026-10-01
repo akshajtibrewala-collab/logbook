@@ -213,7 +213,10 @@ export default function Logbook() {
         <p className="mt-4 text-sm text-slate-400">{visible.length} entr{visible.length === 1 ? 'y' : 'ies'} · {fmtHours(total)} h</p>
       )}
 
-      <ul className="stagger mt-2 space-y-2">
+      {/* max-md:pr-20 reserves the floating + button's own footprint (see AddFab.jsx) on its right side,
+          so a row's trailing text can never render under it — the button's hide-on-scroll only protects
+          while actively scrolling, not at rest (first load, or paused after scrolling up/at the top). */}
+      <ul className="stagger mt-2 space-y-2 max-md:pr-20">
         {visible.slice(0, limit).map((e) => {
           const isSelected = selected && selected.kind === e.kind && String(e.id) === selected.id;
           const cost = costFor(e);
@@ -230,7 +233,7 @@ export default function Logbook() {
                       </span>
                       <span className="shrink-0 stat-value text-lg text-accent-strong">{fmtHours(e.data.total_time)}</span>
                     </div>
-                    <div className="mt-1 flex justify-between text-sm text-slate-400">
+                    <div className="mt-1 flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.route ? ` · via ${e.data.route}` : ''}</span>
                       <span className="flex items-center gap-2">
                         {photoCounts[e.id] > 0 && <Camera size={14} aria-label={`${photoCounts[e.id]} photo(s)`} className="text-slate-500" />}
@@ -247,7 +250,7 @@ export default function Logbook() {
                       </span>
                       <span className="stat-value text-lg text-accent-strong">{fmtHours(e.data.hours)}</span>
                     </div>
-                    <div className="mt-1 flex justify-between text-sm text-slate-400">
+                    <div className="mt-1 flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-sm text-slate-400">
                       <span>{fmtDate(e.date)}{e.data.instructor ? ` · ${e.data.instructor}` : ''}</span>
                       {cost?.total !== null && cost?.total !== undefined && <span>{fmtMoney(cost.total)}</span>}
                     </div>

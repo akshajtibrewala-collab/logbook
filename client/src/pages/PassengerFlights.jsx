@@ -160,7 +160,11 @@ export default function PassengerFlights() {
           {grouped.map(([year, yearFlights]) => (
             <div key={year}>
               <h2 className="mb-2 text-sm font-medium text-slate-400">{year}</h2>
-              <ul className="space-y-2">
+              {/* max-md:pr-20 reserves the floating + button's own footprint (see AddFab.jsx) on its right
+                  side, so a row's trailing text can never render under it — the button's hide-on-scroll
+                  only protects while actively scrolling, not at rest (first load, or paused after
+                  scrolling up/at the top). */}
+              <ul className="space-y-2 max-md:pr-20">
                 {yearFlights.map((f) => (
                   <li key={f.id}>
                     <Card as="button" onClick={() => navigate(`/travel/${f.id}`)} aria-current={selected === String(f.id) ? 'true' : undefined}
