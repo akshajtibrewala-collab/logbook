@@ -9,6 +9,8 @@ import Card from './Card.jsx';
  * same mechanism PassengerFlights.jsx and Stats.jsx already use, so "pilot = sky, passenger = violet"
  * never needs a second color system.
  */
+// `note` is a small line under the stats grid: a plain string (e.g. Travel's top airline), or
+// `{ text, to }` to make it a tappable link (e.g. Pilot's folded closest-milestone progress).
 export default function RoleHeroCard({ scoped = false, icon: Icon, title, scopeLabel, bigValue, bigLabel, stats, to, linkLabel, note, empty }) {
   const content = (
     <Card className="h-full">
@@ -34,7 +36,13 @@ export default function RoleHeroCard({ scoped = false, icon: Icon, title, scopeL
               </div>
             ))}
           </div>
-          {note && <p className="mt-2 truncate text-center text-xs text-slate-500">{note}</p>}
+          {note && (typeof note === 'string' ? (
+            <p className="mt-2 truncate text-center text-xs text-slate-500">{note}</p>
+          ) : (
+            <Link to={note.to} className="mt-2 flex items-center justify-center gap-1 truncate text-center text-xs text-accent-strong">
+              {note.text}<ChevronRight size={12} />
+            </Link>
+          ))}
           <Link to={to} className="mt-4 flex items-center justify-center gap-1 text-sm font-medium text-accent-strong">
             {linkLabel}<ChevronRight size={16} />
           </Link>

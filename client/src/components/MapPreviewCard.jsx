@@ -10,7 +10,7 @@ import { pilotFlights, roleOf } from '../lib/flightRoles.js';
 import Card from './Card.jsx';
 
 const VIEW_W = 400;
-const VIEW_H = 190;
+const VIEW_H = 110; // wide and low, so the preview reads as a strip rather than a second map
 
 /**
  * A static, tile-free route overview for Home: every route drawn with the same role styling as the real
@@ -29,7 +29,7 @@ export default function MapPreviewCard({ flights, airports }) {
   const counts = useMemo(() => visitedCounts(allData.stops), [allData]);
 
   const allPoints = useMemo(() => allData.stops.map((s) => [s.lat, s.lon]), [allData]);
-  const project = useMemo(() => buildProjection(allPoints, VIEW_W, VIEW_H, 16), [allPoints]);
+  const project = useMemo(() => buildProjection(allPoints, VIEW_W, VIEW_H, 10), [allPoints]);
 
   const routeColor = routeColorFor(theme);
   const passengerColor = passengerRouteColorFor(theme);
@@ -40,7 +40,7 @@ export default function MapPreviewCard({ flights, airports }) {
         <div className="flex items-center justify-between text-sm font-medium text-slate-300">
           <span className="flex items-center gap-2"><MapIcon size={16} />Map</span><ChevronRight size={16} className="text-slate-500" />
         </div>
-        <p className="mt-6 py-6 text-center text-sm text-slate-500">Log a flight with airports to see your map here.</p>
+        <p className="mt-3 py-3 text-center text-sm text-slate-500">Log a flight with airports to see your map here.</p>
       </Card>
     );
   }
