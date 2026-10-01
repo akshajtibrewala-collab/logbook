@@ -4,10 +4,19 @@ import { ChevronRight, Map as MapIcon } from 'lucide-react';
 import { buildMapData } from '../lib/mapdata.js';
 import { visitedCounts, routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH } from '../lib/mapstyle.js';
 import { buildProjection } from '../lib/routeProjection.js';
+import { buildLandPath } from '../lib/landPath.js';
 import { fmtNm } from '../lib/geo.js';
 import { useTheme } from '../lib/theme.js';
 import { pilotFlights, roleOf } from '../lib/flightRoles.js';
 import Card from './Card.jsx';
+// Bundled into this already-lazy-loaded chunk (see Home.jsx), so the land outline only loads when the
+// map preview itself renders. No Leaflet, no tile requests — a static, simplified outline only.
+import landOutline from '../lib/landOutline.json';
+
+// Land/coastline tone per theme: one step off the card background (navy-800 vs the navy-900 card), so the
+// backdrop reads as a shape without competing with the route/airport colors drawn on top of it.
+const LAND_FILL = { dark: 'rgb(22 26 35)', light: 'rgb(238 241 246)' };
+const COASTLINE_STROKE = { dark: 'rgb(37 43 56)', light: 'rgb(217 222 232)' };
 
 const VIEW_W = 400;
 const VIEW_H = 110; // wide and low, so the preview reads as a strip rather than a second map
@@ -30,6 +39,7 @@ export default function MapPreviewCard({ flights, airports }) {
 
   const allPoints = useMemo(() => allData.stops.map((s) => [s.lat, s.lon]), [allData]);
   const project = useMemo(() => buildProjection(allPoints, VIEW_W, VIEW_H, 10), [allPoints]);
+  const landPath = useMemo(() => buildLandPath(landOutline, project), [project]);
 
   const routeColor = routeColorFor(theme);
   const passengerColor = passengerRouteColorFor(theme);
@@ -58,6 +68,7 @@ export default function MapPreviewCard({ flights, airports }) {
       </div>
 
       <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="mt-2 h-auto w-full" role="img" aria-label="Route map preview">
+        {landPath && <path d={landPath} fill={LAND_FILL[theme]} stroke={COASTLINE_STROKE[theme]} strokeWidth="0.75" />}
         {toSegments(passengerData.routes).map((s) => (
           <line key={`pax-${s.key}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={passengerColor} strokeWidth="1.5" strokeDasharray={PASSENGER_ROUTE_DASH} opacity="0.75" />
         ))}
