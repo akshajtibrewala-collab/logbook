@@ -25,6 +25,11 @@
 }
 
 @layer base {
+  /* Safety net: no child can ever widen the layout viewport past the screen. overflow-x: clip (not
+     hidden) doesn't create a new scroll container or a containing block for position:fixed/sticky
+     descendants, so BottomNav, AddFab and the sticky Stats tab bar are unaffected — an overflowing
+     child is just clipped at the screen edge instead of pushing the whole page wider. */
+  html, body { overflow-x: clip; }
   html { -webkit-tap-highlight-color: transparent; }
   button, a, select, input, summary { touch-action: manipulation; }
   /* One visible, high-contrast focus ring everywhere for keyboard and switch users. */

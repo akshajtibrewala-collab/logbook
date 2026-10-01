@@ -12,8 +12,8 @@ export default function BottomNav() {
         {NAV_TABS.filter((t) => !t.desktopOnly).map(({ to, label, Icon }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) =>
-              `pressable flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-medium transition-colors ${isActive ? 'text-accent-strong' : 'text-slate-500'}`}>
-            <Icon size={22} strokeWidth={1.75} />{label}
+              `pressable flex min-w-0 flex-1 flex-col items-center gap-1 overflow-hidden py-3 text-[11px] font-medium transition-colors ${isActive ? 'text-accent-strong' : 'text-slate-500'}`}>
+            <Icon size={22} strokeWidth={1.75} /><span className="w-full truncate text-center">{label}</span>
           </NavLink>
         ))}
       </div>
