@@ -171,13 +171,13 @@ export default function Costs() {
 
   return (
     <div className="stagger space-y-4 md:mx-auto md:max-w-3xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Costs</h1>
-        <div className="flex gap-2">
-          <Link to="/logbook/ground/new" aria-label="Add ground session" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Costs</h1>
+        <div className="flex min-w-0 flex-wrap justify-end gap-2">
+          <Link to="/logbook/ground/new" aria-label="Add ground session" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <GraduationCap size={20} />
           </Link>
-          <Link to="/costs/settings" aria-label="Rates & settings" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/costs/settings" aria-label="Rates & settings" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Settings size={20} />
           </Link>
         </div>

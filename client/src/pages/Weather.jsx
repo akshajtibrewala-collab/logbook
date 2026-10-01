@@ -183,9 +183,9 @@ export default function Weather() {
 
   return (
     <div className="stagger space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold"><CloudSun size={22} className="text-accent" />Weather</h1>
-        <Link to="/weather/settings" aria-label="Weather settings" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h1 className="flex min-w-0 flex-1 items-center gap-2 truncate text-2xl font-semibold"><CloudSun size={22} className="shrink-0 text-accent" /><span className="truncate">Weather</span></h1>
+        <Link to="/weather/settings" aria-label="Weather settings" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
           <Settings size={20} />
         </Link>
       </div>

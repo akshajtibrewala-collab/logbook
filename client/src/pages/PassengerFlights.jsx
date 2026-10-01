@@ -93,7 +93,7 @@ export default function PassengerFlights() {
       <div className={`${selected ? 'hidden lg:block' : 'block'} lg:w-[380px] lg:shrink-0`}>
         <div className="role-pax-scope">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Passenger flights</h1>
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Passenger flights</h1>
         </div>
 
         <FlightRoleTabs />

@@ -82,9 +82,9 @@ export default function Aircraft() {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="min-w-0 flex-1 text-2xl font-semibold">Aircraft</h1>
-        <button type="button" onClick={() => navigate('/aircraft/new')} className="pressable hidden h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">
+        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Aircraft</h1>
+        <button type="button" onClick={() => navigate('/aircraft/new')} className="pressable hidden h-11 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-ink md:flex">
           <Plus size={16} />Add aircraft
         </button>
       </div>
