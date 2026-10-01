@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Map as MapIcon } from 'lucide-react';
 import { buildMapData, placeableMapData } from '../lib/mapdata.js';
-import { visitedCounts, routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH } from '../lib/mapstyle.js';
+import { routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH } from '../lib/mapstyle.js';
 import { buildProjection } from '../lib/routeProjection.js';
 import { buildLandPath } from '../lib/landPath.js';
 import { fmtNm } from '../lib/geo.js';
@@ -45,7 +45,6 @@ export default function MapPreviewCard({ flights, airports, homeAirportIdent }) 
   const pilotData = useMemo(() => placeableMapData(buildMapData(pilotFlights(flights), airports)), [flights, airports]);
   const passengerData = useMemo(() => placeableMapData(buildMapData(flights.filter((f) => roleOf(f) === 'passenger'), airports)), [flights, airports]);
   const allData = useMemo(() => placeableMapData(buildMapData(flights, airports)), [flights, airports]);
-  const counts = useMemo(() => visitedCounts(allData.stops), [allData]);
 
   const allPoints = useMemo(() => allData.stops.map((s) => [s.lat, s.lon]), [allData]);
   const project = useMemo(() => buildProjection(allPoints, VIEW_W, VIEW_H), [allPoints]);
@@ -105,10 +104,13 @@ export default function MapPreviewCard({ flights, airports, homeAirportIdent }) 
         })}
       </svg>
 
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-        <span>{counts.airports} airport{counts.airports === 1 ? '' : 's'}</span>
-        {counts.countries > 1 && <span>{counts.countries} countries</span>}
-        <span>{fmtNm(allData.totalDistanceNm)}</span>
+      {/* Just the one fact this card doesn't say anywhere else: total distance across every flight. The
+          Pilot and Travel hero cards above already own the airport/country counts for their own role scope
+          (pilot-only, passenger-only) — repeating an all-roles airports/countries count here read as a
+          third, unlabeled variant of the same stat; see the Home redundancy audit this removal came from. */}
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="stat-value text-2xl text-accent-strong">{fmtNm(allData.totalDistanceNm)}</span>
+        <span className="text-xs text-slate-500">all flights</span>
       </div>
       {omittedFlightCount > 0 && (
         <p className="mt-1 text-xs text-slate-500">

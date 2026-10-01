@@ -126,24 +126,30 @@ test('subline tier 4: a long note is truncated with an ellipsis, never wraps or 
 });
 
 test('subline tier 4: no note on the last flight falls through to the next tier', () => {
-  const r = pickSubline({ lastFlightWorkOn: null, closestMilestone: { label: 'Total time', certificateLabel: 'Private Pilot', percent: 50 } });
-  assert.match(r.text, /Total time/);
+  const facts = { lastFlightWorkOn: null, currencyItems: [{ label: 'Flight review', result: current(10) }] };
+  const r = pickSubline(facts);
+  assert.equal(r.text, 'Flight review: 10 days left.');
 });
 
-test('subline tier 5: closest milestone, only once tiers 1–3 are clear', () => {
-  const r = pickSubline({ closestMilestone: { label: 'Cross-country flight training', certificateLabel: 'Private Pilot', percent: 66.6 } });
-  assert.equal(r.text, '67% toward Cross-country flight training for your Private Pilot.');
-  assert.deepEqual(r.action, { label: 'View milestones', to: '/milestones' });
+// Closest-milestone progress is deliberately NOT a pickSubline tier (see greeting.js) — it's always
+// visible in the Pilot hero card's own note instead, so showing it here too would repeat the same fact
+// twice on screen whenever nothing more urgent applied. A caller passing `closestMilestone` in facts (an
+// unrecognized field) must have no effect: the picker falls straight through to the next real tier.
+test('closestMilestone in facts is ignored — not a recognized tier, never shown here', () => {
+  const withMilestone = pickSubline({ closestMilestone: { label: 'Total time', certificateLabel: 'Private Pilot', percent: 50 }, totalHoursThisYear: 12 });
+  const withoutMilestone = pickSubline({ totalHoursThisYear: 12 });
+  assert.equal(withMilestone.text, withoutMilestone.text);
+  assert.doesNotMatch(withMilestone.text, /Total time|milestone/i);
 });
 
-test('subline tier 6: a calm nudge toward the soonest-expiring current item, no action button', () => {
+test('subline tier 5: a calm nudge toward the soonest-expiring current item, no action button', () => {
   const facts = { currencyItems: [{ label: 'Instrument currency', result: current(40) }, { label: 'Flight review', result: current(10) }] };
   const r = pickSubline(facts);
   assert.equal(r.text, 'Flight review: 10 days left.');
   assert.equal(r.action, null);
 });
 
-test('subline tier 7: fallback to a friendly stat, then to a plain question with no data at all', () => {
+test('subline tier 6: fallback to a friendly stat, then to a plain question with no data at all', () => {
   assert.equal(pickSubline({ totalHoursThisYear: 29.94 }).text, 'You’ve logged 29.9 hours this year.');
   assert.equal(pickSubline({ totalHoursThisYear: 1 }).text, 'You’ve logged 1 hour this year.');
   assert.equal(pickSubline({}).text, 'Where to next?');
@@ -155,7 +161,6 @@ test('subline priority order holds end to end: tier 1 beats everything else at o
     reviewCount: 3,
     hasFlights: true,
     daysSinceLastFlight: 30,
-    closestMilestone: { label: 'Total time', certificateLabel: 'Private Pilot', percent: 50 },
     totalHoursThisYear: 100,
   };
   assert.equal(pickSubline(facts).text, 'Your Medical certificate expired 1 day ago.');

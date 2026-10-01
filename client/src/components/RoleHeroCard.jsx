@@ -28,10 +28,13 @@ export default function RoleHeroCard({ scoped = false, icon: Icon, title, scopeL
             <div className="stat-value text-accent-strong text-4xl leading-none">{bigValue}</div>
             <div className="mt-1 text-xs text-slate-400">{bigLabel}</div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          {/* Grid columns and value size follow stats.length: the Pilot card's 2 stats (since "needs
+              attention" moved to AlertsStrip — see Home.jsx) get a wider, larger-text 2-up row instead of
+              a lopsided 3-up with an empty-feeling gap; Travel's 3 stats are unchanged. */}
+          <div className={`mt-4 grid gap-2 ${stats.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {stats.map((s) => (
               <div key={s.label} className="min-w-0 text-center">
-                <div className="truncate text-base font-semibold">{s.value}</div>
+                <div className={`truncate font-semibold ${stats.length === 2 ? 'text-xl' : 'text-base'}`}>{s.value}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-400">{s.label}</div>
               </div>
             ))}

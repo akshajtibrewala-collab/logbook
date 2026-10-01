@@ -62,14 +62,16 @@ function truncate(text, max) {
  *     milestones can't count them yet)
  *   - lastFlightWorkOn: string | null, the most recent flight's own debrief_work_on note (not scanned
  *     back through older flights — if the last flight didn't leave one, this tier just doesn't apply)
- *   - closestMilestone: { label, certificateLabel, percent } | null, the nearest-to-complete requirement
- *     that isn't met yet
  *   - totalHoursThisYear: number
+ *
+ * Deliberately NOT a tier here: closest-milestone progress. It's always visible in the Pilot hero card's
+ * own note (Home.jsx's `pilotNote`), so repeating it here would just show the same fact in two places at
+ * once whenever nothing more urgent applied — see the Home redundancy audit this removal came from.
  */
 export function pickSubline(facts) {
   const {
     currencyItems = [], hasFlights = false, daysSinceLastFlight = null,
-    reviewCount = 0, lastFlightWorkOn = null, closestMilestone = null, totalHoursThisYear = 0,
+    reviewCount = 0, lastFlightWorkOn = null, totalHoursThisYear = 0,
   } = facts;
 
   // 1. Expiring or expired items — the only tier allowed alarming wording, and only for items with a
@@ -101,16 +103,7 @@ export function pickSubline(facts) {
     return { text: truncate(`Last time: work on ${lastFlightWorkOn}`, SUBLINE_MAX_LENGTH), action: null };
   }
 
-  // 5. Closest milestone progress.
-  if (closestMilestone) {
-    const pct = Math.round(closestMilestone.percent);
-    return {
-      text: `${pct}% toward ${closestMilestone.label} for your ${closestMilestone.certificateLabel}.`,
-      action: { label: 'View milestones', to: '/milestones' },
-    };
-  }
-
-  // 6. A calm currency nudge — the soonest-expiring item that's still comfortably current.
+  // 5. A calm currency nudge — the soonest-expiring item that's still comfortably current.
   const calm = currencyItems
     .filter((i) => i.result.status === 'current' && i.result.daysRemaining !== null)
     .sort((a, b) => a.result.daysRemaining - b.result.daysRemaining);
@@ -119,7 +112,7 @@ export function pickSubline(facts) {
     return { text: `${label}: ${plural(result.daysRemaining, 'day')} left.`, action: null };
   }
 
-  // 7. Fallback: a friendly stat, or a plain question if there's nothing yet to report.
+  // 6. Fallback: a friendly stat, or a plain question if there's nothing yet to report.
   if (totalHoursThisYear > 0) {
     const hours = Math.round(totalHoursThisYear * 10) / 10;
     return { text: `You’ve logged ${plural(hours, 'hour')} this year.`, action: null };

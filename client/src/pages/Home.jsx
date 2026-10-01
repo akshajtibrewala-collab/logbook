@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plane, Zap, Luggage, MapPin, Sparkles } from 'lucide-react';
+import { Plane, Zap, Luggage, Sparkles } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flightCodes } from '../lib/flightpath.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
@@ -137,8 +137,10 @@ export default function Home() {
 
   // The greeting subline's own "it's been N days since your last flight" tier is intentionally suppressed
   // here (by passing null) — that fact now lives in just one place, the status line below, instead of
-  // being shown twice. Every other tier (urgent currency, unlinked-aircraft flights, a debrief note, the
-  // closest milestone, a calm currency nudge, a plain stat) is untouched.
+  // being shown twice. Closest-milestone progress is left out of the facts passed to pickSubline entirely
+  // (not just one tier among others) — it's always visible in the Pilot hero's own note (`pilotNote`
+  // below), so pickSubline no longer has a tier for it at all; see greeting.js. Every other tier (urgent
+  // currency, unlinked-aircraft flights, a debrief note, a calm currency nudge, a plain stat) is untouched.
   const subline = useMemo(() => {
     if (!data || !flights) return null;
     const currencyItems = [
@@ -156,10 +158,9 @@ export default function Home() {
       daysSinceLastFlight: null,
       reviewCount,
       lastFlightWorkOn: lastPilotFlight?.debrief_work_on?.trim() || null,
-      closestMilestone: closest,
       totalHoursThisYear: data.stats.year,
     });
-  }, [data, flights, pilotOnly, expirations, closest, lastPilotFlight, now]);
+  }, [data, flights, pilotOnly, expirations, lastPilotFlight, now]);
 
   // Home's single status line — see lib/homeAlerts.js for exactly which rules make something "need
   // attention" (narrower than the Currency page's own current/expiring/expired split, which still shows
@@ -183,10 +184,6 @@ export default function Home() {
     const cutoff = addDays(now, -365);
     return pilotOnly.filter((f) => f.date >= cutoff && f.date <= now).reduce((s, f) => s + (Number(f.total_time) || 0), 0);
   }, [pilotOnly, now]);
-
-  const notCurrentCount = data ? [data.pax.day, data.pax.night, data.inst, data.review, data.medical].filter((r) => r.status !== 'current').length : 0;
-  const currencySummary = notCurrentCount === 0 ? 'All current' : `${notCurrentCount} of 5`;
-  const currencySummaryLabel = notCurrentCount === 0 ? 'currency' : `need${notCurrentCount === 1 ? 's' : ''} attention`;
 
   const recentItems = useMemo(() => recentActivity(flights ?? [], 3), [flights]);
   const highlights = useMemo(
@@ -246,7 +243,6 @@ export default function Home() {
               bigValue={fmtHours(data.stats.total)} bigLabel="total hours"
               stats={[
                 { label: 'Last 12 mo', value: fmtHours(last12moHours) },
-                { label: currencySummaryLabel, value: currencySummary },
                 { label: 'This year', value: fmtHours(data.stats.year) },
               ]}
               note={pilotNote}
@@ -293,16 +289,16 @@ export default function Home() {
 
           <WeatherDashboardCard />
 
-          <div className="grid grid-cols-3 gap-2">
+          {/* Map dropped (it's already both a bottom-nav tab and the whole map preview card above, one tap
+              away) — Add flight and Quick log are each a real, otherwise-unreachable-in-one-tap entry
+              point, so they keep the row instead of getting folded into something else. */}
+          <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setShowAddFlight(true)}
-              className="pressable flex flex-col items-center gap-1.5 rounded-2xl border border-edge p-3 text-xs font-medium text-slate-300 active:bg-navy-800">
+              className="pressable flex min-h-11 flex-col items-center gap-1.5 rounded-2xl border border-edge p-3 text-xs font-medium text-slate-300 active:bg-navy-800">
               <Plane size={20} className="text-accent" />Add flight
             </button>
-            <Link to="/logbook/quick" className="pressable flex flex-col items-center gap-1.5 rounded-2xl border border-edge p-3 text-xs font-medium text-slate-300 active:bg-navy-800">
+            <Link to="/logbook/quick" className="pressable flex min-h-11 flex-col items-center gap-1.5 rounded-2xl border border-edge p-3 text-xs font-medium text-slate-300 active:bg-navy-800">
               <Zap size={20} className="text-accent" />Quick log
-            </Link>
-            <Link to="/map" className="pressable flex flex-col items-center gap-1.5 rounded-2xl border border-edge p-3 text-xs font-medium text-slate-300 active:bg-navy-800">
-              <MapPin size={20} className="text-accent" />Map
             </Link>
           </div>
         </>
