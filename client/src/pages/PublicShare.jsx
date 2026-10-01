@@ -41,7 +41,7 @@ export default function PublicShare() {
   return (
     <div className="mx-auto min-h-dvh max-w-3xl px-4 py-6 md:px-8 md:py-10">
       <div className="no-print mb-4 flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm text-slate-400"><Plane size={16} />AeroTrail · read-only view</span>
+        <span className="flex items-center gap-2 text-sm text-slate-400"><Plane size={16} />AeroHub · read-only view</span>
         <div className="flex items-center gap-2">
           {state === 'ok' && <Button size="sm" fullWidth={false} variant="secondary" icon={Printer} iconSize={16} onClick={() => window.print()}>Print</Button>}
           <ThemeToggle />

@@ -183,7 +183,7 @@ export default function ImportExport() {
     setMessage(null);
     try {
       const backup = await api.exportBackup();
-      downloadJson(`aerotrail-backup-${stamp()}.json`, backup);
+      downloadJson(`aerohub-backup-${stamp()}.json`, backup);
       const total = Object.values(backup.tables).reduce((s, rows) => s + rows.length, 0);
       setMessage({ kind: 'ok', text: `Exported everything: ${total} row${total === 1 ? '' : 's'} across ${Object.keys(backup.tables).length} tables.` });
     } catch (e) {
@@ -205,7 +205,7 @@ export default function ImportExport() {
       setExisting(flights);
       setRestorePreview({ name: file.name, data });
     } catch {
-      setMessage({ kind: 'error', text: 'That doesn’t look like an AeroTrail backup file.' });
+      setMessage({ kind: 'error', text: 'That doesn’t look like an AeroHub backup file.' });
     }
   }
 
@@ -217,7 +217,7 @@ export default function ImportExport() {
       if (hasExisting) {
         // Safety backup of what's about to be overwritten, downloaded before anything is touched.
         const safety = await api.exportBackup();
-        downloadJson(`aerotrail-pre-restore-backup-${stamp()}.json`, safety);
+        downloadJson(`aerohub-pre-restore-backup-${stamp()}.json`, safety);
       }
       const { restored } = await api.restoreBackup(restorePreview.data, hasExisting ? 'replace' : undefined);
       const total = Object.values(restored).reduce((s, n) => s + n, 0);

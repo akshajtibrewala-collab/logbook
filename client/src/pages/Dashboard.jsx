@@ -18,6 +18,8 @@ import { computeMilestones, certificateLabel } from '../lib/milestones.js';
 import { pilotFlights } from '../lib/flightRoles.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
+// Intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — changing a
+// localStorage key would just lose everyone's existing stored value on upgrade, for no visible benefit.
 const LAST_GREETING_KEY = 'aerotrail-last-greeting';
 const getLastGreeting = () => { try { return localStorage.getItem(LAST_GREETING_KEY); } catch { return null; } };
 const setLastGreeting = (template) => { try { localStorage.setItem(LAST_GREETING_KEY, template); } catch { /* private mode */ } };
@@ -193,7 +195,7 @@ export default function Dashboard() {
       {data && flights.length === 0 && (
         <section className="card card-elevated p-5 text-center">
           <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-600" />
-          <h2 className="stat-title mt-3 text-lg">Welcome to AeroTrail</h2>
+          <h2 className="stat-title mt-3 text-lg">Welcome to AeroHub</h2>
           <p className="mt-1 text-sm text-slate-400">Log a flight or import a CSV and your currency status, hours and map fill in here.</p>
           <div className="mt-4 grid gap-2">
             <Button as={Link} to="/logbook/new" size="md">Add your first flight</Button>

@@ -1,6 +1,6 @@
 {
-  "name": "AeroTrail",
-  "short_name": "AeroTrail",
+  "name": "AeroHub",
+  "short_name": "AeroHub",
   "description": "Personal pilot logbook with currency tracking, flight map and stats.",
   "id": "/",
   "start_url": "/",

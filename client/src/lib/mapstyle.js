@@ -72,6 +72,8 @@ export const ANIMATE_ROUTE_LIMIT = 120;
 /** Whether route animation runs: the pilot's setting is on and the route count is affordable. */
 export const shouldAnimateRoutes = (routeCount, enabled) => Boolean(enabled) && routeCount > 0 && routeCount <= ANIMATE_ROUTE_LIMIT;
 
+// Intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — a storage key
+// change would silently reset everyone's saved "Animate routes" preference on upgrade.
 const ANIMATE_KEY = 'aerotrail-map-animate';
 const defaultStorage = () => { try { return globalThis.localStorage ?? null; } catch { return null; } };
 

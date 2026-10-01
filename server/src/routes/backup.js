@@ -29,7 +29,7 @@ const router = Router();
 export async function buildBackup() {
   const tables = {};
   for (const t of TABLES) tables[t] = await all(`SELECT * FROM "${t}"`);
-  return { format_version: FORMAT_VERSION, app: 'AeroTrail', exported_at: new Date().toISOString(), tables };
+  return { format_version: FORMAT_VERSION, app: 'AeroHub', exported_at: new Date().toISOString(), tables };
 }
 
 router.get('/export', async (_req, res) => {
@@ -39,7 +39,7 @@ router.get('/export', async (_req, res) => {
 router.post('/restore', async (req, res) => {
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const incoming = body.tables && typeof body.tables === 'object' ? body.tables : null;
-  if (!incoming) return res.status(400).json({ error: 'This file doesn’t look like an AeroTrail backup — no tables found.' });
+  if (!incoming) return res.status(400).json({ error: 'This file doesn’t look like an AeroHub backup — no tables found.' });
 
   const existingFlights = (await get('SELECT COUNT(*) AS n FROM flights')).n;
   if (existingFlights > 0 && body.mode !== 'replace') {

@@ -4,6 +4,8 @@
 //   * outbox  — a flight whose save failed because the network did (not because it was invalid) is queued
 //               here and retried automatically, so a bad connection at the airfield doesn't cost an entry.
 
+// Both intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — changing
+// either would strand a pilot's saved draft or queued offline flight under a key nothing reads anymore.
 const DRAFT_PREFIX = 'aerotrail-draft:';
 const OUTBOX_KEY = 'aerotrail-outbox';
 
