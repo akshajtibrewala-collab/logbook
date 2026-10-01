@@ -12,8 +12,15 @@ import { fmtHours } from '../lib/hours.js';
 import { PhotoImage } from '../components/PhotoGrid.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 import { pilotFlights, roleOf } from '../lib/flightRoles.js';
+import Toggle from '../components/Toggle.jsx';
 
-const ROLE_FILTERS = [['all', 'All'], ['pilot', 'Pilot'], ['passenger', 'Passenger']];
+// Each role filter's active-state tint: sky blue for Pilot, violet for Passenger (same tokens as the
+// route lines and FlightRoleTabs), neutral navy for All so it doesn't read as either role.
+const ROLE_FILTERS = [
+  ['all', 'All', 'bg-navy-700 text-slate-100'],
+  ['pilot', 'Pilot', 'bg-accent text-ink'],
+  ['passenger', 'Passenger', 'bg-[rgb(var(--role-pax))] text-ink'],
+];
 
 
 // Frequency -> size and color (cool sky for one-offs, warming to amber for home bases).
@@ -99,6 +106,17 @@ function ZoomTracker() {
   return null;
 }
 
+// Leaflet closes a popup on an outside tap/click by default, but not on Escape — this adds that.
+function EscapePopupCloser() {
+  const map = useMap();
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') map.closePopup(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [map]);
+  return null;
+}
+
 function FitBounds({ points }) {
   const map = useMap();
   useEffect(() => {
@@ -165,22 +183,49 @@ function PinSummary({ stop, photoCounts }) {
     api.listPhotos(withPhoto.id).then((p) => { if (!cancelled && p[0]) setPhoto(p[0]); }).catch(() => {});
     return () => { cancelled = true; };
   }, [withPhoto?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const code = airportCode(stop);
+  // Only show the IATA/local code separately when it's not already implied by the ICAO code (e.g. K + SUS
+  // -> KSUS shouldn't also show "· SUS").
+  const extraCode = stop.iata && stop.iata !== code && !(code.length === 4 && code.slice(1) === stop.iata) ? stop.iata : null;
+  const pilotCount = stop.flights.filter((f) => roleOf(f) === 'pilot').length;
+  const passengerCount = stop.flights.filter((f) => roleOf(f) === 'passenger').length;
+
   return (
-    <div className="min-w-[12rem] max-w-[15rem]">
-      <div className="text-base font-semibold">{airportCode(stop)}{stop.iata ? ` · ${stop.iata}` : ''}</div>
+    <div className="w-[15.5rem] max-w-[calc(100vw-3.5rem)] p-0.5">
+      <div className="text-base font-semibold leading-tight">{code}{extraCode ? ` · ${extraCode}` : ''}</div>
       <div className="text-sm text-slate-400">{stop.name}</div>
-      <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
-        <div><dt className="text-[10px] uppercase tracking-wide text-slate-500">Visits</dt><dd className="text-base font-semibold">{s.visits}</dd></div>
-        <div><dt className="text-[10px] uppercase tracking-wide text-slate-500">Hours</dt><dd className="text-base font-semibold">{fmtHours(s.hours)}</dd></div>
-        <div><dt className="text-[10px] uppercase tracking-wide text-slate-500">Last</dt><dd className="text-sm font-semibold">{fmtDate(s.last)}</dd></div>
-      </dl>
-      {photo && <PhotoImage className="mt-2" src={photo.data_url} width={photo.width} height={photo.height} alt="From a flight here" maxHeight={140} />}
+
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {pilotCount > 0 && (
+          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">Pilot · {pilotCount}</span>
+        )}
+        {passengerCount > 0 && (
+          <span className="rounded-full bg-[rgb(var(--role-pax))]/15 px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--role-pax-strong))]">Passenger · {passengerCount}</span>
+        )}
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 text-center">
+        <div><div className="text-[10px] uppercase tracking-wide text-slate-500">Visits</div><div className="text-base font-semibold">{s.visits}</div></div>
+        <div><div className="text-[10px] uppercase tracking-wide text-slate-500">Hours</div><div className="text-base font-semibold">{fmtHours(s.hours)}</div></div>
+      </div>
+      <div className="mt-2 flex items-baseline justify-between border-t border-edge pt-2 text-sm">
+        <span className="text-[10px] uppercase tracking-wide text-slate-500">Last visit</span>
+        <span className="whitespace-nowrap font-semibold">{fmtDate(s.last)}</span>
+      </div>
+
+      {photo && <PhotoImage className="mt-2.5" src={photo.data_url} width={photo.width} height={photo.height} alt="From a flight here" maxHeight={140} />}
     </div>
   );
 }
 
-const Stat = ({ label, value }) => (
-  <div><div className="text-base font-semibold leading-tight">{value}</div><div className="text-[11px] text-slate-400">{label}</div></div>
+const Stat = ({ label, value, unit }) => (
+  <div className="flex flex-col items-center text-center">
+    <div className="whitespace-nowrap text-base font-semibold leading-tight">
+      {value}{unit && <span className="ml-0.5 text-[10px] font-medium text-slate-400">{unit}</span>}
+    </div>
+    <div className="mt-0.5 min-h-[1.5rem] text-[11px] leading-tight text-slate-400">{label}</div>
+  </div>
 );
 
 export default function MapPage() {
@@ -260,6 +305,11 @@ export default function MapPage() {
   const toggleAnimate = (on) => { setAnimate(on); setPlayOnce(false); saveAnimatePref(on); if (on) setPlays((n) => n + 1); };
   const replay = () => { if (!animate) setPlayOnce(true); setPlays((n) => n + 1); };
 
+  // "All" mixes pilot and passenger time, so the hours stat is labeled to say so explicitly; filtered to
+  // one role, the role name alone is unambiguous.
+  const hoursLabel = roleFilter === 'all' ? 'hours (pilot + passenger)' : `${roleFilter} hours`;
+  const distanceNm = Math.round(data?.totalDistanceNm ?? 0).toLocaleString();
+
   return (
     <div className="relative isolate -mx-4 -mt-6 h-[calc(100dvh-var(--bottom-nav-h))] mb-[calc(-1*(var(--bottom-nav-h)+2rem))]">
       <MapContainer center={[39, -98]} zoom={4} zoomControl={false} attributionControl={false} zoomSnap={0.5} zoomDelta={0.5} minZoom={2} worldCopyJump className="h-full w-full bg-navy-950">
@@ -272,6 +322,7 @@ export default function MapPage() {
           maxZoom={16}
         />
         <ZoomTracker />
+        <EscapePopupCloser />
         <FitBounds points={points} />
 
         {visiblePilotLines.map(({ route: r, key, positions, label }, i) => {
@@ -326,13 +377,17 @@ export default function MapPage() {
 
         {data?.stops.map((s) => (
           <Marker key={s.ident} position={[s.lat, s.lon]} icon={icons.get(s.ident)}>
-            <Popup><PinSummary stop={s} photoCounts={photoCounts} /></Popup>
+            {/* Extra top-left padding keeps the popup clear of the floating stats panel/legend; extra
+                bottom-right padding keeps it clear of the attribution toggle. */}
+            <Popup autoPanPaddingTopLeft={[16, 170]} autoPanPaddingBottomRight={[16, 70]}>
+              <PinSummary stop={s} photoCounts={photoCounts} />
+            </Popup>
           </Marker>
         ))}
       </MapContainer>
 
       {flights && flights.length > 0 && (
-        <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2">
+        <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start">
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-stats"
               className="pressable flex h-10 items-center gap-1.5 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 text-xs font-medium text-slate-100 backdrop-blur active:bg-navy-800">
@@ -346,37 +401,39 @@ export default function MapPage() {
             </button>
           </div>
 
-          {open && (
-            <section id="map-stats" aria-label="Map details and options" className="card-elevated w-64 max-w-full border border-edge-strong bg-navy-900/95 p-3 text-sm backdrop-blur">
-              <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by role">
-                {ROLE_FILTERS.map(([k, l]) => (
+          <section id="map-stats" aria-label="Map details and options" aria-hidden={!open} inert={open ? undefined : ''}
+            className={`grid w-64 max-w-full overflow-hidden rounded-[1.25rem] border border-edge-strong bg-navy-900/95 text-sm shadow-[var(--shadow-card)] backdrop-blur transition-[grid-template-rows,opacity,margin-top] duration-200 ease-out ${open ? 'mt-2 opacity-100' : 'mt-0 pointer-events-none opacity-0'}`}
+            style={{ gridTemplateRows: open ? '1fr' : '0fr' }}>
+            <div className="min-h-0 overflow-hidden p-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Map details</h2>
+
+              <div className="mt-3 flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by role">
+                {ROLE_FILTERS.map(([k, l, activeClass]) => (
                   <button key={k} type="button" onClick={() => setRoleFilter(k)} aria-pressed={roleFilter === k}
-                    className={`pressable h-9 flex-1 rounded-lg text-xs font-medium transition-colors ${roleFilter === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+                    className={`pressable h-11 flex-1 rounded-lg text-xs font-medium transition-colors ${roleFilter === k ? activeClass : 'text-slate-400'}`}>{l}</button>
                 ))}
               </div>
 
-              <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5">
+              <div className="mt-4 grid grid-cols-3 gap-x-2 gap-y-3">
                 <Stat label={counts.airports === 1 ? 'airport' : 'airports'} value={counts.airports} />
                 {counts.regionsKnown && <Stat label={counts.states === 1 ? 'state' : 'states'} value={counts.states} />}
                 {counts.countries > 1 && <Stat label="countries" value={counts.countries} />}
                 <Stat label="routes" value={visiblePilotLines.length + visiblePassengerLines.length} />
                 <Stat label="flights" value={filteredFlights.length} />
-                <Stat label="hours" value={fmtHours(totalHours)} />
-                <Stat label="distance" value={fmtNm(data?.totalDistanceNm ?? 0)} />
+                <Stat label={hoursLabel} value={fmtHours(totalHours)} />
+                <Stat label="distance" value={distanceNm} unit="nm" />
               </div>
-              {!counts.regionsKnown && <p className="mt-2 text-[11px] text-slate-500">States visited appears once the airport database is re-seeded (npm run seed).</p>}
 
               <div className="mt-3 border-t border-edge pt-1">
-                <label className="flex min-h-11 items-center justify-between gap-2 text-xs text-slate-300">
-                  <span>Animate routes{!affordable && visiblePilotLines.length > ANIMATE_ROUTE_LIMIT ? ' (off: many routes)' : ''}</span>
-                  <input type="checkbox" checked={animate} onChange={(e) => toggleAnimate(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />
-                </label>
+                <Toggle label="Animate routes"
+                  description={!affordable && visiblePilotLines.length > ANIMATE_ROUTE_LIMIT ? 'Off: many routes' : undefined}
+                  checked={animate} onChange={toggleAnimate} />
               </div>
-            </section>
-          )}
+            </div>
+          </section>
 
           {hasPassengerRoutes && (
-            <div className="flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/90 px-3 py-1.5 text-[11px] text-slate-300 shadow-[var(--shadow-card)] backdrop-blur">
+            <div className="mt-2 flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 py-2 text-[11px] text-slate-300 shadow-[var(--shadow-card)] backdrop-blur">
               <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Pilot</span>
               <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Passenger</span>
             </div>
