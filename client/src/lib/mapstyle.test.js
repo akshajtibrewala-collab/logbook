@@ -46,7 +46,7 @@ test('visitedCounts counts countries even when no region data is seeded (the bug
   assert.equal(counts.countries, 2); // but countries must still be reported, not hidden/zeroed
 });
 
-// The pilot's real 26 flown/ridden airports, resolved via the airports table (country codes as returned
+// The pilot's real 26 pilot/passenger airports, resolved via the airports table (country codes as returned
 // by GET /api/airports/resolve — see server/src/routes/airports.js), covering 9 distinct countries. None
 // of these carry region data, matching production today.
 const REAL_AIRPORTS = [
@@ -67,7 +67,7 @@ const REAL_AIRPORTS = [
 ];
 const PILOT_ONLY_AIRPORTS = REAL_AIRPORTS.filter((a) => a.ident === 'KSUS' || a.ident === 'KMO6'); // the only two airports pilot-role flights touch
 
-test('visitedCounts on the real 26 flown/ridden airports reports 9 distinct countries', () => {
+test('visitedCounts on the real 26 pilot/passenger airports reports 9 distinct countries', () => {
   assert.equal(visitedCounts(REAL_AIRPORTS).countries, 9);
 });
 

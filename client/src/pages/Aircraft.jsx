@@ -23,14 +23,27 @@ function FlagBadges({ a }) {
   );
 }
 
-const USAGE_FILTERS = [['all', 'All'], ['flown', 'Flown'], ['ridden', 'Ridden']];
+// Same sky-blue/violet tokens as RoleBadge.jsx (pilot vs passenger, everywhere else a flight's role
+// becomes a color) — a local variant since these badges carry a count/qualifier, not just the role name.
+function UsageBadge({ role, children }) {
+  const isPassenger = role === 'passenger';
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+      isPassenger ? 'bg-[rgb(var(--role-pax))]/15 text-[rgb(var(--role-pax-strong))]' : 'bg-accent/15 text-accent-strong'
+    }`}>
+      {children}
+    </span>
+  );
+}
+
+const USAGE_FILTERS = [['all', 'All'], ['pilot', 'Pilot'], ['passenger', 'Passenger']];
 
 export default function Aircraft() {
   const navigate = useNavigate();
   const [aircraft, setAircraft] = useState(null);
   const [flights, setFlights] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
-  const [usageFilter, setUsageFilter] = useState('all');
+  const [usageFilter, setUsageFilter] = useState('all'); // 'all' | 'pilot' | 'passenger'
   const [error, setError] = useState('');
 
   const load = useCallback(() => {
@@ -41,28 +54,28 @@ export default function Aircraft() {
   }, [showArchived]);
   useEffect(load, [load]);
 
-  // How each aircraft has actually been used: flown as pilot, or only ridden as a passenger —
+  // How each aircraft has actually been used: flown as pilot, or only ever as a passenger —
   // an airliner added from a passenger flight's aircraft picker should never look like something you fly.
   const usageById = useMemo(() => {
     const byId = new Map();
     for (const f of flights) {
       if (f.aircraft_id == null) continue;
-      const u = byId.get(f.aircraft_id) ?? { flown: 0, ridden: 0 };
-      if (isPilotFlight(f)) u.flown++; else u.ridden++;
+      const u = byId.get(f.aircraft_id) ?? { pilot: 0, passenger: 0 };
+      if (isPilotFlight(f)) u.pilot++; else u.passenger++;
       byId.set(f.aircraft_id, u);
     }
     return byId;
   }, [flights]);
 
-  // Flown: ever flown as pilot. Ridden: linked to a flight but never as pilot — surfaces exactly the
+  // Pilot: ever flown as pilot. Passenger: linked to a flight but never as pilot — surfaces exactly the
   // "airliner added from a passenger flight" case the Aircraft list must not present as something you fly.
   const visible = useMemo(() => {
     if (!aircraft) return aircraft;
     if (usageFilter === 'all') return aircraft;
     return aircraft.filter((a) => {
       const u = usageById.get(a.id);
-      if (usageFilter === 'flown') return Boolean(u?.flown);
-      return Boolean(u?.ridden) && !u.flown;
+      if (usageFilter === 'pilot') return Boolean(u?.pilot);
+      return Boolean(u?.passenger) && !u.pilot;
     });
   }, [aircraft, usageById, usageFilter]);
 
@@ -95,7 +108,7 @@ export default function Aircraft() {
       <ul className="stagger mt-4 space-y-2">
         {visible?.map((a) => {
           const u = usageById.get(a.id);
-          const riddenOnly = Boolean(u?.ridden) && !u?.flown;
+          const passengerOnly = Boolean(u?.passenger) && !u?.pilot;
           return (
           <li key={a.id}>
             <Card as="button" onClick={() => navigate(`/aircraft/${a.id}`)} className="w-full text-left active:bg-navy-800">
@@ -104,7 +117,7 @@ export default function Aircraft() {
                   {a.is_simulator ? (a.model || 'Simulator') : (a.tail_number || a.model || 'Aircraft')}
                 </span>
                 <div className="flex shrink-0 gap-1.5">
-                  {riddenOnly && <Badge tone="neutral">Ridden only</Badge>}
+                  {passengerOnly && <UsageBadge role="passenger">Passenger only</UsageBadge>}
                   {a.archived_at && <Badge tone="neutral">Archived</Badge>}
                 </div>
               </div>
@@ -112,9 +125,9 @@ export default function Aircraft() {
                 {[a.is_simulator ? a.simulator_device_type : a.tail_number && a.model, a.category, a.class].filter(Boolean).join(' · ') || 'No details yet'}
               </div>
               {u && (
-                <div className="mt-1.5 flex gap-3 text-xs text-slate-500">
-                  {u.flown > 0 && <span>Flown {u.flown}×</span>}
-                  {u.ridden > 0 && <span>Ridden {u.ridden}×</span>}
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {u.pilot > 0 && <UsageBadge role="pilot">Pilot {u.pilot}×</UsageBadge>}
+                  {u.passenger > 0 && <UsageBadge role="passenger">Passenger {u.passenger}×</UsageBadge>}
                 </div>
               )}
               <FlagBadges a={a} />
