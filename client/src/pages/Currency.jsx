@@ -8,10 +8,14 @@ import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Card from '../components/Card.jsx';
+import Button from '../components/Button.jsx';
+import DatePicker from '../components/DatePicker.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import CurrencyStatusCard, { TONE, daysText } from '../components/CurrencyStatusCard.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 
 const today = () => new Date().toLocaleDateString('en-CA');
+const newestFirst = (a, b) => b.date.localeCompare(a.date) || b.id - a.id;
 
 export default function Currency() {
   const navigate = useNavigate();
@@ -19,6 +23,11 @@ export default function Currency() {
   const [reviews, setReviews] = useState([]);
   const [expirations, setExpirations] = useState([]);
   const [error, setError] = useState('');
+  const [reviewDate, setReviewDate] = useState(today);
+  const [logging, setLogging] = useState(false);
+  const [editingId, setEditingId] = useState(null); // id of the review being re-dated, or null when adding
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const now = today();
 
   const load = useCallback(() => {
@@ -40,6 +49,34 @@ export default function Currency() {
       custom: customExpirations(expirations, now),
     };
   }, [flights, reviews, expirations, now]);
+
+  function startAdd() { setEditingId(null); setReviewDate(today()); setLogging(true); }
+  function startEdit() { setEditingId(reviews[0].id); setReviewDate(reviews[0].date); setLogging(true); }
+  function cancelReview() { setLogging(false); setEditingId(null); }
+
+  async function logReview(e) {
+    e.preventDefault();
+    try {
+      const saved = editingId ? await api.updateReview(editingId, reviewDate) : await api.addReview(reviewDate);
+      setReviews((rs) => [saved, ...rs.filter((r) => r.id !== saved.id)].sort(newestFirst));
+      cancelReview();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function removeReview() {
+    setRemoving(true);
+    try {
+      await api.deleteReview(reviews[0].id);
+      setReviews((rs) => rs.slice(1));
+      setConfirmRemove(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   return (
     <div className="stagger space-y-4">
@@ -66,7 +103,27 @@ export default function Currency() {
               detail={`${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`} />
 
             <CurrencyStatusCard title="Flight review" Icon={ClipboardCheck} result={data.review}
-              detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)}` : 'No flight review logged'} />
+              detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)} · due ${fmtDate(data.review.expires)}` : 'No flight review logged'}>
+              {logging ? (
+                <form onSubmit={logReview} className="space-y-2">
+                  <DatePicker label={editingId ? 'Change review date' : 'Flight review date'} value={reviewDate} onChange={setReviewDate} />
+                  <div className="flex gap-2">
+                    <Button size="md" fullWidth={false} className="flex-1">Save</Button>
+                    <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={cancelReview}>Cancel</Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-1">
+                  <Button variant="secondary" size="md" onClick={startAdd}>Log a flight review</Button>
+                  {reviews.length > 0 && (
+                    <div className="flex justify-center gap-2 text-sm">
+                      <Button variant="ghost" size="sm" fullWidth={false} onClick={startEdit}>Change date</Button>
+                      <Button variant="danger" size="sm" fullWidth={false} onClick={() => setConfirmRemove(true)}>Remove</Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CurrencyStatusCard>
 
             <CurrencyStatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
               detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
@@ -115,6 +172,10 @@ export default function Currency() {
           </div>
         </>
       )}
+
+      <ConfirmDialog open={confirmRemove} title="Remove flight review?"
+        description="This removes your most recently logged flight review. This cannot be undone."
+        confirmLabel="Remove" busy={removing} onConfirm={removeReview} onClose={() => setConfirmRemove(false)} />
     </div>
   );
 }
