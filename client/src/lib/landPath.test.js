@@ -22,3 +22,21 @@ test('buildLandPath concatenates multiple rings into separate subpaths', () => {
   assert.equal(d.split('M').length - 1, 2); // one "M" per ring
   assert.ok(d.includes('Z Z') === false && d.trim().endsWith('Z'));
 });
+
+test('buildLandPath unwraps each ring point relative to the PREVIOUS point, not a single fixed reference', () => {
+  // A stub projector that records which `near` value it was called with, and "unwraps" lon toward it —
+  // mimicking routeProjection's antimeridian handling without needing real geography.
+  const calls = [];
+  const near200 = (lon, near) => { calls.push(near); return near === undefined ? lon : lon + (near > 100 ? 1000 : 0); };
+  const stubProject = ([lat, lon], near) => [near200(lon, near), lat];
+
+  const ring = [0, 0, 10, 0, 170, 0]; // flat [lon, lat, ...]
+  buildLandPath([ring], stubProject);
+
+  // First point: no previous point yet, so `near` is undefined (the frame's own default kicks in).
+  assert.equal(calls[0], undefined);
+  // Second point: unwraps relative to the first point's raw lon (0), not a single global reference.
+  assert.equal(calls[1], 0);
+  // Third point: unwraps relative to the SECOND point's raw lon (10), continuing the chain.
+  assert.equal(calls[2], 10);
+});

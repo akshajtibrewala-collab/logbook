@@ -80,6 +80,7 @@ export default function Home() {
   const [milestoneCompletions, setMilestoneCompletions] = useState([]);
   const [aircraft, setAircraft] = useState([]);
   const [backupStatus, setBackupStatus] = useState(null);
+  const [homeAirportIdent, setHomeAirportIdent] = useState(null);
   const [error, setError] = useState('');
   const [showAddFlight, setShowAddFlight] = useState(false);
   const now = today();
@@ -95,15 +96,17 @@ export default function Home() {
   const load = useCallback(() => {
     setError('');
     (async () => {
-      const [f, r, e, m, a, c, b] = await Promise.all([
+      const [f, r, e, m, a, c, b, settings] = await Promise.all([
         api.listFlights(), api.listReviews(), api.listExpirations(), api.listMilestonesConfig(),
         api.listAircraft(true), api.listMilestoneCompletions(),
         api.backupJobStatus().catch(() => null),
+        api.getSettings().catch(() => ({})),
       ]);
       const codes = [...new Set(f.flatMap(flightCodes))];
       const resolved = codes.length ? await api.resolveAirports(codes) : {};
       setFlights(f); setReviews(r); setExpirations(e); setMilestonesConfig(m); setAircraft(a);
       setMilestoneCompletions(c); setBackupStatus(b); setAirports(resolved);
+      setHomeAirportIdent(settings.home_airport_ident || null);
     })().catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
@@ -267,7 +270,7 @@ export default function Home() {
           </div>
 
           <Suspense fallback={<Skeleton className="h-28" />}>
-            <MapPreviewCard flights={flights} airports={airports} />
+            <MapPreviewCard flights={flights} airports={airports} homeAirportIdent={homeAirportIdent} />
           </Suspense>
 
           {recentItems.length > 0 && (
