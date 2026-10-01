@@ -1,4 +1,4 @@
-# AeroTrail
+# AeroHub
 
 A personal pilot logbook and career-tracking app: log flights with structured stops and typed
 approaches, track aircraft and their complex/high-performance/tailwheel/turbine/TAA attributes, see

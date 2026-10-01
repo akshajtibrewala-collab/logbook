@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import BottomNav from './components/BottomNav.jsx';
 import SideNav from './components/SideNav.jsx';
-import Dashboard from './pages/Dashboard.jsx';
+import Home from './pages/Home.jsx';
 import Logbook from './pages/Logbook.jsx';
 import FlightForm from './pages/FlightForm.jsx';
 import FlightDetail from './pages/FlightDetail.jsx';
@@ -40,7 +40,7 @@ export default function App() {
           <OutboxBanner />
           <Suspense fallback={<div className="space-y-4"><Skeleton className="h-8 w-40" /><Skeleton className="h-40" /></div>}>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Home />} />
             <Route path="/logbook" element={<Logbook />}>
               <Route path="ground/:id" element={<GroundSessionDetail />} />
               <Route path=":id" element={<FlightDetail />} />

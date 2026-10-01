@@ -61,11 +61,11 @@ function AirportCheck() {
             </p>
           )}
           <div>
-            <h2 className="mb-2 text-sm font-medium text-slate-400">Current conditions{data.airport.name ? ` — ${data.airport.name}` : ''}</h2>
+            <h2 className="stat-title mb-2 text-sm text-slate-400">Current conditions{data.airport.name ? ` — ${data.airport.name}` : ''}</h2>
             <WeatherConditions data={data.current} />
           </div>
           <div>
-            <h2 className="mb-2 text-sm font-medium text-slate-400">Forecast</h2>
+            <h2 className="stat-title mb-2 text-sm text-slate-400">Forecast</h2>
             {data.forecast.unavailable
               ? <WeatherConditions data={data.forecast} />
               : (
@@ -139,11 +139,11 @@ function PlanFlight() {
         const notice = tzNotice(leg);
         const dateLabel = legDateLabel(i, leg);
         return (
-          <div key={i} className="card space-y-2 p-4">
+          <div key={i} className="card card-elevated space-y-2 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-400">{labels[i]}</span>
+              <span className="stat-title text-sm text-slate-400">{labels[i]}</span>
               {i > 0 && i < legs.length - 1 && (
-                <button type="button" onClick={() => removeStop(i)} aria-label="Remove stop" className="flex h-11 w-11 items-center justify-center text-slate-500 active:text-bad"><X size={16} /></button>
+                <button type="button" onClick={() => removeStop(i)} aria-label="Remove stop" className="pressable flex h-11 w-11 items-center justify-center text-slate-500 active:text-bad"><X size={16} /></button>
               )}
             </div>
             <AirportSearchField value={leg.ident} onChange={(v) => setLeg(i, (l) => changeAirport(l, v))} />
@@ -185,18 +185,18 @@ export default function Weather() {
     <div className="stagger space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="flex items-center gap-2 text-2xl font-semibold"><CloudSun size={22} className="text-accent" />Weather</h1>
-        <Link to="/weather/settings" aria-label="Weather settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+        <Link to="/weather/settings" aria-label="Weather settings" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
           <Settings size={20} />
         </Link>
       </div>
 
       <div className="flex gap-2">
         <button type="button" onClick={() => setMode('airport')}
-          className={`h-10 flex-1 rounded-xl text-sm font-medium ${mode === 'airport' ? 'bg-accent text-ink' : 'border border-edge text-slate-400'}`}>
+          className={`pressable h-10 flex-1 rounded-xl text-sm font-medium transition-colors ${mode === 'airport' ? 'bg-accent text-ink' : 'border border-edge text-slate-400'}`}>
           This airport
         </button>
         <button type="button" onClick={() => setMode('plan')}
-          className={`h-10 flex-1 rounded-xl text-sm font-medium ${mode === 'plan' ? 'bg-accent text-ink' : 'border border-edge text-slate-400'}`}>
+          className={`pressable h-10 flex-1 rounded-xl text-sm font-medium transition-colors ${mode === 'plan' ? 'bg-accent text-ink' : 'border border-edge text-slate-400'}`}>
           Plan a flight
         </button>
       </div>

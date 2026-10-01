@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Plane } from 'lucide-react';
 import { fmtHours } from '../../lib/hours.js';
 import { hoursByCategory, hoursByAircraft } from '../../lib/stats.js';
 import { hoursByMonth, hoursByTail, cumulativeHours } from '../../lib/charts.js';
@@ -30,11 +31,10 @@ export default function PilotTab({ pilotFlights, settings, onSaveTarget }) {
 
   return (
     <div className="stagger space-y-4">
-      <SummaryStrip items={[
-        { label: 'Total hours', value: fmtHours(data.totalHours) },
-        { label: 'Hours, last 12 months', value: fmtHours(data.hours12mo) },
+      <SummaryStrip icon={Plane} tint="pilot" primary={{ label: 'Total hours', value: fmtHours(data.totalHours) }} items={[
+        { label: 'Last 12mo', value: fmtHours(data.hours12mo) },
         { label: 'PIC hours', value: fmtHours(data.picHours) },
-        { label: 'Toward goal', value: data.goalPercent === null ? 'No goal set' : `${data.goalPercent}%` },
+        { label: 'Toward goal', value: data.goalPercent === null ? 'Not set' : `${data.goalPercent}%` },
       ]} />
       <MonthlyChart flights={pilotFlights} note="The last 12 months." />
       <CumulativeChart flights={pilotFlights} settings={settings} onSaveTarget={onSaveTarget} />

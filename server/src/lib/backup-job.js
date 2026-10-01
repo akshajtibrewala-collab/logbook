@@ -14,7 +14,7 @@ export function cronAuthorized(authorizationHeader, secret) {
   return timingSafeEqual(digest(given), digest(secret));
 }
 
-export const backupFilename = (now, gzipped) => `aerotrail-backup-${now.toISOString().replace(/[:.]/g, '-')}.json${gzipped ? '.gz' : ''}`;
+export const backupFilename = (now, gzipped) => `aerohub-backup-${now.toISOString().replace(/[:.]/g, '-')}.json${gzipped ? '.gz' : ''}`;
 
 /** Serializes a backup and gzips it only if it has grown past the threshold. */
 export function packBackup(backup, now = new Date()) {
@@ -44,8 +44,8 @@ export function backupStatus(lastRun, now = new Date()) {
 export function emailContent(pack, backup, trigger, now = new Date()) {
   const counts = Object.entries(backup.tables).map(([t, rows]) => `${t}: ${rows.length}`).join(', ');
   return {
-    subject: `AeroTrail backup ${now.toISOString().slice(0, 10)}${trigger === 'manual' ? ' (manual)' : ''}`,
-    text: `Full AeroTrail backup attached (${pack.filename}, ${pack.sentBytes} bytes${pack.gzipped ? ', gzipped' : ''}).\n\nRows: ${counts}\n\nRestore it from Logbook > Import & export > Restore${pack.gzipped ? ' (gunzip it first)' : ''}.`,
+    subject: `AeroHub backup ${now.toISOString().slice(0, 10)}${trigger === 'manual' ? ' (manual)' : ''}`,
+    text: `Full AeroHub backup attached (${pack.filename}, ${pack.sentBytes} bytes${pack.gzipped ? ', gzipped' : ''}).\n\nRows: ${counts}\n\nRestore it from Logbook > Import & export > Restore${pack.gzipped ? ' (gunzip it first)' : ''}.`,
   };
 }
 

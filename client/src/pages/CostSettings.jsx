@@ -13,9 +13,9 @@ import Skeleton from '../components/Skeleton.jsx';
 
 function Section({ title, description, children }) {
   return (
-    <section className="card space-y-3 p-4">
+    <section className="card card-elevated space-y-3 p-4">
       <div>
-        <h2 className="text-sm font-medium text-slate-400">{title}</h2>
+        <h2 className="stat-title text-sm text-slate-400">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
       </div>
       {children}
@@ -44,7 +44,7 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
           <span className="text-slate-400">Effective {formatDate(r.effective_date)}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.hourly_rate)}/hr</span>
-            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="pressable flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
           </div>
         </div>
       ))}
@@ -58,7 +58,7 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a rate change</button>
+        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a rate change</button>
       )}
     </div>
   );
@@ -80,7 +80,7 @@ function PlannedCosts({ certificate, rows, onCreate, onDelete }) {
           <span className="text-slate-300">{r.label}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.amount)}</span>
-            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete planned cost" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete planned cost" className="pressable flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
           </div>
         </div>
       ))}
@@ -94,7 +94,7 @@ function PlannedCosts({ certificate, rows, onCreate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a one-time cost</button>
+        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a one-time cost</button>
       )}
     </div>
   );
@@ -122,7 +122,7 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
           <span className="text-slate-400">Effective {formatDate(r.effective_date)}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.rental_rate_per_hr)}/hr + {fmtMoney(r.fuel_surcharge_per_hr)}/hr fuel</span>
-            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="pressable flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
           </div>
         </div>
       ))}
@@ -137,7 +137,7 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1.5 text-sm text-accent"><Plus size={14} /> Add a rate change</button>
+        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a rate change</button>
       )}
     </div>
   );
@@ -165,10 +165,10 @@ function PhaseCard({
   };
 
   return (
-    <section className="card p-0">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between p-4 text-left">
+    <section className="card card-elevated p-0">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="pressable flex w-full items-center justify-between p-4 text-left">
         <div>
-          <h2 className="text-base font-semibold">{certificateLabel(certificate)}</h2>
+          <h2 className="stat-title text-base">{certificateLabel(certificate)}</h2>
           <p className="mt-0.5 text-xs text-slate-400">
             {phase ? `${formatDate(phase.start_date)} – ${phase.end_date ? formatDate(phase.end_date) : 'ongoing'}${phase.track_costs ? '' : ' · costs not tracked'}` : 'Not started'}
           </p>
@@ -279,7 +279,7 @@ export default function CostSettings() {
   return (
     <div className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/costs')} className="flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/costs')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Cost settings</h1>
       </div>
 

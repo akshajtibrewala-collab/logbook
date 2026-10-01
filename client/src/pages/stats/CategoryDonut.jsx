@@ -1,3 +1,4 @@
+import { PieChart as PieChartIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { fmtHours } from '../../lib/hours.js';
 import { PALETTE, tooltipStyle } from './chartStyle.js';
@@ -6,7 +7,7 @@ import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 export default function CategoryDonut({ categories, defaultOpen = true }) {
   const total = categories.reduce((s, c) => s + c.hours, 0);
   return (
-    <CollapsibleStatCard title="Hours by category" note="Categories overlap — night PIC counts toward both." defaultOpen={defaultOpen}>
+    <CollapsibleStatCard title="Hours by category" icon={PieChartIcon} note="Categories overlap — night PIC counts toward both." defaultOpen={defaultOpen}>
       {categories.length === 0 ? <p className="text-sm text-slate-500">No category time logged yet.</p> : (
         <>
           <div className="h-56">

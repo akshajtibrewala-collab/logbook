@@ -76,3 +76,25 @@ export function buildMapData(flights, airports) {
     totalDistanceNm: Math.round(totalDistanceNm),
   };
 }
+
+/**
+ * Drops stops/routes whose airport has no coordinates — the airport resolved by code (it's a real row in
+ * the airports table), but that row's own lat/lon is blank, a data-quality gap distinct from an unknown
+ * code (`unresolved` above). Nothing with missing coordinates can be placed on either map. A flight is
+ * counted in `omittedFlightCount` only when NONE of its stops could be placed — if at least one stop is
+ * placeable, that flight still shows as a dot, just missing a leg to/from the unplaceable airport.
+ */
+export function placeableMapData(data) {
+  const stops = data.stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lon));
+  const placeableIdents = new Set(stops.map((s) => s.ident));
+  const routes = data.routes.filter((r) => placeableIdents.has(r.a.ident) && placeableIdents.has(r.b.ident));
+
+  const omittedFlightIds = new Set();
+  for (const s of data.stops) {
+    if (placeableIdents.has(s.ident)) continue;
+    for (const f of s.flights) omittedFlightIds.add(f.id);
+  }
+  for (const s of stops) for (const f of s.flights) omittedFlightIds.delete(f.id);
+
+  return { ...data, stops, routes, omittedFlightCount: omittedFlightIds.size };
+}

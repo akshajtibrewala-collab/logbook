@@ -34,7 +34,7 @@ export default function SummaryDocument({ summary, title = 'Pilot logbook summar
       {target && (
         <section aria-label="Goal progress" className="card p-4">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium text-accent">{target.label}</h2>
+            <h2 className="text-sm font-medium text-accent-strong">{target.label}</h2>
             <span className="text-sm text-slate-300">{fmtHours(target.flown)} of {fmtHours(target.hours)} h · {pct}%</span>
           </div>
           <div className="mt-2 h-2 rounded-full bg-navy-800" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${target.label} progress`}>
@@ -45,7 +45,7 @@ export default function SummaryDocument({ summary, title = 'Pilot logbook summar
 
       {certificates.length > 0 && (
         <section aria-label="Certificate and rating progress" className="card p-4">
-          <h2 className="mb-3 text-sm font-medium text-accent">Certificate & rating progress</h2>
+          <h2 className="mb-3 text-sm font-medium text-accent-strong">Certificate & rating progress</h2>
           <ul className="space-y-3">
             {certificates.map((c) => (
               <li key={c.key}>
@@ -62,14 +62,14 @@ export default function SummaryDocument({ summary, title = 'Pilot logbook summar
 
       {options.show_recent_flights && (
         <section aria-label="Recent flights">
-          <h2 className="mb-2 text-sm font-medium text-accent">Recent flights</h2>
+          <h2 className="mb-2 text-sm font-medium text-accent-strong">Recent flights</h2>
           {recent.length === 0 ? <p className="text-sm text-slate-500">No flights logged yet.</p> : (
             <ul className="space-y-2">
               {recent.map((f) => (
                 <li key={f.id} className="card break-inside-avoid p-3">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-base font-medium">{f.from || '—'} → {f.to || '—'}{f.route ? ` (via ${f.route})` : ''}</span>
-                    <span className="font-semibold text-accent">{fmtHours(f.total_time)}</span>
+                    <span className="font-semibold text-accent-strong">{fmtHours(f.total_time)}</span>
                   </div>
                   <div className="text-sm text-slate-400">
                     {formatDate(f.date)}{options.show_aircraft && (f.aircraft_type || f.tail_number) ? ` · ${[f.aircraft_type, f.tail_number].filter(Boolean).join(' · ')}` : ''}

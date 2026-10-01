@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
+import { Target } from 'lucide-react';
 import { LineChart, Line, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fmtHours } from '../../lib/hours.js';
 import { cumulativeHours } from '../../lib/charts.js';
 import { formatDate } from '../../lib/calendar.js';
 import Button from '../../components/Button.jsx';
-import { axisTick, tooltipStyle } from './chartStyle.js';
+import { axisTick, tooltipStyle, gridStroke } from './chartStyle.js';
 import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 
 const localToday = () => new Date().toLocaleDateString('en-CA');
@@ -28,14 +29,14 @@ export default function CumulativeChart({ flights, settings, onSaveTarget, note,
 
   const name = settings?.hours_target_label || 'goal';
   return (
-    <CollapsibleStatCard title="Progress toward your goal"
+    <CollapsibleStatCard title="Progress toward your goal" icon={Target}
       note={note ?? (series.target ? `${fmtHours(series.total)} of ${fmtHours(series.target)} h (${series.percent}%)` : 'Set a target to draw a goal line.')}
       defaultOpen={defaultOpen}>
       {series.points.length === 0 ? <p className="text-sm text-slate-500">Log a flight to start the line.</p> : (
         <div className="h-56" role="img" aria-label={`Line chart of cumulative hours, now ${fmtHours(series.total)}${series.target ? ` toward ${fmtHours(series.target)}` : ''}`}>
           <ResponsiveContainer>
             <LineChart data={series.points} margin={{ left: -12, right: 16, top: 8, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="rgb(var(--edge) / var(--edge-a))" />
+              <CartesianGrid {...gridStroke} />
               <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} tickFormatter={(d) => formatDate(d).slice(0, 5)} minTickGap={28} />
               <YAxis tick={axisTick} axisLine={false} tickLine={false} domain={[0, (max) => Math.ceil(Math.max(max, series.target ?? 0))]} allowDecimals={false} />
               <Tooltip {...tooltipStyle} labelFormatter={formatDate} formatter={(v) => [`${fmtHours(v)} h`, 'Total']} />
@@ -50,7 +51,7 @@ export default function CumulativeChart({ flights, settings, onSaveTarget, note,
           {fmtHours(series.remaining)} h to go{series.projectedDate ? ` · at your recent pace, about ${formatDate(series.projectedDate)}` : ''}.
         </p>
       )}
-      {series.target && series.remaining === 0 && <p className="mt-2 text-sm text-ok">Goal reached.</p>}
+      {series.target && series.remaining === 0 && <p className="mt-2 text-sm text-ok-strong">Goal reached.</p>}
 
       {editing ? (
         <form onSubmit={save} className="mt-3 space-y-2">

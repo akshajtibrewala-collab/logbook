@@ -7,8 +7,11 @@ const ROUTE_COLORS = { dark: '#38bdf8', light: '#0369a1' };
 export const routeColorFor = (theme) => (theme === 'light' ? ROUTE_COLORS.light : ROUTE_COLORS.dark);
 
 // Passenger routes get a distinct colour AND dash pattern (never color alone) so the two are
-// distinguishable for colorblind users too. Amber/warm, tuned per theme the same way as ROUTE_COLORS.
-const PASSENGER_ROUTE_COLORS = { dark: '#fbbf24', light: '#b45309' };
+// distinguishable for colorblind users too. Violet — the app's passenger/travel role color (--role-pax in
+// index.css) — tuned per theme the same way as ROUTE_COLORS: the dark tiles use --role-pax itself
+// (#a78bfa), the light tiles use the darker --role-pax-dark/-strong step (#7c3aed) so the line doesn't
+// wash out against the light-gray tiles, mirroring how ROUTE_COLORS.light reuses --accent-dark.
+const PASSENGER_ROUTE_COLORS = { dark: '#a78bfa', light: '#7c3aed' };
 export const passengerRouteColorFor = (theme) => (theme === 'light' ? PASSENGER_ROUTE_COLORS.light : PASSENGER_ROUTE_COLORS.dark);
 export const PASSENGER_ROUTE_DASH = '2 7'; // short dashes, long gaps — reads as "not flown by you" at a glance
 
@@ -69,6 +72,8 @@ export const ANIMATE_ROUTE_LIMIT = 120;
 /** Whether route animation runs: the pilot's setting is on and the route count is affordable. */
 export const shouldAnimateRoutes = (routeCount, enabled) => Boolean(enabled) && routeCount > 0 && routeCount <= ANIMATE_ROUTE_LIMIT;
 
+// Intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — a storage key
+// change would silently reset everyone's saved "Animate routes" preference on upgrade.
 const ANIMATE_KEY = 'aerotrail-map-animate';
 const defaultStorage = () => { try { return globalThis.localStorage ?? null; } catch { return null; } };
 

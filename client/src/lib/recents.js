@@ -1,6 +1,8 @@
 // "Remember the ones I've used": most-recently-used lists (airports, aircraft) kept in localStorage.
 // Storage is injectable for tests and every access is guarded — it can be blocked in private mode.
 
+// Intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — a storage key
+// change would silently drop everyone's remembered-airports/aircraft lists on upgrade.
 const PREFIX = 'aerotrail-recent:';
 const MAX = 12;
 const defaultStorage = () => { try { return globalThis.localStorage ?? null; } catch { return null; } };

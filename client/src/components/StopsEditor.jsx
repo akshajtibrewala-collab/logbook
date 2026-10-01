@@ -53,7 +53,7 @@ export default function StopsEditor({ stops, onChange, from, to }) {
       )}
 
       <button type="button" onClick={add}
-        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-edge-strong text-sm text-accent active:bg-navy-800">
+        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-edge-strong text-sm text-accent-strong active:bg-navy-800">
         <Plus size={16} />Add stop
       </button>
     </div>

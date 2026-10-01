@@ -5,6 +5,9 @@
 // fetched in CORS mode so the cache stores real (small) responses rather than opaque ones, which browsers
 // count against storage quota at a large fixed padding; if a tile server doesn't allow CORS, the tile is
 // simply passed through uncached.
+// Intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — this is a cache
+// name, not user-visible text, and renaming it would just make the activate handler below treat every
+// visitor's existing tile cache as stale and delete it for no reason.
 const CACHE = 'aerotrail-tiles-v1';
 const TILE_HOST = 'server.arcgisonline.com';
 const MAX_TILES = 600;

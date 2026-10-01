@@ -64,7 +64,7 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
       <div className="col-span-2 space-y-2">
         <HoursInput label="Total time" value={value.total_time} onChange={(v) => onChange({ total_time: v })} error={errors.total_time} />
         {depCode && arrCode && depCode.length >= 3 && arrCode.length >= 3 && (
-          <button type="button" onClick={switchToLocalTimes} className="text-xs text-accent underline">
+          <button type="button" onClick={switchToLocalTimes} className="text-xs text-accent-strong underline">
             Enter local departure/arrival times instead
           </button>
         )}
@@ -106,10 +106,10 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" aria-label="Earlier arrival day" onClick={() => setOffset((offsetOverride ?? result?.arrDayOffset ?? 0) - 1)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-lg text-slate-300">−</button>
+              className="pressable flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-lg text-slate-300">−</button>
             <span className="w-14 text-center text-xs text-slate-400">+{offsetOverride ?? result?.arrDayOffset ?? 0}d</span>
             <button type="button" aria-label="Later arrival day" onClick={() => setOffset((offsetOverride ?? result?.arrDayOffset ?? 0) + 1)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-lg text-slate-300">+</button>
+              className="pressable flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-lg text-slate-300">+</button>
           </div>
         </div>
       )}
@@ -118,7 +118,7 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
       )}
       {errors.arr_day_offset && <p className="text-xs text-bad">{errors.arr_day_offset}</p>}
 
-      <button type="button" onClick={switchToManual} className="text-xs text-accent underline">
+      <button type="button" onClick={switchToManual} className="text-xs text-accent-strong underline">
         Enter duration manually instead
       </button>
     </div>

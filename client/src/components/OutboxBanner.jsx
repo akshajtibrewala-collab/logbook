@@ -4,6 +4,8 @@ import { CloudOff } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flushOutbox, outboxList, removeFromOutbox } from '../lib/outbox.js';
 
+// Intentionally kept as "aerotrail:" (the app's old name) despite the AeroHub rename — it's an in-page
+// custom event name (never persisted, never shown), so renaming it would carry risk for zero benefit.
 export const OUTBOX_CHANGED = 'aerotrail:outbox-changed';
 
 /**

@@ -113,3 +113,19 @@ export function certificateSummary(requirements) {
 export function completionsByKey(completions) {
   return Object.fromEntries(completions.map((c) => [completionKey(c.certificate, c.requirement_key), c]));
 }
+
+/**
+ * The single nearest-to-complete, not-yet-met requirement across every certificate — the one fact worth
+ * surfacing as "closest milestone" on the greeting subline and the Home progress row. Requirements with
+ * no computable percent (unchecked manual ones) and already-met requirements are never candidates.
+ */
+export function closestMilestone(config, flights, aircraftById = {}, completions = {}) {
+  let best = null;
+  for (const [cert, reqs] of computeMilestones(config, flights, aircraftById, completions)) {
+    for (const r of reqs) {
+      if (r.percent == null || r.met) continue;
+      if (!best || r.percent > best.percent) best = { label: r.label, certificateLabel: certificateLabel(cert), percent: r.percent };
+    }
+  }
+  return best;
+}

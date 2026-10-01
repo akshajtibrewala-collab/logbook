@@ -58,7 +58,7 @@ test('a successful run emails one attachment without airports/runways, records o
   const mail = sent[0];
   assert.equal(mail.to, 'me@example.com');
   const backup = JSON.parse(mail.content.toString());
-  assert.equal(backup.app, 'AeroTrail');
+  assert.equal(backup.app, 'AeroHub');
   assert.ok(!('airports' in backup.tables) && !('runways' in backup.tables));
   assert.ok(!('backup_runs' in backup.tables));
   const status = await (await call('GET', '/backup-job/status', { 'x-app-passcode': 'pass' })).json();

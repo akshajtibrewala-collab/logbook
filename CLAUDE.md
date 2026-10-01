@@ -1,6 +1,6 @@
-# AeroTrail
+# AeroHub
 
-AeroTrail is my private, lifelong, one-stop personal aviation system — not just a logbook. It's meant to hold
+AeroHub is my private, lifelong, one-stop personal aviation system — not just a logbook. It's meant to hold
 everything aviation in my life over time: pilot logbook, passenger flights, a map, aircraft, airports, airlines,
 photos, trips, pilot progress, a journal, knowledge, and a timeline. Currently built out: flights (with
 structured stops and typed approaches), aircraft, currency/expirations, milestone progress toward certificates,
@@ -10,7 +10,7 @@ cost tracker (per-phase rates, ground-only sessions, expenses, projections, a co
 link/print view. Everything through migration 021 is merged and live — see `docs/ROADMAP.md` for details and
 what's next.
 
-**Aircraft Paradise is a separate, public aviation-photography website. Never merge it into this app.** AeroTrail
+**Aircraft Paradise is a separate, public aviation-photography website. Never merge it into this app.** AeroHub
 is private data; nothing here becomes public unless a feature explicitly marks it published (today, only the
 opt-in read-only share link at `/share/:token` — see "Sharing" below — exposes anything, and even that is a
 deliberately narrow, revocable summary, never raw records).
@@ -62,7 +62,7 @@ The database holds real flight records, not sample data. This overrides convenie
   to keep following.
 - **Every write endpoint validates server-side**, the same way `server/src/validate.js` does today — never trust
   client-side validation alone.
-- **Every API route authenticates and scopes its queries to the owner.** AeroTrail is currently single-pilot
+- **Every API route authenticates and scopes its queries to the owner.** AeroHub is currently single-pilot
   behind one shared passcode (`server/src/auth.js`); if real per-user accounts are ever added, every route must
   filter by the authenticated owner, not just check that a passcode was supplied.
 - **Private photos are never served from a public URL.** `flight_photos` are served today only behind the app

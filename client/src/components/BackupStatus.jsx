@@ -39,7 +39,7 @@ export default function BackupStatus({ compact = false }) {
 
   const Icon = !status ? Mail : status.warn ? AlertTriangle : CheckCircle2;
   return (
-    <section className="card space-y-3 p-4">
+    <section className="card card-elevated space-y-3 p-4">
       <div className="flex items-start gap-3">
         <Icon size={20} className={`mt-0.5 shrink-0 ${status?.warn ? 'text-warn' : 'text-ok'}`} />
         <div className="min-w-0">

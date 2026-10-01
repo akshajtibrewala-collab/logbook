@@ -104,6 +104,12 @@ test('round trip: export -> restore into an empty database -> export again match
   assert.equal(after.tables.aircraft_rates[after.tables.aircraft_rates.length - 1].aircraft_id, aircraft.id);
 });
 
+test('restore accepts a backup stamped with the app\'s old name (pre-rename exports must keep working)', async () => {
+  const backup = await (await call('GET', '/backup/export')).json();
+  const res = await call('POST', '/backup/restore', { ...backup, app: 'AeroTrail', mode: 'replace' });
+  assert.equal(res.status, 200);
+});
+
 test('restore drops unknown columns instead of erroring, so a future or past export shape is still readable', async () => {
   const backup = await (await call('GET', '/backup/export')).json();
   backup.tables.aircraft = [{ ...backup.tables.aircraft[0], made_up_future_column: 'whatever' }];

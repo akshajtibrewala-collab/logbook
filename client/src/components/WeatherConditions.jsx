@@ -20,8 +20,8 @@ export default function WeatherConditions({ data, label }) {
     // informational, not something time will fix.
     const isWarning = /valid period/.test(data.reason || '');
     return (
-      <div className="card space-y-1 p-4">
-        {label && <div className="mb-1 text-sm font-medium">{label}</div>}
+      <div className="card card-elevated space-y-1 p-4">
+        {label && <div className="stat-title mb-1 text-sm">{label}</div>}
         <p className={`flex items-start gap-1.5 text-sm ${isWarning ? 'text-warn' : 'text-slate-400'}`}>
           {isWarning && <TriangleAlert size={15} className="mt-0.5 shrink-0" />}
           <span>{data.reason}</span>
@@ -34,10 +34,10 @@ export default function WeatherConditions({ data, label }) {
   const observed = data.obsTime ? observedAgeLabel(new Date(data.obsTime)) : null;
 
   return (
-    <div className="card space-y-3 p-4">
+    <div className="card card-elevated space-y-3 p-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {label && <span className="text-sm font-medium">{label}</span>}
+          {label && <span className="stat-title text-sm">{label}</span>}
           {data.isNight ? <Moon size={14} className="text-slate-500" /> : <Sun size={14} className="text-slate-500" />}
         </div>
         {data.overall && <Badge tone={STATUS_TONE[data.overall]}>{STATUS_LABEL[data.overall]}</Badge>}
@@ -51,9 +51,9 @@ export default function WeatherConditions({ data, label }) {
       )}
 
       <div className="grid grid-cols-3 gap-2 text-center text-sm">
-        <div><div className="text-slate-500">Ceiling</div><div className="font-medium">{data.ceilingFt == null ? 'Unlimited' : `${data.ceilingFt} ft`}</div></div>
-        <div><div className="text-slate-500">Visibility</div><div className="font-medium">{data.visibilitySm == null ? '—' : `${data.visibilitySm} SM`}</div></div>
-        <div><div className="text-slate-500">Wind</div><div className="font-medium">{windText(data.wind)}</div></div>
+        <div><div className="text-slate-500">Ceiling</div><div className="stat-value text-[0.95rem]">{data.ceilingFt == null ? 'Unlimited' : `${data.ceilingFt} ft`}</div></div>
+        <div><div className="text-slate-500">Visibility</div><div className="stat-value text-[0.95rem]">{data.visibilitySm == null ? '—' : `${data.visibilitySm} SM`}</div></div>
+        <div><div className="text-slate-500">Wind</div><div className="stat-value text-[0.95rem]">{windText(data.wind)}</div></div>
       </div>
 
       {data.wxString && <p className="text-xs text-slate-400">Weather: {data.wxString}</p>}

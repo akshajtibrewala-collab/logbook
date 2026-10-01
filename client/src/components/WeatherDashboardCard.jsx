@@ -31,7 +31,7 @@ export default function WeatherDashboardCard() {
 
   if (state === 'unset') {
     return (
-      <Link to="/weather/settings" className="card flex items-center justify-between gap-3 p-4 active:bg-navy-800">
+      <Link to="/weather/settings" className="card card-elevated pressable flex items-center justify-between gap-3 p-4 active:bg-navy-800">
         <div className="flex min-w-0 items-center gap-3">
           <CloudSun size={22} className="shrink-0 text-accent" />
           <div className="min-w-0">
@@ -47,7 +47,7 @@ export default function WeatherDashboardCard() {
   const { current, airport } = state;
 
   return (
-    <Link to="/weather" className="card flex items-center justify-between gap-3 p-4 active:bg-navy-800">
+    <Link to="/weather" className="card card-elevated pressable flex items-center justify-between gap-3 p-4 active:bg-navy-800">
       <div className="flex min-w-0 items-center gap-3">
         <CloudSun size={22} className="shrink-0 text-accent" />
         <div className="min-w-0">

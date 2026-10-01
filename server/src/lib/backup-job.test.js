@@ -15,7 +15,7 @@ test('cronAuthorized: exact bearer secret only, and fails closed with no secret 
 test('packBackup: small backups are sent as plain JSON, large ones gzipped and recoverable', () => {
   const small = packBackup({ tables: { a: [1] } }, new Date('2026-09-28T12:00:00Z'));
   assert.equal(small.gzipped, false);
-  assert.equal(small.filename, 'aerotrail-backup-2026-09-28T12-00-00-000Z.json');
+  assert.equal(small.filename, 'aerohub-backup-2026-09-28T12-00-00-000Z.json');
   const big = { tables: { flights: Array.from({ length: 20000 }, (_, i) => ({ id: i, remarks: 'x'.repeat(60) })) } };
   const packed = packBackup(big);
   assert.ok(packed.rawBytes >= GZIP_THRESHOLD_BYTES);

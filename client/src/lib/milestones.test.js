@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesFilter, computeRequirement, computeMilestones, certificateLabel, requirementGroup, groupRequirements, certificateSummary, completionsByKey, completionKey } from './milestones.js';
+import { matchesFilter, computeRequirement, computeMilestones, certificateLabel, requirementGroup, groupRequirements, certificateSummary, completionsByKey, completionKey, closestMilestone } from './milestones.js';
 import { pilotFlights } from './flightRoles.js';
 
 const flight = (o) => ({ total_time: 0, pic_time: 0, dual_received: 0, solo_time: 0, cross_country_time: 0, night_time: 0, aircraft_id: null, ...o });
@@ -144,6 +144,24 @@ test('certificateSummary: complete when every requirement (including checked-off
   assert.equal(empty.computableCount, 0);
   assert.equal(empty.percent, 0);
   assert.equal(empty.complete, false);
+});
+
+test('closestMilestone picks the highest-percent not-yet-met requirement across every certificate', () => {
+  const config = [
+    { certificate: 'private', requirement_key: 'total_time', label: 'Total time', sort_order: 1, sum_field: 'total_time', flight_filter: null, min_value: 40, manual: false },
+    { certificate: 'instrument', requirement_key: 'inst_time', label: 'Instrument time', sort_order: 1, sum_field: 'instrument_actual,instrument_simulated', flight_filter: null, min_value: 10, manual: false },
+  ];
+  const flights = [flight({ total_time: 36, instrument_actual: 2 })]; // private: 90%, instrument: 20%
+  const best = closestMilestone(config, flights);
+  assert.equal(best.label, 'Total time');
+  assert.equal(best.certificateLabel, 'Private Pilot');
+  assert.ok(Math.abs(best.percent - 90) < 0.01);
+});
+
+test('closestMilestone skips met requirements and manual ones with no completion, returning null when nothing qualifies', () => {
+  const config = [{ certificate: 'private', requirement_key: 'total_time', label: 'Total time', sort_order: 1, sum_field: 'total_time', flight_filter: null, min_value: 10, manual: false }];
+  assert.equal(closestMilestone(config, [flight({ total_time: 20 })]), null); // already met
+  assert.equal(closestMilestone([{ certificate: 'private', requirement_key: 'solo_xc', manual: true }], []), null); // manual, unmet -> percent is null
 });
 
 test('a passenger flight, filtered out via pilotFlights, contributes nothing to milestone progress', () => {

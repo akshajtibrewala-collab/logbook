@@ -5,7 +5,7 @@ import {
   cronAuthorized, packBackup, runsToPrune, backupStatus, emailContent, sendViaResend,
 } from '../lib/backup-job.js';
 
-const DEFAULT_FROM = 'AeroTrail Backup <onboarding@resend.dev>';
+const DEFAULT_FROM = 'AeroHub Backup <onboarding@resend.dev>';
 
 /**
  * Builds the full backup, emails it (gzipped if large), records the run, and prunes old run records.

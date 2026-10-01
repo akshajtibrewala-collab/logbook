@@ -21,7 +21,7 @@ const Button = forwardRef(function Button(
 ) {
   return (
     <As ref={ref} {...props}
-      className={`flex items-center justify-center gap-2 transition-colors disabled:opacity-60 ${VARIANTS[variant]} ${SIZES[size]} ${fullWidth ? 'w-full' : ''} ${className}`}>
+      className={`pressable flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:active:scale-100 ${VARIANTS[variant]} ${SIZES[size]} ${fullWidth ? 'w-full' : ''} ${className}`}>
       {Icon && <Icon size={iconSize} strokeWidth={1.75} />}
       {children}
     </As>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMapData } from './mapdata.js';
+import { buildMapData, placeableMapData } from './mapdata.js';
 
 const A = { ident: 'KAAA', lat: 1, lon: 1 };
 const B = { ident: 'KBBB', lat: 2, lon: 2 };
@@ -31,6 +31,29 @@ test('a flight naming only unplaceable airports is counted, not silently dropped
   assert.equal(oneKnown.unresolvedFlightCount, 0); // a real (if lonely) stop, not "missing"
   const blank = buildMapData([{ id: 3, date: '2026-01-01', departure_airport: null, arrival_airport: '', total_time: 1 }], airports);
   assert.equal(blank.unresolvedFlightCount, 0); // nothing entered isn't a data problem
+});
+
+test('placeableMapData drops a stop with no coordinates, and the routes that touched it', () => {
+  const noCoords = { ident: 'KCCC', lat: null, lon: null };
+  const airportsWithGap = { ...airports, KCCC: noCoords };
+  const flights = [
+    { id: 1, date: '2026-01-01', departure_airport: 'KAAA', arrival_airport: 'KBBB', total_time: 1 },
+    { id: 2, date: '2026-01-02', departure_airport: 'KAAA', arrival_airport: 'KCCC', total_time: 1 },
+  ];
+  const data = buildMapData(flights, airportsWithGap);
+  const placeable = placeableMapData(data);
+  assert.deepEqual(placeable.stops.map((s) => s.ident).sort(), ['KAAA', 'KBBB']);
+  assert.deepEqual(placeable.routes.map((r) => [r.a.ident, r.b.ident].sort()), [['KAAA', 'KBBB']]); // KAAA-KCCC can't be drawn
+});
+
+test('placeableMapData counts a flight as omitted only when NONE of its stops can be placed', () => {
+  const noCoords = { ident: 'KCCC', lat: undefined, lon: undefined };
+  const airportsWithGap = { ...airports, KCCC: noCoords };
+  const bothBad = buildMapData([{ id: 1, date: '2026-01-01', departure_airport: 'KCCC', arrival_airport: 'KCCC', total_time: 1 }], { KCCC: noCoords });
+  assert.equal(placeableMapData(bothBad).omittedFlightCount, 1);
+
+  const oneGood = buildMapData([{ id: 2, date: '2026-01-01', departure_airport: 'KAAA', arrival_airport: 'KCCC', total_time: 1 }], airportsWithGap);
+  assert.equal(placeableMapData(oneGood).omittedFlightCount, 0); // KAAA still shows as a dot
 });
 
 test('routes carry a great-circle distance in nautical miles, rolled up into a running total', () => {
