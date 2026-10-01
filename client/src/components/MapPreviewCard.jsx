@@ -15,10 +15,13 @@ import landOutline from '../lib/landOutline.json';
 
 // Sea matches the card background exactly in dark mode; a pale blue-gray in light mode (the card itself is
 // plain white there, and a literal "sea" needs its own tone to read as water rather than page background).
-// Land is one step lighter than the sea in both themes. No country borders or labels — just a shape.
-const SEA_FILL = { dark: 'rgb(14 17 23)', light: 'rgb(226 232 240)' };
-const LAND_FILL = { dark: 'rgb(23 28 38)', light: 'rgb(241 245 249)' };
-const COASTLINE_STROKE = { dark: 'rgb(37 43 56)', light: 'rgb(203 213 225)' };
+// Land is one step lighter than the sea in both themes, tuned to a clear-but-quiet 1.3-1.6:1 contrast
+// against the sea (WCAG has no floor for this decorative a distinction — these numbers are a deliberate
+// choice, not a compliance target). Route/airport colors clear 3.8:1+ against both land and sea in both
+// themes (routeColorFor/passengerRouteColorFor in mapstyle.js). No country borders or labels — just a shape.
+const SEA_FILL = { dark: 'rgb(14 17 23)', light: 'rgb(203 213 225)' };
+const LAND_FILL = { dark: 'rgb(46 49 55)', light: 'rgb(238 248 255)' };
+const COASTLINE_STROKE = { dark: 'rgb(60 64 72)', light: 'rgb(180 190 201)' };
 
 const VIEW_W = 400;
 const VIEW_H = 110; // wide and low, so the preview reads as a strip rather than a second map

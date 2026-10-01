@@ -100,11 +100,19 @@ export function buildProjection(points, width, height, opts = {}) {
   const centerLon = (minLon + maxLon) / 2;
   const centerLat = (minLat + maxLat) / 2;
 
-  return (point, nearLon = ref) => {
+  const project = (point, nearLon = ref) => {
     const lon = wrapNear(point[1], nearLon);
     return [
       width / 2 + (lon - centerLon) * cos * scale,
       height / 2 - (point[0] - centerLat) * scale, // SVG y grows downward: north maps to smaller y
     ];
   };
+  // A raw, non-wrapping linear mapping (no "nearest representative" branch at all), plus the pixel width of
+  // one full 360-degree wrap — for land only (see landPath.js). Routes and dots keep using `project` above
+  // for its short-way wrapping; land instead draws every ring at its literal coordinates, repeated at a
+  // -360/+360 offset, so a ring can never be internally distorted by which branch each point lands on.
+  project.rawX = (lon) => width / 2 + (lon - centerLon) * cos * scale;
+  project.rawY = (lat) => height / 2 - (lat - centerLat) * scale;
+  project.wrapPx = 360 * cos * scale;
+  return project;
 }
