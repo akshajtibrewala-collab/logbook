@@ -137,19 +137,19 @@ export default function Logbook() {
   return (
     <div className="lg:flex lg:items-start lg:gap-6">
     <div className={`${selected ? 'hidden lg:block' : 'block'} lg:w-[380px] lg:shrink-0`}>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Logbook</h1>
-        <div className="flex gap-2">
-          <Link to="/logbook/share" aria-label="Share and print" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Logbook</h1>
+        <div className="flex min-w-0 flex-wrap justify-end gap-2">
+          <Link to="/logbook/share" aria-label="Share and print" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <Share2 size={20} />
           </Link>
-          <Link to="/costs" aria-label="Costs" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/costs" aria-label="Costs" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <DollarSign size={20} />
           </Link>
-          <Link to="/aircraft" aria-label="Aircraft" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/aircraft" aria-label="Aircraft" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <PlaneTakeoff size={20} />
           </Link>
-          <Link to="/logbook/data" aria-label="Import and export" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
+          <Link to="/logbook/data" aria-label="Import and export" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
             <ArrowLeftRight size={20} />
           </Link>
         </div>
