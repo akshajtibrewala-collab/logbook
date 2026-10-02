@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.DB_FILE = ':memory:';
-const { convertRow, convertFlightdiary, resolveDurations, cleanAircraftType } = await import('./convert-flightdiary-import.js');
+const { convertRow, convertFlightdiary, resolveDurations, cleanAircraftType, applyCorrectionsOverlay } = await import('./convert-flightdiary-import.js');
 const { migrate } = await import('../src/migrate.js');
 const { run } = await import('../src/db.js');
 
@@ -152,4 +152,26 @@ test('resolveDurations: an airport not in the local table leaves total_time as F
   await resolveDurations(rows);
   assert.equal(rows[0][8], '2.83'); // unchanged: Flightdiary's own Duration
   assert.equal(rows[0][30], ''); // arr_day_offset stays blank
+});
+
+test('applyCorrectionsOverlay: patches the one matching row and reports before/after', () => {
+  const body = [row({ Date: '2023-08-16', 'Flight number': 'AA4789', From: 'New York / JFK (JFK/KJFK)', To: 'Raleigh-Durham / Durham (RDU/KRDU)', 'Arr time': '02:17:00' })];
+  const { rows } = convertFlightdiary(HEAD, body);
+  const report = applyCorrectionsOverlay(rows, [
+    { match: { date: '2023-08-16', flight_number: 'AA4789', departure_airport: 'KJFK', arrival_airport: 'KRDU' }, patch: { arr_time: '14:17' } },
+  ]);
+  assert.equal(rows[0][29], '14:17'); // arr_time column
+  assert.deepEqual(report[0].before, { arr_time: '02:17' });
+  assert.deepEqual(report[0].after, { arr_time: '14:17' });
+});
+
+test('applyCorrectionsOverlay: throws rather than silently skip when a match hits zero or several rows', () => {
+  const body = [row(), row()];
+  const { rows } = convertFlightdiary(HEAD, body);
+  assert.throws(() => applyCorrectionsOverlay(rows, [
+    { match: { date: '2026-01-15', flight_number: 'WN123', departure_airport: 'KSTL', arrival_airport: 'KORD' }, patch: { arr_time: '12:00' } },
+  ]), /matched 2 row\(s\), expected exactly 1/);
+  assert.throws(() => applyCorrectionsOverlay(rows, [
+    { match: { date: '1999-01-01', flight_number: 'ZZ999', departure_airport: 'ZZZZ', arrival_airport: 'ZZZZ' }, patch: { arr_time: '12:00' } },
+  ]), /matched 0 row\(s\), expected exactly 1/);
 });
