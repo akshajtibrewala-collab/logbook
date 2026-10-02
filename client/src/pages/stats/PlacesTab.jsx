@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { MapPin, Route } from 'lucide-react';
 import { fmtNm } from '../../lib/geo.js';
-import { hoursByAircraft, topRoutes, topAirports } from '../../lib/stats.js';
+import { topRoutes, topAirports } from '../../lib/stats.js';
+import { distinctAircraftTypeCount } from '../../lib/aircraftTypes.js';
 import { buildMapData } from '../../lib/mapdata.js';
 import { visitedCounts } from '../../lib/mapstyle.js';
 import { roleOf } from '../../lib/flightRoles.js';
@@ -25,7 +26,7 @@ export default function PlacesTab({ flights, airports, roleFilter }) {
     return {
       airports: counts.airports,
       countries: counts.countries,
-      aircraftTypes: hoursByAircraft(scoped).length,
+      aircraftTypes: distinctAircraftTypeCount(scoped),
       distanceNm: mapData.totalDistanceNm,
       routes: topRoutes(scoped, airports, ROUTE_LIMIT),
       places: topAirports(scoped, airports, ROUTE_LIMIT).map((a) => ({ label: a.code, sub: a.name, count: a.count })),
