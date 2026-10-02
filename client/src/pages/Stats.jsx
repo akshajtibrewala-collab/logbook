@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart3 } from 'lucide-react';
 import { api } from '../lib/api.js';
@@ -16,6 +16,37 @@ const TABS = [
   ['travel', 'Travel'],
   ['places', 'Places & aircraft'],
 ];
+// Only the long "Places & aircraft" label ever needs a short fallback at narrow widths or large text.
+const SHORT_LABEL = { places: 'Places' };
+
+/** A tab button that swaps to its short label (measured, not guessed) when the full one wouldn't fit. */
+function TabButton({ tabKey, label, active, onClick }) {
+  const labelRef = useRef(null);
+  const measureRef = useRef(null);
+  const shortLabel = SHORT_LABEL[tabKey];
+  const [short, setShort] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!shortLabel) return;
+    const visible = labelRef.current;
+    const measure = measureRef.current;
+    if (!visible || !measure) return;
+    // Compare against the visible label's own (already padding-adjusted) width, not the button's.
+    const check = () => setShort(measure.scrollWidth > visible.clientWidth);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(visible);
+    return () => ro.disconnect();
+  }, [shortLabel, label]);
+
+  return (
+    <button type="button" role="tab" aria-selected={active} onClick={onClick}
+      className={`pressable relative h-11 flex-1 overflow-hidden rounded-xl px-2 text-sm font-medium shadow-sm transition-all ${active ? ACTIVE_TAB_STYLE[tabKey] : 'text-slate-400 hover:text-slate-300 shadow-none'}`}>
+      <span ref={labelRef} className="block truncate">{shortLabel && short ? shortLabel : label}</span>
+      {shortLabel && <span ref={measureRef} aria-hidden="true" className="invisible absolute left-0 top-0 whitespace-nowrap">{label}</span>}
+    </button>
+  );
+}
 
 // Each tab's active pill is tinted with its role color, so which section you're in reads at a glance —
 // Places mixes both roles and deliberately stays neutral rather than picking a side.
@@ -78,11 +109,10 @@ export default function Stats() {
 
       {flights && flights.length > 0 && (
         <>
-          <div className="sticky top-0 z-20 -mx-4 bg-navy-950/90 px-4 pb-3 pt-1 backdrop-blur-xl md:static md:mx-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          <div className="sticky top-0 z-20 -mx-4 bg-navy-950/90 px-4 pb-3 pt-1 shadow-[0_8px_12px_-8px_rgba(0,0,0,0.35)] backdrop-blur-xl md:static md:mx-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
             <div className="flex gap-1 rounded-2xl border border-edge bg-navy-950/60 p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]" role="tablist" aria-label="Stats section">
               {TABS.map(([k, l]) => (
-                <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                  className={`pressable h-11 flex-1 rounded-xl text-sm font-medium shadow-sm transition-all ${tab === k ? ACTIVE_TAB_STYLE[k] : 'text-slate-400 hover:text-slate-300 shadow-none'}`}>{l}</button>
+                <TabButton key={k} tabKey={k} label={l} active={tab === k} onClick={() => setTab(k)} />
               ))}
             </div>
           </div>

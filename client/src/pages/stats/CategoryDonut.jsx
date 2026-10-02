@@ -22,11 +22,12 @@ export default function CategoryDonut({ categories, defaultOpen = true }) {
           </div>
           <ul className="mt-2 space-y-2">
             {categories.map((c, i) => (
-              <li key={c.key} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />{c.label}
+              <li key={c.key} className="flex items-center justify-between gap-2 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
+                  <span className="truncate">{c.label}</span>
                 </span>
-                <span className="text-slate-400">{fmtHours(c.hours)} h · {Math.round((c.hours / total) * 100)}%</span>
+                <span className="shrink-0 whitespace-nowrap text-slate-400">{fmtHours(c.hours)} h · {Math.round((c.hours / total) * 100)}%</span>
               </li>
             ))}
           </ul>
