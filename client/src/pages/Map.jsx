@@ -220,8 +220,8 @@ function PinSummary({ stop, photoCounts }) {
 }
 
 const Stat = ({ label, value, unit }) => (
-  <div className="flex flex-col items-center text-center">
-    <div className="whitespace-nowrap text-base font-semibold leading-tight">
+  <div className="flex min-w-0 flex-col items-center text-center">
+    <div className="break-words text-base font-semibold leading-tight">
       {value}{unit && <span className="ml-0.5 text-[10px] font-medium text-slate-400">{unit}</span>}
     </div>
     <div className="mt-0.5 min-h-[1.5rem] text-[11px] leading-tight text-slate-400">{label}</div>
