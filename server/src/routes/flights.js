@@ -4,6 +4,7 @@ import { ensureAircraftRate, pickDefaultAircraftRate } from '../lib/default-rate
 import { parseFlight, parseStops, parseApproaches, parseAircraft, AIRCRAFT_FIELDS, FLIGHT_FIELDS } from '../validate.js';
 import { resolveAirportRow, resolveAirportRows } from './airports.js';
 import { passengerDuration } from '../lib/passengerDuration.js';
+import { isTurbineAircraftType } from '../lib/aircraftTurbine.js';
 
 const INSERT_AIRCRAFT = `INSERT INTO aircraft (${AIRCRAFT_FIELDS.join(',')}) VALUES (${AIRCRAFT_FIELDS.map((c) => ':' + c).join(',')})`;
 const normTail = (t) => (t ? String(t).trim().toUpperCase() : null);
@@ -71,7 +72,10 @@ async function saveApproaches(flightId, approaches) {
  * Batched aircraft find-or-create for the bulk route: one SELECT for every distinct tail number across the
  * whole import (an IN clause, not one query per tail), then — only for tails that don't already exist — one
  * atomic batch of INSERTs. Mutates each row's `value.aircraft_id` in place. Passenger rows only (see the
- * comment at its call site for why pilot rows are never auto-linked).
+ * comment at its call site for why pilot rows are never auto-linked). A newly-created aircraft's
+ * is_turbine defaults to 1 only when its type is on the isTurbineAircraftType allowlist — there's no
+ * pilot here to say otherwise, unlike manual creation (POST /api/aircraft), which always takes it from
+ * what was actually entered.
  */
 async function findOrCreateAircraftBatch(rows) {
   const tailsNeeded = [...new Set(
@@ -91,7 +95,10 @@ async function findOrCreateAircraftBatch(rows) {
       const t = normTail(value.tail_number);
       if (t && value.aircraft_type && !typeForTail.has(t)) typeForTail.set(t, value.aircraft_type);
     }
-    const inserts = toCreate.map((tail) => ({ sql: INSERT_AIRCRAFT, args: parseAircraft({ tail_number: tail, model: typeForTail.get(tail) || '' }).value }));
+    const inserts = toCreate.map((tail) => {
+      const type = typeForTail.get(tail) || '';
+      return { sql: INSERT_AIRCRAFT, args: parseAircraft({ tail_number: tail, model: type, is_turbine: isTurbineAircraftType(type) }).value };
+    });
     const results = await batchRun(inserts);
     toCreate.forEach((tail, i) => idByTail.set(tail, lastIdOf(results[i])));
   }

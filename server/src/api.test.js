@@ -251,6 +251,17 @@ test('bulk import: a passenger row with a new tail number creates an aircraft an
   assert.equal(aircraft.length, 1); // not duplicated
 });
 
+test('bulk import: a new aircraft defaults is_turbine from the aircraft_type\'s ICAO designator', async () => {
+  const res = await call('POST', '/flights/bulk', { flights: [
+    { date: '2026-08-04', role: 'passenger', departure_airport: 'KSTL', arrival_airport: 'KRDU', tail_number: 'N738AA', aircraft_type: 'Boeing 737-800 (B738)', total_time: 2 },
+    { date: '2026-08-05', role: 'passenger', departure_airport: 'KSTL', arrival_airport: 'KRDU', tail_number: 'N172AA', aircraft_type: 'Cessna 172 (C172)', total_time: 2 },
+  ] });
+  assert.equal((await res.json()).inserted, 2);
+  const aircraft = await (await call('GET', '/aircraft')).json();
+  assert.equal(aircraft.find((a) => a.tail_number === 'N738AA').is_turbine, 1);
+  assert.equal(aircraft.find((a) => a.tail_number === 'N172AA').is_turbine, 0);
+});
+
 test('bulk import: a pilot row with a tail number is NOT auto-linked to an aircraft (unchanged behavior)', async () => {
   const res = await call('POST', '/flights/bulk', { flights: [
     { date: '2026-08-03', role: 'pilot', departure_airport: 'KSTL', arrival_airport: 'KRDU', tail_number: 'N888YY', aircraft_type: 'C172', total_time: 1.5, pic_time: 1.5 },
@@ -344,6 +355,11 @@ test('aircraft: create, dedupe-safe uppercasing, archive/unarchive, delete guard
   const created = await res.json();
   assert.equal(created.tail_number, 'N123AB');
   assert.equal(created.is_complex, 0);
+
+  // Manual creation never auto-derives is_turbine from the model text — only the passenger-flight
+  // aircraft auto-create path does that. A turbine-sounding model still defaults to 0 unless set.
+  res = await call('POST', '/aircraft', { tail_number: 'N738ZZ', model: 'Boeing 737-800 (B738)' });
+  assert.equal((await res.json()).is_turbine, 0);
 
   res = await call('PUT', `/aircraft/${created.id}`, { tail_number: 'N123AB', model: 'C172', is_complex: true, is_tailwheel: true });
   assert.equal((await res.json()).is_complex, 1);
