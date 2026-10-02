@@ -81,8 +81,8 @@ export default function Currency() {
   return (
     <div className="stagger space-y-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">Currency & expirations</h1>
+        <button type="button" onClick={() => navigate('/')} className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Currency & expirations</h1>
       </div>
 
       {error && <ErrorNote message={error} onRetry={load} />}

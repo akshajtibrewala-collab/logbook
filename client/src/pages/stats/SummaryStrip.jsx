@@ -22,11 +22,11 @@ export default function SummaryStrip({ icon: Icon, tint = 'pilot', primary, item
       <div className="stat-value mt-2 text-[2.75rem] leading-none md:text-6xl">{primary.value}</div>
 
       {items?.length > 0 && (
-        <div className="mt-5 grid grid-cols-3 gap-3 border-t border-edge pt-4">
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-edge pt-4 sm:gap-3">
           {items.map((item) => (
-            <div key={item.label}>
-              <div className="stat-value text-xl md:text-2xl">{item.value}</div>
-              <div className="mt-0.5 text-xs text-slate-400">{item.label}</div>
+            <div key={item.label} className="min-w-0">
+              <div className="stat-value truncate text-xl md:text-2xl">{item.value}</div>
+              <div className="mt-0.5 break-words text-xs text-slate-400 [hyphens:auto]">{item.label}</div>
             </div>
           ))}
         </div>

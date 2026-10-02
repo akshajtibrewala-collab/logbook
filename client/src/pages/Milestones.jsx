@@ -204,11 +204,11 @@ export default function Milestones() {
 
   return (
     <div className="stagger space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Milestones</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Milestones</h1>
         {grouped && grouped.size > 0 && (
           <button onClick={() => setHideCompleted((v) => !v)}
-            className={`pressable flex h-10 items-center gap-1.5 rounded-xl border px-3 text-sm transition-colors ${hideCompleted ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
+            className={`pressable flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm transition-colors ${hideCompleted ? 'border-accent text-accent' : 'border-edge text-slate-400'}`}>
             <EyeOff size={15} />{hideCompleted ? 'Hiding completed' : 'Hide completed'}
           </button>
         )}
