@@ -16,3 +16,7 @@ server/backups/
 
 # Personal data imports (source CSVs and generated app-format CSVs) — never committed
 server/imports/
+
+# One-off production fix scripts: written for a single release, deleted after use, never committed
+server/scripts/one-off-*
+server/scripts/prod/one-off-*
