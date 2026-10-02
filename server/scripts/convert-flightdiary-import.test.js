@@ -165,6 +165,17 @@ test('applyCorrectionsOverlay: patches the one matching row and reports before/a
   assert.deepEqual(report[0].after, { arr_time: '14:17' });
 });
 
+test('applyCorrectionsOverlay: can patch a field other than a time (e.g. a wrong arrival airport)', () => {
+  const body = [row({ Date: '2023-08-18', 'Flight number': 'AA121', From: 'Doha (DOH/OTHH)', To: 'Philadelphia (PHL/KPHL)' })];
+  const { rows } = convertFlightdiary(HEAD, body);
+  const report = applyCorrectionsOverlay(rows, [
+    { match: { date: '2023-08-18', flight_number: 'AA121', departure_airport: 'OTHH', arrival_airport: 'KPHL' }, patch: { arrival_airport: 'KJFK' } },
+  ]);
+  assert.equal(rows[0][3], 'KJFK'); // arrival_airport column
+  assert.deepEqual(report[0].before, { arrival_airport: 'KPHL' });
+  assert.deepEqual(report[0].after, { arrival_airport: 'KJFK' });
+});
+
 test('applyCorrectionsOverlay: throws rather than silently skip when a match hits zero or several rows', () => {
   const body = [row(), row()];
   const { rows } = convertFlightdiary(HEAD, body);
