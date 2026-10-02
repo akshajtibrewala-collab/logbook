@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useMatch, useNavigate } from 'react-router-dom';
-import { Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign, GraduationCap, Zap, Camera, Share2 } from 'lucide-react';
+import { Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign, GraduationCap, Zap, Copy, Camera, Share2 } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { computeFlightCost, computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
@@ -128,6 +128,17 @@ export default function Logbook() {
       <div className="mt-3 flex gap-2">
         <Link to="/logbook/new" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
         <Link to="/logbook/quick" className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300"><Zap size={16} />Quick log</Link>
+      </div>
+
+      {/* Phone-only secondary shortcuts: tablet/desktop never had one-tap access to these (no FAB there
+          either), so they stay phone-only here too, matching the primary row above. */}
+      <div className="mt-2 flex gap-2 md:hidden">
+        <Link to="/logbook/new?copy=last" className="pressable flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-edge text-sm text-slate-300 active:bg-navy-800">
+          <Copy size={15} />Copy last
+        </Link>
+        <Link to="/logbook/ground/new" className="pressable flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-edge text-sm text-slate-300 active:bg-navy-800">
+          <GraduationCap size={15} />Ground session
+        </Link>
       </div>
 
       <div className="mt-4 flex gap-1 rounded-xl bg-navy-800 p-1">
