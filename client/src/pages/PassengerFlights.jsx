@@ -13,7 +13,6 @@ import Card from '../components/Card.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import EmptyState from '../components/EmptyState.jsx';
-import AddFab from '../components/AddFab.jsx';
 import Button from '../components/Button.jsx';
 import FlightRoleTabs from '../components/FlightRoleTabs.jsx';
 
@@ -99,7 +98,7 @@ export default function PassengerFlights() {
         <FlightRoleTabs />
 
         {flights && flights.length > 0 && (
-          <div className="mt-3 hidden md:flex">
+          <div className="mt-3 flex">
             <Link to="/logbook/new?role=passenger&from=travel" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
           </div>
         )}
@@ -160,11 +159,7 @@ export default function PassengerFlights() {
           {grouped.map(([year, yearFlights]) => (
             <div key={year}>
               <h2 className="mb-2 text-sm font-medium text-slate-400">{year}</h2>
-              {/* max-md:pr-20 reserves the floating + button's own footprint (see AddFab.jsx) on its right
-                  side, so a row's trailing text can never render under it — the button's hide-on-scroll
-                  only protects while actively scrolling, not at rest (first load, or paused after
-                  scrolling up/at the top). */}
-              <ul className="space-y-2 max-md:pr-20">
+              <ul className="space-y-2">
                 {yearFlights.map((f) => (
                   <li key={f.id}>
                     <Card as="button" onClick={() => navigate(`/travel/${f.id}`)} aria-current={selected === String(f.id) ? 'true' : undefined}
@@ -196,9 +191,6 @@ export default function PassengerFlights() {
           ))}
         </div>
 
-        {flights && flights.length > 0 && (
-          <AddFab onClick={() => navigate('/logbook/new?role=passenger&from=travel')} label="Add passenger flight" />
-        )}
         </div>
       </div>
 

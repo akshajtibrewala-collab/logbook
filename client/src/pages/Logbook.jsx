@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useMatch, useNavigate } from 'react-router-dom';
-import { Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign, GraduationCap, Zap, Copy, Camera, Share2 } from 'lucide-react';
+import { Plane, SlidersHorizontal, ArrowLeftRight, PlaneTakeoff, BookOpen, DollarSign, GraduationCap, Zap, Camera, Share2 } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { computeFlightCost, computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
@@ -11,8 +11,6 @@ import ErrorNote from '../components/ErrorNote.jsx';
 import Card from '../components/Card.jsx';
 import { pilotFlights } from '../lib/flightRoles.js';
 import EmptyState from '../components/EmptyState.jsx';
-import Modal from '../components/Modal.jsx';
-import AddFab from '../components/AddFab.jsx';
 import Button from '../components/Button.jsx';
 import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
@@ -35,36 +33,6 @@ const PAGE_SIZE = 40; // entries shown at a time; "Show more" reveals the next p
 
 const selectCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent';
 
-function LogChoiceModal({ open, onClose }) {
-  const navigate = useNavigate();
-  return (
-    <Modal open={open} onClose={onClose} title="Log">
-      <div className="grid grid-cols-2 gap-3">
-        <button type="button" onClick={() => navigate('/logbook/new')}
-          className="pressable flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
-          <Plane size={28} className="text-accent" />
-          <span className="text-sm font-medium">Log flight</span>
-        </button>
-        <button type="button" onClick={() => navigate('/logbook/quick')}
-          className="pressable flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
-          <Zap size={28} className="text-accent" />
-          <span className="text-sm font-medium">Quick log</span>
-        </button>
-        <button type="button" onClick={() => navigate('/logbook/new?copy=last')}
-          className="pressable flex flex-col items-center gap-2 rounded-2xl border border-edge p-5 active:bg-navy-800">
-          <Copy size={28} className="text-accent" />
-          <span className="text-sm font-medium">Copy last flight</span>
-        </button>
-        <button type="button" onClick={() => navigate('/logbook/ground/new')}
-          className="pressable col-span-2 flex flex-col items-center gap-2 rounded-2xl border border-edge p-4 active:bg-navy-800">
-          <GraduationCap size={24} className="text-accent" />
-          <span className="text-sm font-medium">Log ground session</span>
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
 export default function Logbook() {
   const navigate = useNavigate();
   const flightMatch = useMatch('/logbook/:id');
@@ -78,7 +46,6 @@ export default function Logbook() {
   const [sort, setSort] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ from: '', to: '', type: '', category: '', kind: 'all' });
-  const [showLogChoice, setShowLogChoice] = useState(false);
   const [photoCounts, setPhotoCounts] = useState({});
   const [limit, setLimit] = useState(PAGE_SIZE);
 
@@ -157,9 +124,8 @@ export default function Logbook() {
 
       <FlightRoleTabs />
 
-      {/* Tablet/desktop only: on phones these live behind the floating + button. Its own row so the
-          title and icon buttons above never have to share width with them. */}
-      <div className="mt-3 hidden gap-2 md:flex">
+      {/* Its own row so the title and icon buttons above never have to share width with them. */}
+      <div className="mt-3 flex gap-2">
         <Link to="/logbook/new" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
         <Link to="/logbook/quick" className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300"><Zap size={16} />Quick log</Link>
       </div>
@@ -213,10 +179,7 @@ export default function Logbook() {
         <p className="mt-4 text-sm text-slate-400">{visible.length} entr{visible.length === 1 ? 'y' : 'ies'} · {fmtHours(total)} h</p>
       )}
 
-      {/* max-md:pr-20 reserves the floating + button's own footprint (see AddFab.jsx) on its right side,
-          so a row's trailing text can never render under it — the button's hide-on-scroll only protects
-          while actively scrolling, not at rest (first load, or paused after scrolling up/at the top). */}
-      <ul className="stagger mt-2 space-y-2 max-md:pr-20">
+      <ul className="stagger mt-2 space-y-2">
         {visible.slice(0, limit).map((e) => {
           const isSelected = selected && selected.kind === e.kind && String(e.id) === selected.id;
           const cost = costFor(e);
@@ -273,14 +236,12 @@ export default function Logbook() {
 
       {entries && entries.length === 0 && (
         <EmptyState icon={Plane} title="Nothing logged yet." description="Log your first flight or ground session to start your logbook."
-          action={<div className="mx-auto grid max-w-xs gap-2"><Button as={Link} to="/logbook/new" size="md">Add a flight</Button><Button as={Link} to="/logbook/quick" size="md" variant="secondary">Quick log</Button></div>} />
+          action={<Button as={Link} to="/logbook/new" size="md" className="mx-auto max-w-xs">Add a flight</Button>} />
       )}
       {entries && entries.length > 0 && visible.length === 0 && (
         <EmptyState title="Nothing matches these filters." />
       )}
 
-      <AddFab onClick={() => setShowLogChoice(true)} label="Log flight or ground session" />
-      <LogChoiceModal open={showLogChoice} onClose={() => setShowLogChoice(false)} />
     </div>
 
     {/* Detail pane: full-screen (via the nested /logbook/:id or /logbook/ground/:id routes) below lg, a
