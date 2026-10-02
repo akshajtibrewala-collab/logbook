@@ -7,6 +7,7 @@ import { flightCodes } from '../lib/flightpath.js';
 import { buildMapData } from '../lib/mapdata.js';
 import { visitedCounts } from '../lib/mapstyle.js';
 import { labelFor, SEAT_CLASSES } from '../lib/aviationEnums.js';
+import { distinctAircraftTypeCount } from '../lib/aircraftTypes.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 import AirlineBadge from '../components/AirlineBadge.jsx';
 import Card from '../components/Card.jsx';
@@ -81,7 +82,7 @@ export default function PassengerFlights() {
       airports: counts.airports,
       countries: counts.countries,
       airlines: new Set(visible.map((f) => f.airline).filter(Boolean)).size,
-      aircraft: new Set(visible.map((f) => f.aircraft_type).filter(Boolean)).size,
+      aircraft: distinctAircraftTypeCount(visible),
     };
   }, [visible, mapData]);
 

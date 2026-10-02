@@ -20,7 +20,7 @@
 //   Duration column (tolerance 2 minutes), without writing the output CSV.
 //
 // Reads the local SQLite airports table directly (never Turso) to resolve each airport's coordinates.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseDelimited } from '../../client/src/lib/csv.js';
@@ -168,6 +168,32 @@ export async function resolveDurations(rows) {
 const rowsToCsv = (rows) => [EXPORT_HEADER.join(','), ...rows.map((r) => r.map(quote).join(','))].join('\r\n') + '\r\n';
 
 /**
+ * Applies a corrections overlay (see server/imports/corrections-overlay.json) to already-converted rows,
+ * matching each entry's `match` (date/flight_number/departure_airport/arrival_airport, against the row's
+ * *pre-correction* values) to exactly one row and overwriting the fields in `patch` — mutates `rows` in
+ * place. Applied before resolveDurations() so a patched date or time is what the duration recompute uses.
+ * Throws if an entry matches zero or more than one row, so a stale overlay entry (e.g. after a CSV re-
+ * export changes a row it used to match) is never silently skipped or misapplied.
+ */
+export function applyCorrectionsOverlay(rows, overlay) {
+  const report = [];
+  for (const entry of overlay) {
+    const { match, patch } = entry;
+    const hits = rows.filter((r) =>
+      r[IDX.date] === match.date && r[IDX.flight_number] === match.flight_number &&
+      r[IDX.departure_airport] === match.departure_airport && r[IDX.arrival_airport] === match.arrival_airport);
+    if (hits.length !== 1) {
+      throw new Error(`Corrections overlay entry ${JSON.stringify(match)} matched ${hits.length} row(s), expected exactly 1.`);
+    }
+    const row = hits[0];
+    const before = {};
+    for (const field of Object.keys(patch)) { before[field] = row[IDX[field]]; row[IDX[field]] = patch[field]; }
+    report.push({ match, before, after: patch });
+  }
+  return report;
+}
+
+/**
  * The whole conversion, from parsed Flightdiary rows to converted EXPORT_HEADER-shaped rows (before
  * duration recomputation — dep_time/arr_time are set, total_time/arr_day_offset still Flightdiary's raw
  * values). Also reports which resolved airline names have no branded badge yet.
@@ -221,6 +247,15 @@ async function main() {
 
   const [head, ...body] = parseDelimited(readFileSync(input, 'utf8'));
   const { rows, rowCount, unresolvedAirlines } = convertFlightdiary(head, body);
+
+  const overlayPath = path.join(path.dirname(input), 'corrections-overlay.json');
+  if (existsSync(overlayPath)) {
+    const overlay = JSON.parse(readFileSync(overlayPath, 'utf8'));
+    const report = applyCorrectionsOverlay(rows, overlay);
+    console.log(`\nApplied ${report.length} correction(s) from ${overlayPath}:`);
+    for (const r of report) console.log(`  ${JSON.stringify(r.match)}: ${JSON.stringify(r.before)} -> ${JSON.stringify(r.after)}`);
+  }
+
   const { comparisons } = await resolveDurations(rows);
   printComparisons(comparisons);
 
