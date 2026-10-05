@@ -4,6 +4,10 @@ import {
   parseHourlyRate, parseAircraftRate, parseExpense, parseGroundSession, parseTrainingPhase, parsePlannedCost,
 } from '../validate.js';
 
+import { mergeOntoStored } from '../lib/merge-update.js';
+
+const GROUND_SESSION_FIELDS = ['date', 'hours', 'instructor', 'topics', 'notes', 'cost_override', 'invoice_ref'];
+
 const router = Router();
 
 // instructor_rates, ground_rates and simulator_rates are all shaped exactly alike (effective_date,
@@ -114,7 +118,11 @@ router.post('/ground-sessions', async (req, res) => {
   res.status(201).json(await get('SELECT * FROM ground_sessions WHERE id = ?', [lastId]));
 });
 router.put('/ground-sessions/:id', async (req, res) => {
-  const { value, errors } = parseGroundSession(req.body);
+  const stored = await get('SELECT * FROM ground_sessions WHERE id = ?', [req.params.id]);
+  if (!stored) return res.status(404).json({ error: 'Ground session not found' });
+  // Only the fields sent change (see lib/merge-update.js): a form that leaves out the instructor or the
+  // invoice reference must not erase them.
+  const { value, errors } = parseGroundSession(mergeOntoStored(stored, req.body, GROUND_SESSION_FIELDS));
   if (errors) return res.status(400).json({ errors });
   const { changes } = await run(
     'UPDATE ground_sessions SET date = :date, hours = :hours, instructor = :instructor, topics = :topics, notes = :notes, cost_override = :cost_override, invoice_ref = :invoice_ref WHERE id = :id',

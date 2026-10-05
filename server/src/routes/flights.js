@@ -5,6 +5,7 @@ import { parseFlight, parseStops, parseApproaches, parseAircraft, AIRCRAFT_FIELD
 import { resolveAirportRow, resolveAirportRows } from './airports.js';
 import { passengerDuration } from '../lib/passengerDuration.js';
 import { isTurbineAircraftType } from '../lib/aircraftTurbine.js';
+import { mergeOntoStored } from '../lib/merge-update.js';
 
 const INSERT_AIRCRAFT = `INSERT INTO aircraft (${AIRCRAFT_FIELDS.join(',')}) VALUES (${AIRCRAFT_FIELDS.map((c) => ':' + c).join(',')})`;
 const normTail = (t) => (t ? String(t).trim().toUpperCase() : null);
@@ -298,8 +299,20 @@ router.post('/bulk', async (req, res) => {
   res.status(201).json({ inserted: ready.length, failed });
 });
 
-router.put('/:id', async (req, res) => {
-  const { value, errors } = parseFlight(req.body);
+// Fields whose change invalidates a stored arrival-day offset (it is derived from them), so an update that
+// moves one of them without sending a new offset has the server work the offset out again.
+const OFFSET_INPUTS = ['date', 'dep_time', 'arr_time', 'departure_airport', 'arrival_airport'];
+
+// PUT and PATCH behave the same: only the fields sent change (see lib/merge-update.js). Omitting a field
+// keeps what is stored; sending null or '' clears it.
+async function updateFlight(req, res) {
+  const stored = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
+  if (!stored) return res.status(404).json({ error: 'Flight not found' });
+  const body = mergeOntoStored(stored, req.body, FLIGHT_FIELDS);
+  if (OFFSET_INPUTS.some((k) => Object.hasOwn(req.body ?? {}, k)) && !Object.hasOwn(req.body ?? {}, 'arr_day_offset')) {
+    body.arr_day_offset = null;
+  }
+  const { value, errors } = parseFlight(body);
   const { value: stops, errors: stopErrors } = parseStops(req.body?.stops);
   const { value: approachTypes, errors: approachErrors } = parseApproaches(req.body?.approach_types);
   if (errors || stopErrors || approachErrors) {
@@ -318,7 +331,9 @@ router.put('/:id', async (req, res) => {
   updated.stops = await all(STOPS_SELECT, [req.params.id]);
   updated.approach_types = await all(APPROACHES_SELECT, [req.params.id]);
   res.json(updated);
-});
+}
+router.put('/:id', updateFlight);
+router.patch('/:id', updateFlight);
 
 router.delete('/:id', async (req, res) => {
   // Explicit cleanup rather than relying on ON DELETE CASCADE, which SQLite only enforces when
