@@ -20,3 +20,6 @@ server/imports/
 # One-off production fix scripts: written for a single release, deleted after use, never committed
 server/scripts/one-off-*
 server/scripts/prod/one-off-*
+
+# Private design notes and standing plan (never commit)
+docs/design/_private/

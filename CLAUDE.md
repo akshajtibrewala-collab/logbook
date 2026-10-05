@@ -181,6 +181,11 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
   ("Not tracked"), never $0. Ending a phase freezes its totals. A manual cost override applies anywhere.
 - Hours always display with two decimals (`fmtHours`).
 
+## Standing plan
+
+The current multi-task plan (release gates, restore, Logbook redesign mockups, bugs, one page frame) is saved
+locally at `docs/design/_private/PLAN.md` (gitignored, private). Read it at the start of a session.
+
 ## Status
 
 All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details in `docs/ROADMAP.md`.
