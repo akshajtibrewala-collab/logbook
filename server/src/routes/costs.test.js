@@ -107,7 +107,9 @@ test('ground sessions CRUD, including GET /:id', async () => {
 
   const updated = await (await call('PUT', `/costs/ground-sessions/${created.id}`, { date: '2026-05-01', hours: 2 })).json();
   assert.equal(updated.hours, 2);
-  assert.equal(updated.instructor, null); // omitted on the update, so cleared like other optional text fields
+  assert.equal(updated.instructor, 'Jane'); // omitted on the update, so kept
+  const cleared = await (await call('PUT', `/costs/ground-sessions/${created.id}`, { instructor: null })).json();
+  assert.equal(cleared.instructor, null); // an explicit null clears it
 
   const del = await call('DELETE', `/costs/ground-sessions/${created.id}`);
   assert.equal(del.status, 204);
@@ -153,7 +155,9 @@ test('flights: ground_time and cost_override round-trip, and ground_time is not 
     date: '2026-05-01', total_time: 1.5, dual_received: 1.5, ground_time: 0.5,
   })).json();
   assert.equal(cleared.ground_time, 0.5);
-  assert.equal(cleared.cost_override, null); // omitted on update, clears back to null like other optional fields
+  assert.equal(cleared.cost_override, 400); // omitted on update, so kept
+  const reset = await (await call('PUT', `/flights/${flight.id}`, { cost_override: null })).json();
+  assert.equal(reset.cost_override, null); // an explicit null clears it
 });
 
 test('planned costs CRUD', async () => {

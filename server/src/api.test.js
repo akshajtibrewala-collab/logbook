@@ -463,3 +463,115 @@ test('expirations: create, edit, delete, sorted by expiry', async () => {
   assert.equal(afterDelete.length, 1);
   assert.equal(afterDelete[0].label, '2nd Class Medical');
 });
+
+// ---- Updates change only the fields that are sent (fix/partial-update-erases-fields) ----
+
+const trainingFlight = {
+  ...flight, date: '2026-08-25', departure_airport: 'KSUS', arrival_airport: 'KSUS', total_time: 1.7, pic_time: 0, dual_received: 1.7,
+  instructor: 'Jane Doe', invoice_ref: 'INV-1', remarks: 'Pattern work', cost_override: 380, flight_number: 'TR1',
+};
+
+test('PUT without instructor or invoice_ref keeps them (this erased real data before)', async () => {
+  const created = await (await call('POST', '/flights', trainingFlight)).json();
+  assert.equal(created.instructor, 'Jane Doe');
+  const res = await call('PUT', `/flights/${created.id}`, { date: '2026-08-25', departure_airport: 'KSUS', arrival_airport: 'KSUS', total_time: 1.7, dual_received: 1.7, remarks: 'Edited' });
+  assert.equal(res.status, 200);
+  const updated = await res.json();
+  assert.equal(updated.remarks, 'Edited');
+  for (const k of ['instructor', 'invoice_ref', 'cost_override', 'flight_number', 'tail_number', 'aircraft_type', 'role', 'day_landings']) {
+    assert.equal(updated[k], created[k], `${k} must survive an update that did not send it`);
+  }
+  assert.equal(updated.dual_received, 1.7);
+});
+
+test('PATCH changes only what is sent; an empty body changes nothing', async () => {
+  const created = await (await call('POST', '/flights', trainingFlight)).json();
+  let res = await call('PATCH', `/flights/${created.id}`, { remarks: 'Just a note' });
+  assert.equal(res.status, 200);
+  const patched = await res.json();
+  assert.equal(patched.remarks, 'Just a note');
+  const { remarks: _r, updated_at: _u, ...before } = created;
+  const { remarks: _r2, updated_at: _u2, ...after } = patched;
+  assert.deepEqual(after, before);
+  res = await call('PATCH', `/flights/${created.id}`, {});
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).instructor, 'Jane Doe');
+});
+
+test('an explicit null or empty string still clears a field', async () => {
+  const created = await (await call('POST', '/flights', trainingFlight)).json();
+  let res = await call('PUT', `/flights/${created.id}`, { instructor: null, invoice_ref: '', cost_override: null });
+  const cleared = await res.json();
+  assert.equal(cleared.instructor, null);
+  assert.equal(cleared.invoice_ref, null);
+  assert.equal(cleared.cost_override, null);
+  assert.equal(cleared.remarks, 'Pattern work');
+  res = await call('PUT', `/flights/${created.id}`, { total_time: 2.4, dual_received: 0 });
+  const numbers = await res.json();
+  assert.equal(numbers.total_time, 2.4);
+  assert.equal(numbers.dual_received, 0);
+});
+
+test('update validation is unchanged, and a rejected update writes nothing', async () => {
+  const created = await (await call('POST', '/flights', trainingFlight)).json();
+  let res = await call('PUT', `/flights/${created.id}`, { date: '2026-13-45' });
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).errors.date);
+  res = await call('PUT', `/flights/${created.id}`, { total_time: 1, dual_received: 5 });
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).errors.dual_received);
+  res = await call('PUT', `/flights/${created.id}`, { role: 'observer' });
+  assert.equal(res.status, 400);
+  res = await call('PUT', `/flights/${created.id}`, { departure_airport: 'TOOLONG' });
+  assert.equal(res.status, 400);
+  const still = await (await call('GET', `/flights/${created.id}`)).json();
+  assert.equal(still.total_time, 1.7);
+  assert.equal(still.instructor, 'Jane Doe');
+  assert.equal((await call('PUT', '/flights/999999', { remarks: 'x' })).status, 404);
+  assert.equal((await call('PATCH', '/flights/999999', { remarks: 'x' })).status, 404);
+});
+
+test('a full-body PUT (CSV re-import, offline outbox) behaves exactly as before', async () => {
+  const created = await (await call('POST', '/flights', trainingFlight)).json();
+  const full = { ...trainingFlight, remarks: 'Rewritten', instructor: 'Someone Else', invoice_ref: null, stops: [{ airport_code: 'KSQL', stop_type: 'full_stop' }] };
+  const updated = await (await call('PUT', `/flights/${created.id}`, full)).json();
+  assert.equal(updated.instructor, 'Someone Else');
+  assert.equal(updated.invoice_ref, null);
+  assert.equal(updated.remarks, 'Rewritten');
+  assert.equal(updated.route, 'KSQL');
+  assert.deepEqual(updated.stops.map((s) => s.airport_code), ['KSQL']);
+  // Stops not sent: left alone, and so is the route that was derived from them.
+  const next = await (await call('PUT', `/flights/${created.id}`, { remarks: 'Again' })).json();
+  assert.equal(next.route, 'KSQL');
+  assert.deepEqual(next.stops.map((s) => s.airport_code), ['KSQL']);
+});
+
+test('a passenger flight update that moves a time works the arrival day out again', async () => {
+  await run("INSERT OR IGNORE INTO airports (ident, icao, iata, local_code, name, city, type, lat, lon) VALUES ('KSFO','KSFO','SFO','SFO','San Francisco International','San Francisco','large_airport',37.62,-122.38)");
+  await run("INSERT OR IGNORE INTO airports (ident, icao, iata, local_code, name, city, type, lat, lon) VALUES ('KJFK','KJFK','JFK','JFK','John F Kennedy International','New York','large_airport',40.64,-73.78)");
+  const passenger = { role: 'passenger', date: '2026-05-01', departure_airport: 'KSFO', arrival_airport: 'KJFK', dep_time: '08:00', arr_time: '16:30', airline: 'Delta', flight_number: 'DL1' };
+  const created = await (await call('POST', '/flights', passenger)).json();
+  assert.equal(created.role, 'passenger');
+  const moved = await (await call('PATCH', `/flights/${created.id}`, { dep_time: '22:00', arr_time: '06:00' })).json();
+  assert.equal(moved.airline, 'Delta');
+  assert.equal(moved.role, 'passenger');
+  assert.ok(moved.total_time > 0);
+  assert.equal(moved.arr_day_offset, 1);
+});
+
+test('PUT on a ground session keeps the instructor and invoice reference it was not sent', async () => {
+  const body = { date: '2026-08-14', hours: 1, instructor: 'Jane Doe', topics: 'Weather', invoice_ref: 'INV-9' };
+  const created = await (await call('POST', '/costs/ground-sessions', body)).json();
+  let res = await call('PUT', `/costs/ground-sessions/${created.id}`, { date: '2026-08-14', hours: 1.5, notes: 'Added' });
+  assert.equal(res.status, 200);
+  const updated = await res.json();
+  assert.equal(updated.hours, 1.5);
+  assert.equal(updated.notes, 'Added');
+  assert.equal(updated.instructor, 'Jane Doe');
+  assert.equal(updated.invoice_ref, 'INV-9');
+  assert.equal(updated.topics, 'Weather');
+  res = await call('PUT', `/costs/ground-sessions/${created.id}`, { instructor: null });
+  assert.equal((await res.json()).instructor, null);
+  assert.equal((await call('PUT', `/costs/ground-sessions/${created.id}`, { hours: 0 })).status, 400);
+  assert.equal((await call('PUT', '/costs/ground-sessions/999999', { hours: 1 })).status, 404);
+});
