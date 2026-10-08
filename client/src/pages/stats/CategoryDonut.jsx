@@ -8,7 +8,7 @@ export default function CategoryDonut({ categories, defaultOpen = true }) {
   const total = categories.reduce((s, c) => s + c.hours, 0);
   return (
     <CollapsibleStatCard title="Hours by category" icon={PieChartIcon} note="Categories overlap — night PIC counts toward both." defaultOpen={defaultOpen}>
-      {categories.length === 0 ? <p className="text-sm text-slate-500">No category time logged yet.</p> : (
+      {categories.length === 0 ? <p className="text-sm text-slate-400">No category time logged yet.</p> : (
         <>
           <div className="h-56">
             <ResponsiveContainer>

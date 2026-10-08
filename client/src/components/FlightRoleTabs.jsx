@@ -2,20 +2,13 @@ import { NavLink } from 'react-router-dom';
 
 // The Pilot log / Passenger flights switcher shown at the top of both /logbook and /travel — the phone
 // bottom bar has no room for a seventh tab (see nav.js), so this is how a phone reaches the passenger
-// flights page. Each side is tinted with its own role color (sky blue for pilot, violet for passenger —
-// see index.css's --role-pax), the same convention the Stats page tabs use, so which mode you're in reads
-// at a glance without reading the label.
+// flights page. A glass segmented control (ds/buttons.css): the selected side carries its own role tint
+// (sky for pilot, violet for passenger), so which mode you're in reads at a glance without reading the label.
 export default function FlightRoleTabs() {
   return (
-    <div className="mt-3 flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Pilot log or passenger flights">
-      <NavLink to="/logbook"
-        className={({ isActive }) => `pressable flex h-9 flex-1 items-center justify-center rounded-lg text-center text-sm font-medium transition-colors ${isActive ? 'bg-accent text-ink' : 'text-slate-400'}`}>
-        Pilot log
-      </NavLink>
-      <NavLink to="/travel"
-        className={({ isActive }) => `pressable flex h-9 flex-1 items-center justify-center rounded-lg text-center text-sm font-medium transition-colors ${isActive ? 'bg-[rgb(var(--role-pax))] text-ink' : 'text-slate-400'}`}>
-        Passenger flights
-      </NavLink>
+    <div className="gl-seg mt-3" role="group" aria-label="Pilot log or passenger flights">
+      <NavLink to="/logbook" className="gl pilot">Pilot log</NavLink>
+      <NavLink to="/travel" className="gl pax">Passenger flights</NavLink>
     </div>
   );
 }

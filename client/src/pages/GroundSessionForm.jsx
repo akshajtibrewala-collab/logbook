@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
@@ -11,6 +12,7 @@ import DatePicker from '../components/DatePicker.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Disclosure from '../components/Disclosure.jsx';
+import useInstructorNames from '../hooks/useInstructorNames.js';
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -35,6 +37,7 @@ function Section({ title, children }) {
 export default function GroundSessionForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const instructors = useInstructorNames();
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(Boolean(id));
@@ -97,21 +100,19 @@ export default function GroundSessionForm() {
   if (loading) return <p className="text-slate-400">Loading…</p>;
 
   return (
-    <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">{id ? 'Edit ground session' : 'Log ground session'}</h1>
-      </div>
-
+    <form onSubmit={submit} className="cl mn mn-form md:mx-auto md:max-w-xl">
       <Section title="Session">
         <DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} />
         <HoursInput label="Hours" value={form.hours} onChange={set('hours')} error={errors.hours} />
-        <TextField label="Instructor (optional)" value={form.instructor} onChange={set('instructor')} placeholder="Jane Smith" />
+        <div>
+          <TextField label="Instructor (optional)" value={form.instructor} onChange={set('instructor')} placeholder="Jane Smith" list="instructor-names" />
+          <datalist id="instructor-names">{instructors.map((n) => <option key={n} value={n} />)}</datalist>
+        </div>
         <TextField label="Topics covered (optional)" value={form.topics} onChange={set('topics')} placeholder="Weather, airspace" />
         <div>
           <span className="mb-1 block text-xs text-slate-400">Notes (optional)</span>
           <textarea value={form.notes} onChange={(e) => set('notes')(e.target.value)} rows={3}
-            className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+            className="gl-field w-full p-3 text-base" />
         </div>
       </Section>
 
@@ -151,12 +152,12 @@ export default function GroundSessionForm() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+      <SaveBar>
         <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Log ground session'}</Button>
         {id && (
           <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete ground session</Button>
         )}
-      </div>
+      </SaveBar>
 
       <ConfirmDialog open={confirmDelete} title="Delete ground session?" description="This cannot be undone."
         confirmLabel="Delete" busy={deleting} onConfirm={remove} onClose={() => setConfirmDelete(false)} />

@@ -32,7 +32,7 @@ export default function CumulativeChart({ flights, settings, onSaveTarget, note,
     <CollapsibleStatCard title="Progress toward your goal" icon={Target}
       note={note ?? (series.target ? `${fmtHours(series.total)} of ${fmtHours(series.target)} h (${series.percent}%)` : 'Set a target to draw a goal line.')}
       defaultOpen={defaultOpen}>
-      {series.points.length === 0 ? <p className="text-sm text-slate-500">Log a flight to start the line.</p> : (
+      {series.points.length === 0 ? <p className="text-sm text-slate-400">Log a flight to start the line.</p> : (
         <div className="h-56" role="img" aria-label={`Line chart of cumulative hours, now ${fmtHours(series.total)}${series.target ? ` toward ${fmtHours(series.target)}` : ''}`}>
           <ResponsiveContainer>
             <LineChart data={series.points} margin={{ left: -12, right: 16, top: 8, bottom: 0 }}>
@@ -57,11 +57,11 @@ export default function CumulativeChart({ flights, settings, onSaveTarget, note,
         <form onSubmit={save} className="mt-3 space-y-2">
           <label className="block text-xs text-slate-400">Goal name (optional)
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Private certificate" maxLength={40}
-              className="mt-1 h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent" />
+              className="gl-field mt-1 h-12 w-full px-3 text-base" />
           </label>
           <label className="block text-xs text-slate-400">Target total hours (leave blank for none)
             <input value={hours} onChange={(e) => setHours(e.target.value)} inputMode="decimal" placeholder="40"
-              className="mt-1 h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent" />
+              className="gl-field mt-1 h-12 w-full px-3 text-base" />
           </label>
           {err && <p role="alert" className="text-sm text-bad">{err}</p>}
           <div className="flex gap-2">

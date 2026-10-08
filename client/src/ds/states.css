@@ -1,0 +1,15 @@
+/* Login, error and offline states (B-calm): one solid surface or one centred column, one muted line, one action. Tokens only; restrained (no red boxes). */
+.st-page { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 16px; padding: 24px; width: min(100%, 24rem); margin: 0 auto; text-align: center; color: var(--ds-text); box-sizing: border-box; }
+.st-page form { display: grid; gap: 16px; width: 100%; justify-items: stretch; }
+.st-mark { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; }
+.st-sub { margin: 0; color: var(--ds-text-2); font-size: 1.0625rem; line-height: 1.45; }
+.st-lock { width: 28px; height: 28px; color: var(--ds-text-2); fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.st-err { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; color: var(--ds-text); font-size: 1rem; }
+.st-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ds-warn); flex: none; display: inline-block; }
+.st-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 16px; background: var(--ds-surface); color: var(--ds-text); font-size: 1.0625rem; line-height: 1.4; }
+.st-note > span:first-child { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.st-note .gl { flex: none; }
+.st-note.queue { display: grid; gap: 8px; }
+.st-note.queue .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.st-note.queue .row > span:first-child { display: inline-flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 12rem; }
+.st-note.queue .act { display: flex; gap: 8px; flex-wrap: wrap; }

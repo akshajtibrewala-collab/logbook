@@ -12,8 +12,8 @@ export default function MonthlyChart({ flights, note, defaultOpen = true }) {
   const rows = useMemo(() => hoursByMonth(flights, { months: 12, now: localToday() }), [flights]);
   const any = rows.some((r) => r.hours > 0);
   return (
-    <CollapsibleStatCard title="Hours by month" note={note} icon={TrendingUp} defaultOpen={defaultOpen}>
-      {!any ? <p className="text-sm text-slate-500">No flying in the last 12 months.</p> : (
+    <CollapsibleStatCard title="Hours, last 12 months" note={note} icon={TrendingUp} defaultOpen={defaultOpen}>
+      {!any ? <p className="text-sm text-slate-400">No flying in the last 12 months.</p> : (
         <div className="h-56" role="img" aria-label={`Bar chart of hours flown per month. ${rows.map((r) => `${r.label}: ${fmtHours(r.hours)}`).join(', ')}`}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={chartMargin}>

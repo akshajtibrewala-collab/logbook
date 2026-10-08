@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { Printer } from 'lucide-react';
+import { Chip } from '../ds/Controls.jsx';
+import '../ds/bcalm.css';
 import { api } from '../lib/api.js';
 import { computeMilestones, certificateLabel, certificateSummary, completionsByKey } from '../lib/milestones.js';
 import { pilotFlights } from '../lib/flightRoles.js';
@@ -11,7 +12,6 @@ import Button from '../components/Button.jsx';
 
 /** Printable / save-as-PDF logbook summary (browser print dialog → "Save as PDF"). */
 export default function PrintSummary() {
-  const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [milestones, setMilestones] = useState(null);
   const [error, setError] = useState('');
@@ -41,17 +41,14 @@ export default function PrintSummary() {
   }, [milestones]);
 
   return (
-    <div className="space-y-4">
-      <div className="no-print flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <label className="flex min-h-11 items-center gap-2 text-sm text-slate-300">
-          <input type="checkbox" checked={notes} onChange={(e) => setNotes(e.target.checked)} className="h-5 w-5 accent-[rgb(var(--accent))]" />Include notes
-        </label>
-        <Button size="md" fullWidth={false} icon={Printer} iconSize={18} className="ml-auto" onClick={() => window.print()}>Print / Save as PDF</Button>
+    <div className="cl bc"><div className="bc-stack">
+      <div className="no-print bc-ctl">
+        <Chip pressed={notes} onClick={() => setNotes((v) => !v)} aria-label={notes ? 'Notes included. Tap to leave them out' : 'Notes left out. Tap to include them'}>{notes ? 'Notes on' : 'Notes off'}</Chip>
+        <Button size="md" fullWidth={false} icon={Printer} iconSize={18} onClick={() => window.print()}>Print / Save as PDF</Button>
       </div>
       {error && <ErrorNote message={error} onRetry={() => setTries((t) => t + 1)} />}
       {!summary && !error && <><Skeleton className="h-16" /><Skeleton className="h-40" /></>}
       {summary && <SummaryDocument summary={summary} certificates={certificates} />}
-    </div>
+    </div></div>
   );
 }

@@ -1,64 +1,37 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plane } from 'lucide-react';
+import { useParams, useLocation, Link } from 'react-router-dom';
+import { Pencil } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { computeFlightCost, fmtMoney } from '../lib/cost.js';
-import Skeleton from '../components/Skeleton.jsx';
+import Button from '../components/Button.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
-import AirlineBadge from '../components/AirlineBadge.jsx';
-import Badge from '../components/Badge.jsx';
 import PhotoGallery from '../components/PhotoGallery.jsx';
-import { formatDateWithWeekday as fmtDate, parseISO } from '../lib/calendar.js';
-import { isPilotFlight, roleOf } from '../lib/flightRoles.js';
+import { MnFold, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
+import { formatDate as fmtDate, parseISO } from '../lib/calendar.js';
+import { isPilotFlight } from '../lib/flightRoles.js';
 import { labelFor, SEAT_CLASSES } from '../lib/aviationEnums.js';
 import { zonedToUtc, zuluHHMM } from '../lib/timezone.js';
+import '../ds/logbook.css';
 
-const TIME_FIELDS = [
-  ['pic_time', 'PIC'], ['sic_time', 'SIC'], ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
-  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['ground_time', 'Ground instruction'], ['night_time', 'Night'],
+// Every non-zero time beyond PIC and Dual sits behind "All times".
+const MAIN_TIMES = [['pic_time', 'PIC'], ['dual_received', 'Dual received']];
+const MORE_TIMES = [
+  ['sic_time', 'SIC'], ['dual_given', 'Dual given'], ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['ground_time', 'Ground instruction'], ['night_time', 'Night'],
   ['cross_country_time', 'Cross-country'], ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
-const COUNT_FIELDS = [
-  ['day_landings', 'Day landings'], ['night_landings', 'Night landings'],
-  ['approaches', 'Approaches'], ['holds', 'Holds'],
-];
+const COUNT_FIELDS = [['day_landings', 'Day landings'], ['night_landings', 'Night landings'], ['approaches', 'Approaches'], ['holds', 'Holds']];
 
-
-function Section({ title, children }) {
-  return (
-    <section className="card card-elevated p-4">
-      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Stat({ label, value }) {
-  return (
-    <div>
-      <div className="stat-value text-lg">{fmtHours(value)}</div>
-      <div className="text-xs text-slate-400">{label}</div>
-    </div>
-  );
-}
-
-// Only takes up space when the flight has photos (PhotoGallery renders nothing otherwise, but the card
-// around it would still show), so it checks first.
-function PhotosSection({ flightId }) {
+// The number of photos on this flight (the Photos row appears only when there are some).
+function usePhotoCount(flightId) {
   const [count, setCount] = useState(0);
   useEffect(() => { api.photoCounts().then((c) => setCount(c[flightId] || 0)).catch(() => {}); }, [flightId]);
-  if (!count) return null;
-  return (
-    <Section title={`Photos (${count})`}>
-      <PhotoGallery flightId={flightId} />
-    </Section>
-  );
+  return count;
 }
 
+/** A flight or passenger flight in the minimalist detail layout: the hours numeral, three headline figures, a short card, and everything else one tap down. */
 export default function FlightDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   // Nested under either /logbook or /travel (App.jsx) — reused as-is for both, so back/edit stay on
   // whichever page the flight was opened from rather than always returning to the pilot logbook.
   const base = useLocation().pathname.startsWith('/travel') ? '/travel' : '/logbook';
@@ -67,6 +40,10 @@ export default function FlightDetail() {
   const [rates, setRates] = useState(null);
   const [phases, setPhases] = useState(null);
   const [tz, setTz] = useState({});
+  const [open, setOpen] = useState({});
+  const [showCode, setShowCode] = useState(false);
+  const photoCount = usePhotoCount(Number(id));
+  const fold = (k) => ({ open: Boolean(open[k]), onToggle: () => setOpen((o) => ({ ...o, [k]: !o[k] })) });
 
   const load = useCallback(() => {
     setError('');
@@ -90,166 +67,117 @@ export default function FlightDetail() {
   const cost = flight && rates && phases ? computeFlightCost(flight, rates, phases) : null;
 
   const route = flight ? [flight.departure_airport, ...flight.stops.map((s) => s.airport_code), flight.arrival_airport].filter(Boolean) : [];
-  const times = flight ? TIME_FIELDS.filter(([k]) => Number(flight[k]) > 0) : [];
+  const pilot = !flight || isPilotFlight(flight);
+  const routeTitle = route.length > 1 ? route.join(' → ') : (flight?.departure_airport || flight?.arrival_airport || 'Local flight');
+  const local = Boolean(flight) && flight.stops.length === 0 && Boolean(flight.departure_airport) && flight.departure_airport.trim().toUpperCase() === (flight.arrival_airport || '').trim().toUpperCase();
+  const moreTimes = flight ? MORE_TIMES.filter(([k]) => Number(flight[k]) > 0) : [];
   const counts = flight ? COUNT_FIELDS.filter(([k]) => Number(flight[k]) > 0) : [];
 
+  const utcLine = () => {
+    if (!flight?.dep_time || !flight?.arr_time) return null;
+    const depTz = tz[flight.departure_airport];
+    const arrTz = tz[flight.arrival_airport];
+    if (!depTz || !arrTz) return null;
+    const day = parseISO(flight.date);
+    if (!day) return null;
+    const [dh, dm] = flight.dep_time.split(':').map(Number);
+    const [ah, am] = flight.arr_time.split(':').map(Number);
+    const depUtc = zonedToUtc({ ...day, hour: dh, minute: dm }, depTz);
+    const arrDay = new Date(Date.UTC(day.y, day.m - 1, day.d + (flight.arr_day_offset || 0)));
+    const arrUtc = zonedToUtc({ y: arrDay.getUTCFullYear(), m: arrDay.getUTCMonth() + 1, d: arrDay.getUTCDate(), hour: ah, minute: am }, arrTz);
+    const dayDiff = Math.round((Date.UTC(arrDay.getUTCFullYear(), arrDay.getUTCMonth(), arrDay.getUTCDate()) - Date.UTC(day.y, day.m - 1, day.d)) / 86400000);
+    return `UTC: ${zuluHHMM(depUtc)}Z → ${zuluHHMM(arrUtc)}${dayDiff > 0 ? `+${dayDiff}` : ''}Z`;
+  };
+
+  if (error) return <div className="cl mn"><ErrorNote message={error} onRetry={load} /></div>;
+  if (!flight) return <div className={`cl mn ${pilot ? '' : 'pax'}`}><MnSkeleton rows={3} /></div>;
+
+  const utc = utcLine();
+  const landings = flight.day_landings + flight.night_landings;
+  const title = local ? `Local ${flight.departure_airport.trim().toUpperCase()}` : routeTitle;
+  const tailOrType = flight.tail_number || flight.aircraft_type || '';
+  const trio = pilot
+    ? [['PIC', fmtHours(flight.pic_time)], ['Dual', fmtHours(flight.dual_received)], ['Landings', landings]]
+    : [['Airline', flight.airline], ['Flight', flight.flight_number], ['Class', flight.seat_class ? labelFor(SEAT_CLASSES, flight.seat_class) : '']].filter(([, v]) => v);
+
   return (
-    <div className={`stagger space-y-4 ${flight && !isPilotFlight(flight) ? 'role-pax-scope' : ''}`}>
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(base)} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Flight</h1>
-        {flight && (
-          <Link to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} aria-label="Edit flight" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
-            <Pencil size={18} />
-          </Link>
+    <div className={`cl mn ${pilot ? '' : 'pax'}`}>
+      <div className="mn-detail">
+        <div className="head">
+          <span className="mn-mut">{[fmtDate(flight.date), tailOrType].filter(Boolean).join(' · ')}</span>
+          <h1>{title}</h1>
+          <div className="num-row" role="img" aria-label={`${fmtHours(flight.total_time)} hours`}><span className="mn-num accent">{fmtHours(flight.total_time)}</span><span className="mn-u">h</span></div>
+        </div>
+
+        {trio.length > 0 && (
+          <div className="mn-trio">
+            {trio.map(([k, v]) => <div key={k} className="stat"><span className="mn-num">{v}</span><span className="mn-mut">{k}</span></div>)}
+          </div>
         )}
-      </div>
 
-      {error && <ErrorNote message={error} onRetry={load} />}
-      {!flight && !error && (
-        <><Skeleton className="h-24" /><Skeleton className="h-32" /><Skeleton className="h-24" /></>
-      )}
+        <div className="mn-card">
+          {pilot && <MnKv k="Instructor" v={flight.instructor} />}
+          <MnKv k="Aircraft" v={flight.aircraft_type} />
+          {flight.tail_number && flight.aircraft_type && <MnKv k="Tail" v={flight.tail_number} />}
 
-      {flight && (
-        <>
-          <section className="card card-hero p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="stat-title text-lg">{route.length > 1 ? route.join(' → ') : (flight.departure_airport || flight.arrival_airport || 'Local flight')}</div>
-                <div className="mt-0.5 text-sm text-slate-400">{fmtDate(flight.date)}</div>
-              </div>
-              <div className="stat-value shrink-0 text-right text-3xl text-accent-strong">{fmtHours(flight.total_time)}</div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {!isPilotFlight(flight) && <Badge tone="accent" className="capitalize">{roleOf(flight)}</Badge>}
-              {flight.airline && <AirlineBadge airline={flight.airline} />}
-              {flight.flight_number && <Badge tone="neutral">{flight.flight_number}</Badge>}
-              {(flight.aircraft_type || flight.tail_number) && (
-                <Badge tone="neutral" icon={Plane}>{[flight.aircraft_type, flight.tail_number].filter(Boolean).join(' · ')}</Badge>
-              )}
-            </div>
-            {!isPilotFlight(flight) && (flight.seat_class || flight.confirmation_code) && (
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-edge pt-3 text-sm text-slate-400">
-                {flight.seat_class && <span>Seat: {labelFor(SEAT_CLASSES, flight.seat_class)}</span>}
-                {flight.confirmation_code && <span>Confirmation: {flight.confirmation_code}</span>}
-              </div>
-            )}
-            {!isPilotFlight(flight) && flight.dep_time && flight.arr_time && (
-              <div className="mt-3 border-t border-edge pt-3 text-sm text-slate-300">
-                <div>
-                  {flight.dep_time} → {flight.arr_time}
-                  {flight.arr_day_offset > 0 && ` +${flight.arr_day_offset}`}
-                  <span className="ml-1 text-slate-500">local</span>
-                </div>
-                {(() => {
-                  const depTz = tz[flight.departure_airport];
-                  const arrTz = tz[flight.arrival_airport];
-                  if (!depTz || !arrTz) return null;
-                  const day = parseISO(flight.date);
-                  if (!day) return null;
-                  const [dh, dm] = flight.dep_time.split(':').map(Number);
-                  const [ah, am] = flight.arr_time.split(':').map(Number);
-                  const depUtc = zonedToUtc({ ...day, hour: dh, minute: dm }, depTz);
-                  const arrDay = new Date(Date.UTC(day.y, day.m - 1, day.d + (flight.arr_day_offset || 0)));
-                  const arrUtc = zonedToUtc({ y: arrDay.getUTCFullYear(), m: arrDay.getUTCMonth() + 1, d: arrDay.getUTCDate(), hour: ah, minute: am }, arrTz);
-                  const dayDiff = Math.round((Date.UTC(arrDay.getUTCFullYear(), arrDay.getUTCMonth(), arrDay.getUTCDate()) - Date.UTC(day.y, day.m - 1, day.d)) / 86400000);
-                  return (
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      UTC: {zuluHHMM(depUtc)}Z → {zuluHHMM(arrUtc)}{dayDiff > 0 ? `+${dayDiff}` : ''}Z
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            {flight.stops.length > 0 && (
-              <ul className="mt-3 space-y-1 border-t border-edge pt-3 text-sm">
-                {flight.stops.map((s, i) => (
-                  <li key={i} className="flex items-center justify-between text-slate-300">
-                    <span>{s.airport_code}</span>
-                    <span className="text-slate-400">{s.stop_type === 'touch_and_go' ? 'Touch & go' : 'Full stop'}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {isPilotFlight(flight) && times.length > 0 && (
-            <Section title="Time">
-              <div className="grid grid-cols-2 gap-3">
-                {times.map(([k, label]) => <Stat key={k} label={label} value={flight[k]} />)}
-              </div>
-            </Section>
+          {pilot && moreTimes.length > 0 && (
+            <MnFold label="All times" value={`${moreTimes.length + 3}`} {...fold('times')}>
+              <div>{[['total_time', 'Total'], ...MAIN_TIMES, ...moreTimes].map(([k, label]) => <MnKv key={k} k={label} v={`${fmtHours(flight[k])} h`} />)}</div>
+            </MnFold>
           )}
-
-          {isPilotFlight(flight) && cost && (cost.total > 0 || cost.override) && (
-            <Section title="Cost">
-              <div className="flex items-baseline justify-between">
-                <span className="stat-value text-2xl">{fmtMoney(cost.total)}</span>
-                {cost.override && (
-                  <span className="text-xs text-slate-400">
-                    Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}
-                  </span>
-                )}
-              </div>
-              {cost.missingRate && <p className="mt-1 text-xs text-bad">A rate wasn't set for part of this flight — see Costs settings.</p>}
-            </Section>
-          )}
-
-          {isPilotFlight(flight) && counts.length > 0 && (
-            <Section title="Landings & approaches">
-              <div className="grid grid-cols-4 gap-3">
+          {pilot && counts.length > 0 && (
+            <MnFold label="Landings and approaches" value={`${landings}`} {...fold('counts')}>
+              <div>
                 {counts.map(([k, label]) => (
-                  <div key={k}>
-                    <div className="stat-value text-lg">{flight[k]}</div>
-                    <div className="text-xs text-slate-400">
-                      {label}
-                      {k === 'day_landings' && flight.day_landings_full_stop > 0 && ` (${flight.day_landings_full_stop} full stop)`}
-                      {k === 'night_landings' && flight.night_landings_full_stop > 0 && ` (${flight.night_landings_full_stop} full stop)`}
-                    </div>
-                  </div>
+                  <MnKv key={k} v={flight[k]}
+                    k={`${label}${k === 'day_landings' && flight.day_landings_full_stop > 0 ? ` (${flight.day_landings_full_stop} full stop)` : ''}${k === 'night_landings' && flight.night_landings_full_stop > 0 ? ` (${flight.night_landings_full_stop} full stop)` : ''}`} />
                 ))}
+                {flight.approach_types?.map((a) => <MnKv key={a.approach_type} k={a.approach_type} v={`×${a.count}`} />)}
               </div>
-              {flight.approach_types?.length > 0 && (
-                <ul className="mt-3 space-y-1 border-t border-edge pt-3 text-sm">
-                  {flight.approach_types.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between text-slate-300">
-                      <span>{a.approach_type}</span>
-                      <span className="text-slate-400">×{a.count}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
+            </MnFold>
           )}
-
-          {flight.remarks && (
-            <Section title="Note">
-              <p className="whitespace-pre-wrap text-sm text-slate-300">{flight.remarks}</p>
-            </Section>
+          {flight.stops.length > 0 && (
+            <MnFold label="Stops" value={flight.stops.length} {...fold('stops')}>
+              <div>{flight.stops.map((s, i) => <MnKv key={i} k={`${i + 1}. ${s.airport_code}`} v={s.stop_type === 'touch_and_go' ? 'Touch & go' : 'Full stop'} />)}</div>
+            </MnFold>
           )}
-
-          <PhotosSection flightId={flight.id} />
-
-          {isPilotFlight(flight) && (flight.debrief_went_well || flight.debrief_work_on) && (
-            <Section title="Debrief">
-              <div className="space-y-3">
-                {flight.debrief_went_well && (
-                  <div>
-                    <div className="text-xs text-slate-400">What went well</div>
-                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-300">{flight.debrief_went_well}</p>
-                  </div>
-                )}
-                {flight.debrief_work_on && (
-                  <div>
-                    <div className="text-xs text-slate-400">What to work on</div>
-                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-300">{flight.debrief_work_on}</p>
-                  </div>
-                )}
+          {!pilot && flight.dep_time && flight.arr_time && (
+            <MnFold label="Local times" value="" {...fold('local')}>
+              <div>
+                <MnKv k={`Departs ${flight.departure_airport || ''}`.trim()} v={flight.dep_time} />
+                <MnKv k={`Arrives ${flight.arrival_airport || ''}`.trim()} v={`${flight.arr_time}${flight.arr_day_offset > 0 ? ` +${flight.arr_day_offset}` : ''}`} />
+                {utc && <p className="mn-note">{utc}</p>}
               </div>
-            </Section>
+            </MnFold>
           )}
-        </>
-      )}
+          {!pilot && flight.confirmation_code && (
+            <MnFold label="Booking" value="" {...fold('booking')}>
+              <div><button type="button" className="gl link sm" aria-pressed={showCode} onClick={() => setShowCode((s) => !s)}>{showCode ? flight.confirmation_code : 'Show confirmation code'}</button></div>
+            </MnFold>
+          )}
+          {flight.remarks && <MnFold label="Note" value="" {...fold('note')}><p>{flight.remarks}</p></MnFold>}
+          {pilot && (flight.debrief_went_well || flight.debrief_work_on) && (
+            <MnFold label="Debrief" value="" {...fold('debrief')}>
+              {flight.debrief_went_well && <p><span className="k">What went well</span>{flight.debrief_went_well}</p>}
+              {flight.debrief_work_on && <p><span className="k">What to work on</span>{flight.debrief_work_on}</p>}
+            </MnFold>
+          )}
+          {photoCount > 0 && <MnFold label="Photos" value={photoCount} {...fold('photos')}><PhotoGallery flightId={flight.id} /></MnFold>}
+          {pilot && cost && (cost.total > 0 || cost.override) && (
+            <MnFold label="Cost" value={fmtMoney(cost.total)} {...fold('cost')}>
+              <div>
+                <MnKv k="Cost" v={fmtMoney(cost.total)} />
+                {cost.override && <p className="mn-note">Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}</p>}
+                {cost.missingRate && <p className="mn-note" style={{ color: 'var(--ds-bad)' }}>A rate wasn't set for part of this flight. See Costs settings.</p>}
+              </div>
+            </MnFold>
+          )}
+        </div>
+
+        <div className="mn-actions">
+          <Button as={Link} to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} variant={pilot ? 'primary' : 'pax'} size="lg" icon={Pencil}>Edit flight</Button>
+        </div>
+      </div>
     </div>
   );
 }

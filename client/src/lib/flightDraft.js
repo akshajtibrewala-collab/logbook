@@ -24,6 +24,31 @@ export function prefillFromFlight(last, today) {
   return draft;
 }
 
+/**
+ * A new PASSENGER flight prefilled from the last passenger flight: only the airline and seat class carry over (a different trip has different
+ * airports, times and flight number). Returns null when there is none, or when it has nothing worth copying.
+ */
+export function prefillPassengerFrom(last, today) {
+  if (!last) return null;
+  const draft = { date: today, role: 'passenger' };
+  if (last.airline) draft.airline = last.airline;
+  if (last.seat_class) draft.seat_class = last.seat_class;
+  return draft.airline || draft.seat_class ? draft : null;
+}
+
+/**
+ * When the flight time changes, the PIC, dual and solo times that equalled the OLD total (an all-dual lesson, say) follow it, so changing the one big
+ * number on a prefilled flight never leaves "PIC 2.60 on a 1.50 h flight". Times that were not equal to the old total are left alone. `form` holds the
+ * text values the form edits; returns the fields to merge (empty when nothing follows or the new total isn't a number yet).
+ */
+export function followTotal(form, nextTotal, parse) {
+  const was = parse(form.total_time), now = parse(nextTotal);
+  if (now === null || was === null || was === 0 || was === now) return {};
+  const patch = {};
+  for (const k of ['pic_time', 'dual_received', 'solo_time']) if (parse(form[k]) === was) patch[k] = nextTotal;
+  return patch;
+}
+
 /** The most recent flight by date, then id — the "last entry" for Copy last. */
 export function mostRecentFlight(flights) {
   if (!flights?.length) return null;

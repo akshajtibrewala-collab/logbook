@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Copy } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Luggage } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours, parseHours } from '../lib/hours.js';
 import { computeFlightCost, fmtMoney, isPastCostCutoff } from '../lib/cost.js';
@@ -11,7 +12,7 @@ import TextField from '../components/TextField.jsx';
 import AirportSearchField from '../components/AirportSearchField.jsx';
 import PhotoPicker, { uploadPending } from '../components/PhotoPicker.jsx';
 import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
-import { prefillFromFlight, mostRecentFlight, validateFlightPayload } from '../lib/flightDraft.js';
+import { followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload } from '../lib/flightDraft.js';
 import { saveDraft, loadDraft, clearDraft, enqueue, outboxList, removeFromOutbox, isNetworkError } from '../lib/outbox.js';
 import DatePicker from '../components/DatePicker.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
@@ -21,11 +22,14 @@ import AircraftPicker from '../components/AircraftPicker.jsx';
 import PassengerTimeFields from '../components/PassengerTimeFields.jsx';
 import StopsEditor from '../components/StopsEditor.jsx';
 import ApproachesEditor from '../components/ApproachesEditor.jsx';
-import Disclosure from '../components/Disclosure.jsx';
+import BigHours from '../components/calm/BigHours.jsx';
 import Select from '../components/Select.jsx';
+import useInstructorNames from '../hooks/useInstructorNames.js';
+import { Segmented } from '../ds/Controls.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 import { FLIGHT_ROLES, pilotFlights } from '../lib/flightRoles.js';
 import { SEAT_CLASSES } from '../lib/aviationEnums.js';
+import '../ds/logbook.css';
 
 const TIME_FIELDS = [
   ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'],
@@ -35,12 +39,17 @@ const TIME_FIELDS = [
   ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
 const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
+// Fields under "More details" (an error on any of them opens it, so a problem is never hidden).
+const MORE_PILOT = ['stops', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time', 'ground_time', 'night_time', 'cross_country_time', 'instrument_actual', 'instrument_simulated',
+  'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds', 'approach_types', 'cost_override', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on'];
+const MORE_PAX = ['seat_class', 'confirmation_code', 'aircraft_id', 'remarks', 'stops'];
 
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 
 const blank = (role) => ({
   date: today(), role: role === 'passenger' ? 'passenger' : 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
   airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
+  instructor: '', invoice_ref: '', // carried through unchanged on edit: the server replaces the whole row, so leaving them out would erase them
   dep_time: '', arr_time: '', arr_day_offset: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
@@ -59,15 +68,16 @@ function fromFlight(f) {
 
 const DRAFT_NAME = 'flight-new';
 
-function Section({ title, children }) {
-  return (
-    <section className="card card-elevated p-4">
-      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
-      <div className="grid grid-cols-2 gap-3">{children}</div>
-    </section>
-  );
+/** A titled block inside "More details". */
+function MoreBlock({ title, children }) {
+  return <div className="cl-grp"><h3>{title}</h3>{children}</div>;
 }
 
+/**
+ * Log a flight, or edit one: a focused, step-light screen with the Save bar always in reach. ONE form for both roles: the Pilot / Passenger switch
+ * swaps the fields and the accent. The first screen asks only for what changes flight to flight (date, route, time, landings) and is prefilled from
+ * the last flight; everything else is under "More details". ?role=passenger preselects the role and ?from=travel returns to Travel.
+ */
 export default function FlightForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -86,12 +96,36 @@ export default function FlightForm() {
   const [defaultGroundTime, setDefaultGroundTime] = useState(null);
   const [groundTouched, setGroundTouched] = useState(false);
   const [params] = useSearchParams();
+  const instructors = useInstructorNames(); // names already used, offered as suggestions so a spelling can't drift
   const [notice, setNotice] = useState('');
   const [pendingPhotos, setPendingPhotos] = useState([]);
+  const [more, setMore] = useState(Boolean(id)); // editing shows everything; a new flight starts with the short form
   // ?from=travel means this form was opened from the Passenger flights page, so back/save/delete should
   // return there instead of the pilot logbook.
   const base = params.get('from') === 'travel' ? '/travel' : '/logbook';
   const draftReady = useRef(false); // autosave starts only after any restore/prefill has happened
+  const pristine = useRef(null); // JSON of the prefilled form: while the form still equals it, switching role re-prefills for the new role
+  const lastFlights = useRef(null); // { pilot, passenger }: the most recent flight of each role, loaded once
+
+  /** The last flight of each role, once (the pilot one in full, with its stops and approaches). */
+  async function loadLast() {
+    if (lastFlights.current) return lastFlights.current;
+    const list = await api.listFlights();
+    const lastPilot = mostRecentFlight(pilotFlights(list));
+    const lastPax = mostRecentFlight(list.filter((f) => f.role === 'passenger'));
+    lastFlights.current = { pilot: lastPilot ? await api.getFlight(lastPilot.id) : null, passenger: lastPax };
+    return lastFlights.current;
+  }
+  const prefillFor = (role, last) => {
+    if (role === 'passenger') {
+      const d = prefillPassengerFrom(last.passenger, today());
+      return d ? { form: { ...blank('passenger'), ...fromFlight(d), role: 'passenger' }, note: `Prefilled the airline and seat class from your last passenger flight on ${formatDate(last.passenger.date)}. Change anything.` } : null;
+    }
+    if (!last.pilot) return null;
+    const d = prefillFromFlight(last.pilot, today());
+    const what = [last.pilot.aircraft_type, last.pilot.tail_number].filter(Boolean).join(' ');
+    return { form: { ...fromFlight(d), role: 'pilot' }, note: `Prefilled from your last flight on ${formatDate(last.pilot.date)}${what ? `: ${what}` : ''}${last.pilot.instructor ? `, ${last.pilot.instructor}` : ''}. Change anything.` };
+  };
 
   useEffect(() => {
     if (id) {
@@ -99,7 +133,7 @@ export default function FlightForm() {
       return undefined;
     }
     // New flight: start from (in priority order) a queued entry being fixed, the last flight (Copy last),
-    // or an unsaved draft from an earlier visit; otherwise a blank form.
+    // an unsaved draft from an earlier visit, or the last flight of the chosen role; otherwise a blank form.
     const outboxId = params.get('outbox');
     const queued = outboxId ? outboxList().find((e) => e.id === outboxId) : null;
     if (queued) {
@@ -110,27 +144,38 @@ export default function FlightForm() {
     }
     if (params.get('copy') === 'last') {
       setLoading(true);
-      api.listFlights()
-        .then(async (list) => {
+      loadLast()
+        .then((last) => {
           // Copy last is for repeating your own flying — the most recent PILOT flight, never a
           // passenger one, so an airline/flight_number/aircraft from a commercial trip never
           // leaks into what's meant to become a new logged-time flight.
-          const last = mostRecentFlight(pilotFlights(list));
-          if (!last) { setNotice('There’s no previous flight to copy yet.'); return; }
-          const full = await api.getFlight(last.id);
-          setForm(fromFlight(prefillFromFlight(full, today())));
-          setNotice('Copied from your last flight — change anything that’s different.');
+          const p = prefillFor('pilot', last);
+          if (!p) { setNotice('There’s no previous flight to copy yet.'); return; }
+          setForm(p.form); pristine.current = JSON.stringify(p.form);
+          setNotice(p.note.replace('Prefilled from', 'Copied from'));
         })
         .catch((e) => setMessage(e.message))
         .finally(() => { setLoading(false); draftReady.current = true; });
       return undefined;
     }
     const draft = loadDraft(DRAFT_NAME);
-    if (draft?.value) {
+    const wantedRole = params.get('role'); // an explicit ?role= wins over a draft of the other role
+    if (draft?.value && (!wantedRole || (draft.value.role ?? 'pilot') === wantedRole)) {
       setForm({ ...blank(params.get('role')), ...draft.value });
       setNotice('Restored your unsaved flight from earlier.');
+      draftReady.current = true;
+      return undefined;
     }
-    draftReady.current = true;
+    // Nothing to restore: prefill from the last flight of this role (a quiet failure leaves the blank form).
+    const role = params.get('role') === 'passenger' ? 'passenger' : 'pilot';
+    setLoading(true);
+    loadLast()
+      .then((last) => {
+        const p = prefillFor(role, last);
+        if (p) { setForm(p.form); pristine.current = JSON.stringify(p.form); setNotice(p.note); }
+      })
+      .catch(() => {})
+      .finally(() => { setLoading(false); draftReady.current = true; });
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, params]);
@@ -160,12 +205,31 @@ export default function FlightForm() {
     setForm((f) => ({ ...f, [k]: v }));
   };
 
+  /** Switching role on an untouched, prefilled new flight re-prefills for the new role; otherwise only the role changes. */
+  async function chooseRole(role) {
+    if (role === form.role) return;
+    if (!id && pristine.current !== null && JSON.stringify(form) === pristine.current) {
+      try {
+        const p = prefillFor(role, await loadLast());
+        const next = p ? p.form : blank(role);
+        setForm(next); pristine.current = JSON.stringify(next); setNotice(p ? p.note : '');
+        return;
+      } catch { /* fall through to a plain switch */ }
+    }
+    set('role')(role);
+  }
+
   const previewCost = rates && phases ? computeFlightCost({
     date: form.date, aircraft_id: form.aircraft_id,
     total_time: parseHours(form.total_time) || 0, simulator_time: parseHours(form.simulator_time) || 0,
     dual_received: parseHours(form.dual_received) || 0, ground_time: parseHours(form.ground_time) || 0,
     cost_override: form.cost_override.trim() === '' ? null : form.cost_override,
   }, rates, phases) : null;
+
+  const showErrors = (errs) => {
+    setErrors(errs);
+    if (Object.keys(errs).some((k) => (form.role === 'pilot' ? MORE_PILOT : MORE_PAX).includes(k))) setMore(true); // never hide a problem
+  };
 
   async function submit(e) {
     e.preventDefault();
@@ -179,10 +243,10 @@ export default function FlightForm() {
       if (n === null) local[k] = `${label}: use 1.5 or 1:30`;
       payload[k] = n;
     }
-    if (Object.keys(local).length) return setErrors(local);
+    if (Object.keys(local).length) return showErrors(local);
     const invalid = validateFlightPayload(payload, { today: today() });
     if (Object.keys(invalid).length) {
-      setErrors(invalid);
+      showErrors(invalid);
       setMessage('Please fix the highlighted fields.');
       return undefined;
     }
@@ -216,7 +280,7 @@ export default function FlightForm() {
         navigate(base);
         return undefined;
       }
-      setErrors(err.fieldErrors || {});
+      showErrors(err.fieldErrors || {});
       setMessage(err.fieldErrors ? 'Please fix the highlighted fields.'
         : isNetworkError(err) ? `${err.message} Your entry is still here — try again when you’re connected.` : err.message);
       setSaving(false);
@@ -236,211 +300,168 @@ export default function FlightForm() {
   }
 
   const costOff = Boolean(rates) && isPastCostCutoff(form.date, rates.cost_cutoff_date);
+  const pilot = form.role === 'pilot';
 
-  if (loading) return <p className="text-slate-400">Loading…</p>;
+  if (loading) return <p className="ds-sub" role="status">Loading…</p>;
 
   return (
-    <form onSubmit={submit} className={`space-y-4 md:mx-auto md:max-w-xl ${form.role !== 'pilot' ? 'role-pax-scope' : ''}`}>
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate(id ? `${base}/${id}` : base)} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="min-w-0 flex-1 text-2xl font-semibold">{id ? 'Edit flight' : 'Add flight'}</h1>
-        {!id && (
-          <button type="button" onClick={() => navigate(`/logbook/new?copy=last${base === '/travel' ? '&from=travel' : ''}`, { replace: true })}
-            className="pressable flex h-11 items-center gap-2 rounded-full bg-navy-800 px-4 text-sm text-slate-300 active:text-accent">
-            <Copy size={16} />Copy last
-          </button>
-        )}
-      </div>
-      {notice && (
-        <p role="status" className="flex items-center justify-between gap-3 rounded-xl bg-accent/10 p-3 text-sm text-accent-strong">
-          <span>{notice}</span>
-          {!id && !params.get('outbox') && (
-            <button type="button" onClick={() => { clearDraft(DRAFT_NAME); setForm(blank()); setNotice(''); }} className="h-11 shrink-0 px-2 font-medium underline">Start over</button>
-          )}
-        </p>
-      )}
+    <form onSubmit={submit} className={`cl mn mn-form md:mx-auto md:max-w-xl ${pilot ? '' : 'pax role-pax-scope'}`}>
+      <div className="cl-form">
+        <Segmented label="Flight role" scope={pilot ? 'pilot' : 'pax'} value={form.role} onChange={chooseRole}
+          options={FLIGHT_ROLES.map((r) => ({ value: r.value, label: r.label, role: r.value === 'passenger' ? 'pax' : 'pilot' }))} />
 
-      <section className="card card-elevated p-4">
-        <h2 className="stat-title mb-3 text-sm text-accent-strong">Role</h2>
-        <div className="flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Flight role">
-          {FLIGHT_ROLES.map((r) => (
-            <button key={r.value} type="button" onClick={() => set('role')(r.value)} aria-pressed={form.role === r.value}
-              className={`pressable h-11 flex-1 rounded-lg text-sm font-medium transition-colors ${form.role === r.value ? 'bg-accent text-ink' : 'text-slate-400'}`}>
-              {r.label}
-            </button>
-          ))}
-        </div>
-        {form.role !== 'pilot' && (
-          <p className="mt-2 text-xs text-slate-500">
-            A passenger flight doesn't count toward your logbook hours, currency or milestones — just the map and your travel history.
+        {notice && (
+          <p role="status" className="cl-pre">
+            {pilot ? <Copy aria-hidden="true" /> : <Luggage aria-hidden="true" />}
+            <span>{notice}</span>
+            {!id && !params.get('outbox') && <button type="button" onClick={() => { clearDraft(DRAFT_NAME); setForm(blank(form.role)); pristine.current = null; setNotice(''); }} className="gl link sm" style={{ marginLeft: 'auto' }}>Start over</button>}
           </p>
         )}
-      </section>
+        {!pilot && !notice && <p className="cl-pre"><Luggage aria-hidden="true" /><span>A passenger flight doesn’t count toward your logbook hours, currency or milestones — just the map and your travel history.</span></p>}
 
-      <Section title="Flight">
-        <div className="col-span-2"><DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} /></div>
-        <AirportSearchField label="From" value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
-        <AirportSearchField label="To" value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
-        <div className="col-span-2">
-          <StopsEditor stops={form.stops} onChange={(stops) => setForm((f) => ({ ...f, stops }))}
-            from={form.departure_airport} to={form.arrival_airport} />
-          {typeof errors.stops === 'object' && (
-            <p className="mt-1 text-xs text-bad">Check the stop airport codes above.</p>
-          )}
-        </div>
-        <div className="col-span-2">
-          <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
-            ...f,
-            aircraft_id: a.id,
-            aircraft_type: a.is_simulator ? (a.model || '') : (a.type_designator || a.model || f.aircraft_type),
-            tail_number: a.is_simulator ? '' : (a.tail_number || f.tail_number),
-          }))} />
-        </div>
-      </Section>
-
-      <Disclosure key={form.role === 'pilot' ? 'pilot' : 'nonpilot'} title="Airline / Operator" defaultOpen={Boolean(form.airline.trim() || form.flight_number.trim() || form.role !== 'pilot')}>
-        <div className="col-span-2">
-          <TextField label="Airline (optional, for commercial flights)" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
-          <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
-          {form.airline.trim() && <div className="mt-2"><AirlineBadge airline={form.airline} /></div>}
-        </div>
-        <div className="col-span-2">
-          <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
-        </div>
-        {form.role !== 'pilot' && (
+        {/* ---- the short form: what changes flight to flight ---- */}
+        {pilot ? (
           <>
-            <Select label="Seat class" value={form.seat_class} onChange={set('seat_class')} options={SEAT_CLASSES} placeholder="Not set" />
-            <TextField label="Confirmation code" upper value={form.confirmation_code} onChange={set('confirmation_code')} placeholder="ABC123" />
-          </>
-        )}
-      </Disclosure>
-
-      {form.role === 'pilot' && (
-      <Section title="Time (hours — 1.5 or 1:30)">
-        {TIME_FIELDS.map(([k, label]) => (
-          <div key={k} className={k === 'total_time' ? 'col-span-2' : ''}>
-            <HoursInput label={label} value={form[k]} onChange={set(k)} error={errors[k]} />
-          </div>
-        ))}
-      </Section>
-      )}
-      {form.role !== 'pilot' && (
-        <Section title="Time">
-          <PassengerTimeFields
-            value={{
-              date: form.date, departure_airport: form.departure_airport, arrival_airport: form.arrival_airport,
-              dep_time: form.dep_time, arr_time: form.arr_time, arr_day_offset: form.arr_day_offset, total_time: form.total_time,
-            }}
-            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
-            errors={errors}
-          />
-        </Section>
-      )}
-
-      {form.role === 'pilot' && (
-      <Section title="Landings">
-        <CountInput label="Day landings" value={form.day_landings} onChange={set('day_landings')} error={errors.day_landings} />
-        <CountInput label="Day, full stop" value={form.day_landings_full_stop} onChange={set('day_landings_full_stop')} error={errors.day_landings_full_stop} />
-        <CountInput label="Night landings" value={form.night_landings} onChange={set('night_landings')} error={errors.night_landings} />
-        <CountInput label="Night, full stop" value={form.night_landings_full_stop} onChange={set('night_landings_full_stop')} error={errors.night_landings_full_stop} />
-      </Section>
-      )}
-
-      {form.role === 'pilot' && (costOff ? (
-        <section className="card card-elevated p-4">
-          <h2 className="stat-title text-sm text-accent-strong">Cost</h2>
-          <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
-        </section>
-      ) : (
-      <>
-      <section className="card card-elevated p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="stat-title text-sm text-accent-strong">Cost</h2>
-          <span className="stat-value text-xl">
-            {!previewCost ? '—'
-              : previewCost.total !== null ? fmtMoney(previewCost.total)
-              : <span className="text-sm font-normal text-slate-500">Not tracked</span>}
-          </span>
-        </div>
-        {previewCost?.total === null && (
-          <p className="mt-1 text-xs text-slate-500">This date isn't inside a cost-tracked training phase, so no cost is calculated — set an override below if you want to record one anyway.</p>
-        )}
-        {previewCost?.missingRate && <p className="mt-1 text-xs text-slate-500">A rate isn't set for part of this flight yet — set it on the Costs screen.</p>}
-      </section>
-
-      <Disclosure title="Manual cost override" defaultOpen={Boolean(form.cost_override.trim())}>
-        <div className="col-span-2">
-          <TextField label="Override (optional, e.g. to match an invoice)" type="number" value={form.cost_override}
-            onChange={set('cost_override')} error={errors.cost_override} placeholder="Use calculated cost" />
-          {previewCost?.override && previewCost.computedTotal !== null && (
-            <p className="mt-1 text-xs text-slate-500">Calculated cost would be {fmtMoney(previewCost.computedTotal)}.</p>
-          )}
-        </div>
-      </Disclosure>
-      </>
-      ))}
-
-      {form.role === 'pilot' && (
-      <section className="card card-elevated p-4">
-        <h2 className="stat-title mb-3 text-sm text-accent-strong">Approaches</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {form.approach_types.length > 0 ? (
-            <div>
-              <span className="mb-1 block text-xs text-slate-400">Total approaches</span>
-              <div className="flex h-12 items-center justify-center rounded-xl border border-edge bg-navy-800 text-base">
-                {form.approach_types.reduce((s, a) => s + (Number(a.count) || 0), 0)}
+            <div className="cl-two">
+              <DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} />
+              <div>
+                <TextField label="Instructor" value={form.instructor} onChange={set('instructor')} error={errors.instructor} placeholder="Optional" list="instructor-names" />
+                <datalist id="instructor-names">{instructors.map((n) => <option key={n} value={n} />)}</datalist>
               </div>
             </div>
+            <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
+              ...f,
+              aircraft_id: a.id,
+              aircraft_type: a.is_simulator ? (a.model || '') : (a.type_designator || a.model || f.aircraft_type),
+              tail_number: a.is_simulator ? '' : (a.tail_number || f.tail_number),
+            }))} />
+            <div className="cl-two">
+              <AirportSearchField label="From" value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
+              <AirportSearchField label="To" value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
+            </div>
+            <BigHours value={form.total_time} onChange={(v) => setForm((f) => ({ ...f, total_time: v, ...followTotal(f, v, parseHours) }))} error={errors.total_time} />
+            <CountInput label="Day landings" value={form.day_landings} onChange={set('day_landings')} error={errors.day_landings} />
+          </>
+        ) : (
+          <>
+            <div className="cl-two">
+              <DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} />
+              <div>
+                <TextField label="Airline" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
+                <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
+              </div>
+            </div>
+            {form.airline.trim() && <AirlineBadge airline={form.airline} />}
+            <div className="cl-two">
+              <AirportSearchField label="From" value={form.departure_airport} onChange={set('departure_airport')} error={errors.departure_airport} placeholder="KPAO" />
+              <AirportSearchField label="To" value={form.arrival_airport} onChange={set('arrival_airport')} error={errors.arrival_airport} placeholder="KSQL" />
+            </div>
+            <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
+            <div className="cl-grp">
+              <span className="ds-cap">Times and flight time</span>
+              <PassengerTimeFields
+                value={{
+                  date: form.date, departure_airport: form.departure_airport, arrival_airport: form.arrival_airport,
+                  dep_time: form.dep_time, arr_time: form.arr_time, arr_day_offset: form.arr_day_offset, total_time: form.total_time,
+                }}
+                onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+                errors={errors}
+              />
+            </div>
+          </>
+        )}
+
+        {/* ---- everything else, one tap down ---- */}
+        <div className="cl-grp" style={{ gap: 0 }}>
+          <button type="button" className={`cl-disc ${more ? 'open' : ''}`} aria-expanded={more} onClick={() => setMore((m) => !m)}>
+            <span>More details</span>{more ? <ChevronUp className="cl-chev" aria-hidden="true" /> : <ChevronDown className="cl-chev" aria-hidden="true" />}
+          </button>
+          {more && (pilot ? (
+            <div className="cl-open">
+              <MoreBlock title="Via stops">
+                <StopsEditor stops={form.stops} onChange={(stops) => setForm((f) => ({ ...f, stops }))} from={form.departure_airport} to={form.arrival_airport} />
+                {typeof errors.stops === 'object' && <p className="cl-note" style={{ color: 'var(--ds-bad)' }}>Check the stop airport codes above.</p>}
+              </MoreBlock>
+              <MoreBlock title="Time (hours — 1.5 or 1:30)">
+                {TIME_FIELDS.filter(([k]) => k !== 'total_time').map(([k, label]) => <HoursInput key={k} label={label} value={form[k]} onChange={set(k)} error={errors[k]} />)}
+              </MoreBlock>
+              <MoreBlock title="Landings and approaches">
+                <CountInput label="Day, full stop" value={form.day_landings_full_stop} onChange={set('day_landings_full_stop')} error={errors.day_landings_full_stop} />
+                <CountInput label="Night landings" value={form.night_landings} onChange={set('night_landings')} error={errors.night_landings} />
+                <CountInput label="Night, full stop" value={form.night_landings_full_stop} onChange={set('night_landings_full_stop')} error={errors.night_landings_full_stop} />
+                {form.approach_types.length > 0 ? (
+                  <div className="cl-dl"><div><span className="k">Total approaches</span><span className="v">{form.approach_types.reduce((s, a) => s + (Number(a.count) || 0), 0)}</span></div></div>
+                ) : (
+                  <CountInput label="Total approaches" value={form.approaches} onChange={set('approaches')} error={errors.approaches} />
+                )}
+                <CountInput label="Holds" value={form.holds} onChange={set('holds')} error={errors.holds} />
+                <ApproachesEditor approaches={form.approach_types} onChange={(v) => setForm((f) => ({ ...f, approach_types: v }))} />
+                {form.approach_types.length > 0 && <p className="cl-note">Total approaches above is the sum of these.</p>}
+                {typeof errors.approach_types === 'object' && <p className="cl-note" style={{ color: 'var(--ds-bad)' }}>Check the approach rows above.</p>}
+              </MoreBlock>
+              <MoreBlock title="Airline or operator (commercial flights)">
+                <div>
+                  <TextField label="Airline" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
+                  <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
+                  {form.airline.trim() && <div style={{ marginTop: 8 }}><AirlineBadge airline={form.airline} /></div>}
+                </div>
+                <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
+              </MoreBlock>
+              <MoreBlock title="Invoice">
+                <TextField label="Invoice reference (optional)" value={form.invoice_ref} onChange={set('invoice_ref')} error={errors.invoice_ref} placeholder="00-000000" />
+              </MoreBlock>
+              <MoreBlock title="Cost">
+                {costOff ? (
+                  <p className="cl-note">Costs aren’t counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your “Commercial certificate date” in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
+                ) : (
+                  <>
+                    <div className="cl-dl"><div><span className="k">Calculated cost</span><span className="v">{!previewCost ? '—' : previewCost.total !== null ? fmtMoney(previewCost.total) : 'Not tracked'}</span></div></div>
+                    {previewCost?.total === null && <p className="cl-note">This date isn’t inside a cost-tracked training phase, so no cost is calculated — set an override below if you want to record one anyway.</p>}
+                    {previewCost?.missingRate && <p className="cl-note">A rate isn’t set for part of this flight yet — set it on the Costs screen.</p>}
+                    <TextField label="Manual override (optional, e.g. to match an invoice)" type="number" value={form.cost_override} onChange={set('cost_override')} error={errors.cost_override} placeholder="Use calculated cost" />
+                    {previewCost?.override && previewCost.computedTotal !== null && <p className="cl-note">Calculated cost would be {fmtMoney(previewCost.computedTotal)}.</p>}
+                  </>
+                )}
+              </MoreBlock>
+              <MoreBlock title="Notes">
+                <label className="block"><span className="mb-1 block text-xs text-slate-400">Remarks</span>
+                  <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3} className="gl-field w-full p-3 text-base" /></label>
+                <label className="block"><span className="mb-1 block text-xs text-slate-400">What went well</span>
+                  <textarea value={form.debrief_went_well} onChange={(e) => set('debrief_went_well')(e.target.value)} rows={2} className="gl-field w-full p-3 text-base" /></label>
+                <label className="block"><span className="mb-1 block text-xs text-slate-400">What to work on</span>
+                  <textarea value={form.debrief_work_on} onChange={(e) => set('debrief_work_on')(e.target.value)} rows={2} className="gl-field w-full p-3 text-base" /></label>
+              </MoreBlock>
+              <MoreBlock title="Photos"><PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} /></MoreBlock>
+            </div>
           ) : (
-            <CountInput label="Total approaches" value={form.approaches} onChange={set('approaches')} error={errors.approaches} />
-          )}
-          <CountInput label="Holds" value={form.holds} onChange={set('holds')} error={errors.holds} />
+            <div className="cl-open">
+              <Select label="Seat class" value={form.seat_class} onChange={set('seat_class')} options={SEAT_CLASSES} placeholder="Not set" />
+              <TextField label="Confirmation code" upper value={form.confirmation_code} onChange={set('confirmation_code')} placeholder="ABC123" />
+              <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
+                ...f,
+                aircraft_id: a.id,
+                aircraft_type: a.is_simulator ? (a.model || '') : (a.type_designator || a.model || f.aircraft_type),
+                tail_number: a.is_simulator ? '' : (a.tail_number || f.tail_number),
+              }))} />
+              <MoreBlock title="Via stops">
+                <StopsEditor stops={form.stops} onChange={(stops) => setForm((f) => ({ ...f, stops }))} from={form.departure_airport} to={form.arrival_airport} />
+              </MoreBlock>
+              <label className="block"><span className="mb-1 block text-xs text-slate-400">Note</span>
+                <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3} className="gl-field w-full p-3 text-base" /></label>
+              <MoreBlock title="Photos"><PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} /></MoreBlock>
+            </div>
+          ))}
         </div>
-        <div className="mt-3">
-          <ApproachesEditor approaches={form.approach_types} onChange={(v) => setForm((f) => ({ ...f, approach_types: v }))} />
-          {form.approach_types.length > 0 && <p className="mt-1 text-xs text-slate-500">Total approaches above is the sum of these.</p>}
-          {typeof errors.approach_types === 'object' && <p className="mt-1 text-xs text-bad">Check the approach rows above.</p>}
-        </div>
-      </section>
-      )}
 
-      <section className="card card-elevated p-4">
-        <h2 className="stat-title mb-3 text-sm text-accent-strong">Note</h2>
-        <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3}
-          className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
-      </section>
+        {message && <p className="cl-error" role="alert">{message}</p>}
+      </div>
 
-      <section className="card card-elevated p-4">
-        <h2 className="stat-title mb-3 text-sm text-accent-strong">Photos</h2>
-        <PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} />
-      </section>
-
-      {form.role === 'pilot' && (
-      <section className="card card-elevated p-4">
-        <h2 className="stat-title mb-3 text-sm text-accent-strong">Debrief</h2>
-        <div className="space-y-3">
-          <div>
-            <span className="mb-1 block text-xs text-slate-400">What went well</span>
-            <textarea value={form.debrief_went_well} onChange={(e) => set('debrief_went_well')(e.target.value)} rows={2}
-              className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
-          </div>
-          <div>
-            <span className="mb-1 block text-xs text-slate-400">What to work on</span>
-            <textarea value={form.debrief_work_on} onChange={(e) => set('debrief_work_on')(e.target.value)} rows={2}
-              className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
-          </div>
-        </div>
-      </section>
-      )}
-
-      {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
-
-      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-        <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}</Button>
+      <SaveBar>
+        <Button disabled={saving} variant={pilot ? 'primary' : 'pax'} size="lg">{saving ? 'Saving…' : id ? 'Save changes' : 'Add flight'}</Button>
         {id && (
           <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete flight</Button>
         )}
-      </div>
+      </SaveBar>
 
       <ConfirmDialog open={confirmDelete} title="Delete flight?" description="This cannot be undone."
         confirmLabel="Delete" busy={deleting} onConfirm={remove} onClose={() => setConfirmDelete(false)} />

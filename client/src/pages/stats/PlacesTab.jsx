@@ -34,8 +34,8 @@ export default function PlacesTab({ flights, airports, roleFilter }) {
   }, [scoped, airports]);
 
   return (
-    <div className="stagger space-y-4">
-      <SummaryStrip icon={MapPin} tint={tint} primary={{ label: 'Airports', value: data.airports }} items={[
+    <div className="bc-stack">
+      <SummaryStrip scope="Airports" tint={tint} primary={{ label: 'Airports', value: data.airports, unit: '' }} items={[
         { label: 'Countries', value: data.countries },
         { label: 'Aircraft types', value: data.aircraftTypes },
         { label: 'Distance', value: fmtNm(data.distanceNm) },

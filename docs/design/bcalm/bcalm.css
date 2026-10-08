@@ -1,0 +1,93 @@
+/* B-calm: the calm pass on the minimalist Logbook and Home (static mockup CSS; real tokens only, no literal colours).
+   One bright thing per screen: the accent lives on the Private Pilot progress line, the Add button and the selected tab, and nowhere else.
+   List hours are neutral at a medium weight. Rows are 72px with no dividers; earlier months collapse to one line. */
+.bc { display: grid; gap: 24px; padding: 0 16px 96px; align-content: start; grid-auto-rows: min-content; --fs-p: 1.0625rem; --fs-s: 0.875rem; font-size: var(--fs-p); }
+.bc *, .bc *::before, .bc *::after { box-sizing: border-box; }
+.bc.d { padding: 0 0 64px; gap: 32px; --fs-p: 1.1875rem; --fs-s: 0.9375rem; }
+.bc a { color: inherit; text-decoration: none; }
+.bc button { font: inherit; color: inherit; }
+.bc .mut { color: var(--ds-text-2); font-size: var(--fs-s); }
+.bc svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* the header switcher: the title is the way to the other Flying pages */
+.bc-sw { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 22px; cursor: pointer; font-weight: 700; color: var(--ds-g-text, var(--ds-text)); }
+.bc-sw svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bc-flymenu { position: absolute; top: 74px; left: 76px; width: 14rem; z-index: 60; }
+
+/* hero: one number and a thin line */
+.bc-hero { all: unset; box-sizing: border-box; display: grid; gap: 12px; width: 100%; padding: 8px 0; cursor: pointer; }
+.bc-hero .lab { font-size: var(--fs-p); color: var(--ds-text-2); }
+.bc-hero .n { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ds-text); }
+.d .bc-hero .n { font-size: 4.5rem; }
+.bc-hero .n small { font-size: var(--fs-s); font-weight: 600; letter-spacing: 0; color: var(--ds-text-2); margin-left: 6px; }
+.bc-line { height: 4px; border-radius: 2px; background: var(--ds-surface-3); overflow: hidden; }
+.bc-line i { display: block; height: 100%; border-radius: 2px; background: var(--ds-pilot); }
+.bc-hero:focus-visible { outline: 2px solid var(--ds-white); outline-offset: 6px; border-radius: 8px; }
+
+/* one control row */
+.bc-ctl { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bc-ctl .ic2 { display: flex; gap: 4px; }
+
+/* months: flat on black, no surfaces, no dividers */
+.bc-month { display: grid; }
+.bc-mh { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 0 8px; border-radius: 16px; cursor: pointer; color: var(--ds-text-2); font-size: var(--fs-p); width: 100%; }
+.bc-mh:hover { background: var(--ds-surface); } .bc-mh:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
+.bc-mh .r { display: inline-flex; align-items: center; gap: 12px; font-variant-numeric: tabular-nums; }
+.bc-mh svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bc-month.open > .bc-mh { color: var(--ds-text); font-weight: 600; min-height: 48px; }
+.bc-month.open > .bc-mh .r { color: var(--ds-text-2); font-weight: 400; }
+.bc-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 72px; padding: 0 8px; border-radius: 16px; color: inherit; }
+.bc-row:hover, .bc-row.sel { background: var(--ds-surface); }
+.bc-row .day { color: var(--ds-text-2); font-variant-numeric: tabular-nums; text-align: center; }
+.bc-row .t { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
+.bc-row .t > span { font-weight: 600; }
+.bc-row .t em { font-style: normal; font-weight: 400; color: var(--ds-text-2); overflow: hidden; text-overflow: ellipsis; }
+.bc-row .t svg { width: 14px; height: 14px; fill: none; stroke: var(--ds-text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.bc-row .v { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ds-text); }
+.bc-row.full { grid-template-columns: 5.5rem minmax(0, 1fr) auto; } .bc-row.full .day { font-size: var(--fs-s); text-align: left; }
+.bc-ground { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 8px 0 64px; border-radius: 16px; cursor: pointer; color: var(--ds-text-2); font-size: var(--fs-s); width: 100%; }
+.bc-ground:hover { background: var(--ds-surface); } .bc-ground svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+.bc-more { justify-self: start; }
+
+/* sheets */
+.bc-sheet { display: grid; gap: 16px; padding: 8px 0 24px; }
+.bc-kv { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 56px; padding: 0 8px; }
+.bc-kv .k { color: var(--ds-text-2); } .bc-kv .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+.bc-pickrow { all: unset; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; min-height: 56px; padding: 0 16px; border-radius: 16px; cursor: pointer; width: 100%; font-size: var(--fs-p); }
+.bc-pickrow:hover, .bc-pickrow[aria-current="true"] { background: var(--ds-surface-2); } .bc-pickrow .r { color: var(--ds-text-2); font-variant-numeric: tabular-nums; }
+.bc-field { display: grid; gap: 8px; } .bc-field > .l { font-size: var(--fs-s); font-weight: 600; color: var(--ds-text-2); }
+.bc-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.bc-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* empty and loading */
+.bc-empty { display: grid; justify-items: center; gap: 24px; text-align: center; padding: 72px 16px; }
+.bc-empty h3 { margin: 0; font-size: var(--fs-p); font-weight: 600; }
+.bc-empty .ill { width: 88px; height: 88px; border-radius: 50%; background: var(--ds-surface); display: grid; place-items: center; color: var(--ds-text-2); padding: 24px; }
+.bc-empty .ill svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.bc-skel { display: grid; gap: 8px; } .bc-skel i { display: block; height: 56px; border-radius: 16px; background: var(--ds-surface); } .bc-skel i.h { height: 40px; width: 60%; } .bc-skel i.b { height: 4px; border-radius: 2px; width: 100%; } .bc-skel i.n { height: 56px; width: 45%; }
+
+/* desktop frame: list left, summary or the open entry right */
+.bc-cols { display: grid; grid-template-columns: minmax(0, 1fr) 27rem; gap: 64px; align-items: start; }
+.bc-side { display: grid; gap: 32px; align-content: start; }
+.bc-detail { display: grid; gap: 24px; align-content: start; }
+.bc-detail h1 { margin: 0; font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; }
+.bc-detail .big { font-size: 4.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; } .bc-detail .big small { font-size: var(--fs-s); color: var(--ds-text-2); margin-left: 6px; font-weight: 600; letter-spacing: 0; }
+.bc-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; } .bc-trio b { display: block; font-size: 1.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ledger: dense by design, calm spacing, aligned columns; neutral numerals */
+.bc .mn-led td.t { color: var(--ds-text); } .bc .mn-led tr.mo td b { color: var(--ds-text); }
+
+/* Home */
+.bc-greet { margin: 0; color: var(--ds-text-2); font-size: var(--fs-p); }
+.bc-status { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px; border-radius: 16px; cursor: pointer; width: 100%; font-size: var(--fs-p); }
+.bc-status:hover { background: var(--ds-surface); } .bc-status .r { margin-left: auto; color: var(--ds-text-2); display: inline-flex; }
+.bc-status svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.bc-map { display: block; position: relative; height: 12rem; border-radius: 24px; overflow: hidden; background: var(--ds-map-sea); }
+.d .bc-map { height: 30rem; }
+.bc-map svg { position: absolute; inset: 0; width: 100%; height: 100%; } .bc-map .land { fill: var(--ds-map-land); } .bc-map .rt { fill: none; stroke: var(--ds-text-2); stroke-width: 0.5; opacity: 0.55; vector-effect: non-scaling-stroke; stroke-width: 1px; }
+.bc-map .home { fill: none; stroke: var(--ds-text); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.bc-list { display: grid; gap: 0; }
+.bc-item { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 0 8px; border-radius: 16px; cursor: pointer; width: 100%; font-size: var(--fs-p); }
+.bc-item:hover { background: var(--ds-surface); } .bc-item .r { display: inline-flex; align-items: center; gap: 12px; color: var(--ds-text-2); font-variant-numeric: tabular-nums; } .bc-item .r b { color: var(--ds-text); font-weight: 600; font-size: 1.25rem; }
+.bc-item svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.bc-home-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 64px; align-items: start; }

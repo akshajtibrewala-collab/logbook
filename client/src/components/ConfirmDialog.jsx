@@ -8,7 +8,7 @@ export default function ConfirmDialog({ open, title = 'Are you sure?', descripti
     <Modal open={open} onClose={onClose} title={title} footer={
       <>
         <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={onClose} disabled={busy}>Cancel</Button>
-        <Button type="button" variant={danger ? 'danger' : 'primary'} size="md" fullWidth={false} onClick={onConfirm} disabled={busy}>
+        <Button type="button" variant={danger ? 'danger' : 'primary'} confirm size="md" fullWidth={false} onClick={onConfirm} disabled={busy}>
           {busy ? 'Working…' : confirmLabel}
         </Button>
       </>

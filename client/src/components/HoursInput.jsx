@@ -14,14 +14,14 @@ export default function HoursInput({ label, value, onChange, error }) {
   return (
     <label className="block">
       <span className="mb-1 block text-xs text-slate-400">{label}</span>
-      <div className={`flex items-center rounded-xl border bg-navy-800 ${error ? 'border-bad' : 'border-edge'}`}>
+      <div className="gl-stepbox"><div className={`gl-field gl-step ${error ? 'is-bad' : ''}`}>
         <button type="button" onClick={() => step(-0.1)} aria-label={`Decrease ${label}`}
-          className="pressable flex h-12 w-12 items-center justify-center text-slate-400 active:text-accent"><Minus size={18} /></button>
+          className="gl clear icon sm"><Minus size={18} /></button>
         <input value={value} inputMode="decimal" onChange={(e) => onChange(e.target.value)} onBlur={normalise}
-          className="min-w-0 flex-1 bg-transparent text-center text-base outline-none" />
+          className="" />
         <button type="button" onClick={() => step(0.1)} aria-label={`Increase ${label}`}
-          className="pressable flex h-12 w-12 items-center justify-center text-slate-400 active:text-accent"><Plus size={18} /></button>
-      </div>
+          className="gl clear icon sm"><Plus size={18} /></button>
+      </div></div>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}
     </label>
   );

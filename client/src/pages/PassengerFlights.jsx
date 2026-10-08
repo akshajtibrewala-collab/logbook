@@ -1,43 +1,47 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Outlet, useMatch, useNavigate } from 'react-router-dom';
-import { Luggage, SlidersHorizontal } from 'lucide-react';
+import { Link, Outlet, useMatch } from 'react-router-dom';
+import { CalendarDays, Luggage, Search, SlidersHorizontal } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { flightCodes } from '../lib/flightpath.js';
 import { buildMapData } from '../lib/mapdata.js';
 import { visitedCounts } from '../lib/mapstyle.js';
-import { labelFor, SEAT_CLASSES } from '../lib/aviationEnums.js';
 import { distinctAircraftTypeCount } from '../lib/aircraftTypes.js';
-import { formatDate as fmtDate } from '../lib/calendar.js';
-import AirlineBadge from '../components/AirlineBadge.jsx';
-import Card from '../components/Card.jsx';
-import Skeleton from '../components/Skeleton.jsx';
+import { defaultOpenYears, groupByYear, matchesQuery, monthIsOpen, travelRowModel } from '../lib/logbookList.js';
+import { formatDate as fmtDate, todayISO } from '../lib/calendar.js';
 import ErrorNote from '../components/ErrorNote.jsx';
-import EmptyState from '../components/EmptyState.jsx';
 import Button from '../components/Button.jsx';
-import FlightRoleTabs from '../components/FlightRoleTabs.jsx';
+import { FilterChips, SearchField } from '../components/logbook/SearchBar.jsx';
+import { BcHero, BcMonth, BcRow } from '../components/bc/Bc.jsx';
+import { MnEmpty, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
+import { Sheet } from '../ds/Overlays.jsx';
+import '../ds/logbook.css';
+import '../ds/bcalm.css';
 
-const selectCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent';
+const OPEN_KEY = 'aerohub-open-years'; // the years you opened, remembered for the session only
+const loadOpen = () => { try { const s = sessionStorage.getItem(OPEN_KEY); return s ? new Set(JSON.parse(s)) : null; } catch { return null; } };
+const saveOpen = (set) => { try { sessionStorage.setItem(OPEN_KEY, JSON.stringify([...set])); } catch { /* session memory is a nicety */ } };
 
-function Stat({ label, value }) {
-  return (
-    <div>
-      <div className="text-lg font-semibold">{value}</div>
-      <div className="text-xs text-slate-400">{label}</div>
-    </div>
-  );
-}
-
+/**
+ * Travel (passenger flights) in the calm system: one hero (hours as passenger, a violet dot), one control row, one solid surface per year (the current year
+ * open, earlier years one line each), three items per row. Passenger hours never count toward logbook hours. Year headers sum to the hero.
+ */
 export default function PassengerFlights() {
-  const navigate = useNavigate();
   const flightMatch = useMatch('/travel/:id');
   const selected = flightMatch ? flightMatch.params.id : null;
 
   const [flights, setFlights] = useState(null);
   const [airports, setAirports] = useState({});
   const [error, setError] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  const [totalsOpen, setTotalsOpen] = useState(false);
+  const [jumpSheet, setJumpSheet] = useState(false);
   const [filters, setFilters] = useState({ year: '', airline: '' });
+  const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [openKeys, setOpenKeys] = useState(loadOpen);
+  const [closedUnderFilter, setClosedUnderFilter] = useState(() => new Set());
+  const [scrollTo, setScrollTo] = useState(null);
 
   const load = useCallback(() => {
     setError('');
@@ -59,19 +63,11 @@ export default function PassengerFlights() {
     return flights.filter((f) => {
       if (filters.year && f.date.slice(0, 4) !== filters.year) return false;
       if (filters.airline && f.airline !== filters.airline) return false;
-      return true;
+      return matchesQuery({ kind: 'flight', data: f }, query);
     });
-  }, [flights, filters]);
+  }, [flights, filters, query]);
 
-  const grouped = useMemo(() => {
-    const byYear = new Map();
-    for (const f of [...visible].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)) {
-      const y = f.date.slice(0, 4);
-      if (!byYear.has(y)) byYear.set(y, []);
-      byYear.get(y).push(f);
-    }
-    return [...byYear.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [visible]);
+  const grouped = useMemo(() => groupByYear(visible), [visible]);
 
   const mapData = useMemo(() => buildMapData(visible, airports), [visible, airports]);
   const summary = useMemo(() => {
@@ -86,123 +82,113 @@ export default function PassengerFlights() {
     };
   }, [visible, mapData]);
 
-  const activeFilters = Object.values(filters).filter(Boolean).length;
+  const chips = [
+    ...(query.trim() ? [{ key: 'q', label: `“${query.trim()}”` }] : []),
+    ...(filters.year ? [{ key: 'year', label: filters.year }] : []),
+    ...(filters.airline ? [{ key: 'airline', label: filters.airline }] : []),
+  ];
+  const removeChip = (key) => { if (key === 'q') setQuery(''); else setFilters((f) => ({ ...f, [key]: '' })); };
+  const clearAll = () => { setFilters({ year: '', airline: '' }); setQuery(''); setClosedUnderFilter(new Set()); };
+  const filterCount = chips.filter((c) => c.key !== 'q').length;
+  const filterActive = chips.length > 0;
+
+  const openSet = openKeys ?? defaultOpenYears(grouped.map((g) => g.year), todayISO().slice(0, 4));
+  const isOpen = (year) => monthIsOpen({ key: year, filterActive, openKeys: openSet, closedUnderFilter });
+  const toggleYear = (year) => {
+    if (filterActive) setClosedUnderFilter((s) => { const n = new Set(s); if (n.has(year)) n.delete(year); else n.add(year); return n; });
+    else { const n = new Set(openSet); if (n.has(year)) n.delete(year); else n.add(year); setOpenKeys(n); saveOpen(n); }
+  };
+  const jumpTo = (year) => {
+    if (filterActive) setClosedUnderFilter((s) => { const n = new Set(s); n.delete(year); return n; });
+    else { const n = new Set(openSet); n.add(year); setOpenKeys(n); saveOpen(n); }
+    setJumpSheet(false); setScrollTo(year);
+  };
+  useEffect(() => {
+    if (!scrollTo) return undefined;
+    const t = setTimeout(() => { document.getElementById(`y-${scrollTo}`)?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); setScrollTo(null); }, 380);
+    return () => clearTimeout(t);
+  }, [scrollTo]);
+
+  const fullDate = filterActive;
+  const hero = flights && flights.length > 0 ? (
+    <BcHero label="Passenger" dot="pax" number={summary.hours} ariaLabel={`Passenger: ${fmtHours(summary.hours)} hours as passenger. Open totals`} onClick={() => setTotalsOpen(true)} />
+  ) : !error && !flights && <MnSkeleton rows={1} />;
 
   return (
-    <div className="lg:flex lg:items-start lg:gap-6">
-      <div className={`${selected ? 'hidden lg:block' : 'block'} lg:w-[380px] lg:shrink-0`}>
-        <div className="role-pax-scope">
-        <div className="flex items-center justify-between">
-          <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Passenger flights</h1>
-        </div>
+    <div className="cl bc pax role-pax-scope">
+      <div className={`bc-cols${selected ? ' has-sel' : ''}`}>
+        <div className="bc-side">{selected ? <Outlet /> : hero}</div>
 
-        <FlightRoleTabs />
-
-        {flights && flights.length > 0 && (
-          <div className="mt-3 flex">
-            <Link to="/logbook/new?role=passenger&from=travel" className="flex h-11 flex-1 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-ink">Add flight</Link>
-          </div>
-        )}
-
-        {flights && flights.length > 0 && (
-          <div className="mt-4 grid grid-cols-3 gap-3 card p-4">
-            <Stat label="Flights" value={summary.flights} />
-            <Stat label={summary.hours === 1 ? 'hour' : 'hours'} value={fmtHours(summary.hours)} />
-            <Stat label={summary.airports === 1 ? 'airport' : 'airports'} value={summary.airports} />
-            <Stat label={summary.countries === 1 ? 'country' : 'countries'} value={summary.countries} />
-            <Stat label={summary.airlines === 1 ? 'airline' : 'airlines'} value={summary.airlines} />
-            <Stat label="aircraft types" value={summary.aircraft} />
-          </div>
-        )}
-
-        {flights && flights.length > 0 && (
-          <div className="mt-3 flex gap-2">
-            <button onClick={() => setShowFilters((s) => !s)}
-              className={`h-12 flex-1 rounded-xl border px-4 text-sm ${activeFilters ? 'border-accent-strong text-accent-strong' : 'border-edge text-slate-300'}`}>
-              <SlidersHorizontal size={16} className="mr-2 inline" />Filter{activeFilters ? ` (${activeFilters})` : ''}
-            </button>
-          </div>
-        )}
-
-        {showFilters && flights && flights.length > 0 && (
-          <div className="mt-3 grid grid-cols-2 gap-3 card p-4">
-            <label className="text-xs text-slate-400">Year
-              <select value={filters.year} onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value }))} className={`${selectCls} mt-1`}>
-                <option value="">All</option>{years.map((y) => <option key={y}>{y}</option>)}
-              </select>
-            </label>
-            <label className="text-xs text-slate-400">Airline
-              <select value={filters.airline} onChange={(e) => setFilters((f) => ({ ...f, airline: e.target.value }))} className={`${selectCls} mt-1`}>
-                <option value="">All</option>{airlines.map((a) => <option key={a}>{a}</option>)}
-              </select>
-            </label>
-            {activeFilters > 0 && (
-              <button onClick={() => setFilters({ year: '', airline: '' })} className="col-span-2 h-10 text-sm text-accent-strong">Clear filters</button>
-            )}
-          </div>
-        )}
-
-        {error && <div className="mt-4"><ErrorNote message={error} onRetry={load} /></div>}
-        {!flights && !error && (
-          <div className="mt-4 space-y-2"><Skeleton className="h-[4.5rem]" /><Skeleton className="h-[4.5rem]" /><Skeleton className="h-[4.5rem]" /></div>
-        )}
-
-        {flights && flights.length === 0 && (
-          <EmptyState icon={Luggage} title="No passenger flights yet."
-            description="Riding along, not flying — commercial trips, anything you weren't the pilot on. They show up here, on the map and in your travel history, but never in your logbook hours."
-            action={<Button as={Link} to="/logbook/new?role=passenger&from=travel" size="md">Add flight</Button>} />
-        )}
-        {flights && flights.length > 0 && visible.length === 0 && (
-          <EmptyState title="Nothing matches these filters." />
-        )}
-
-        <div className="stagger mt-4 space-y-4">
-          {grouped.map(([year, yearFlights]) => (
-            <div key={year}>
-              <h2 className="mb-2 text-sm font-medium text-slate-400">{year}</h2>
-              <ul className="space-y-2">
-                {yearFlights.map((f) => (
-                  <li key={f.id}>
-                    <Card as="button" onClick={() => navigate(`/travel/${f.id}`)} aria-current={selected === String(f.id) ? 'true' : undefined}
-                      className={`w-full text-left transition-colors active:bg-navy-800 ${selected === String(f.id) ? 'lg:border-accent' : ''}`}>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="truncate text-base font-medium">{f.departure_airport || '—'} → {f.arrival_airport || '—'}</span>
-                        <span className="shrink-0 text-lg font-semibold text-accent-strong">{fmtHours(f.total_time)}</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between gap-2 text-sm text-slate-400">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          {f.airline && <AirlineBadge airline={f.airline} />}
-                          <span className="truncate">{fmtDate(f.date)}{f.flight_number ? ` · ${f.flight_number}` : ''}</span>
-                        </span>
-                      </div>
-                      {(f.aircraft_type || f.tail_number || f.seat_class || (f.dep_time && f.arr_time)) && (
-                        <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-500">
-                          {(f.aircraft_type || f.tail_number) && <span>{[f.aircraft_type, f.tail_number].filter(Boolean).join(' · ')}</span>}
-                          {f.seat_class && <span>{labelFor(SEAT_CLASSES, f.seat_class)}</span>}
-                          {f.dep_time && f.arr_time && (
-                            <span>{f.dep_time} → {f.arr_time}{f.arr_day_offset > 0 ? ` +${f.arr_day_offset}` : ''}</span>
-                          )}
-                        </div>
-                      )}
-                    </Card>
-                  </li>
-                ))}
-              </ul>
+        <div className="bc-list">
+          {flights && flights.length > 0 && (
+            <div className="bc-ctl start">
+              <span className="ic2">
+                {grouped.length > 1 && <button type="button" className="gl clear icon" aria-label="Jump to a year" title="Jump to a year" onClick={() => setJumpSheet(true)}><CalendarDays className="ds-i" aria-hidden="true" /></button>}
+                <button type="button" className="gl clear icon" aria-label="Search" title="Search" aria-pressed={searchOpen || Boolean(query)} onClick={() => setSearchOpen((o) => !o)}><Search className="ds-i" aria-hidden="true" /></button>
+                <button type="button" className="gl clear icon" aria-label={`Filter${filterCount ? ` (${filterCount} active)` : ''}`} title="Filter" aria-pressed={filterCount > 0} onClick={() => setSheet(true)}><SlidersHorizontal className="ds-i" aria-hidden="true" /></button>
+              </span>
             </div>
+          )}
+          {(searchOpen || query) && <SearchField query={query} onQuery={setQuery} autoFocus={searchOpen && !query} placeholder="Search flights" label="Search by route, airport, airline, flight number, aircraft type or tail number" />}
+          <FilterChips chips={chips} onRemove={removeChip} pax />
+
+          {error && <ErrorNote message={error} onRetry={load} />}
+          {!flights && !error && <MnSkeleton />}
+
+          {flights && flights.length === 0 && (
+            <MnEmpty title="No passenger flights yet" icon={<Luggage />} action={<Button as={Link} to="/logbook/new?role=passenger&from=travel" variant="pax" size="lg">Add a flight</Button>} />
+          )}
+          {flights && flights.length > 0 && visible.length === 0 && (
+            <MnEmpty title="No matches" icon={<Search />} action={<Button variant="secondary" onClick={clearAll}>Clear filters</Button>} />
+          )}
+
+          {grouped.map((g) => (
+            <BcMonth key={g.year} id={`y-${g.year}`} name={g.year} hours={g.hours} unit="hours as passenger" extra={`${g.flights} flight${g.flights === 1 ? '' : 's'}`} surface open={isOpen(g.year)} onToggle={() => toggleYear(g.year)}>
+              {g.list.map((f) => <BcRow key={f.id} to={`/travel/${f.id}`} row={travelRowModel(f, fmtDate)} wide fullDate={fullDate} selected={selected === String(f.id)} />)}
+            </BcMonth>
           ))}
         </div>
+      </div>
 
+      <Sheet open={totalsOpen} onClose={() => setTotalsOpen(false)} title="Passenger totals" detent="medium">
+        <div className="cl pax mn mn-sheet">
+          <MnKv k="Hours" v={`${fmtHours(summary.hours)} h`} />
+          <MnKv k="Flights" v={summary.flights} />
+          <MnKv k={summary.airports === 1 ? 'Airport' : 'Airports'} v={summary.airports} />
+          <MnKv k={summary.countries === 1 ? 'Country' : 'Countries'} v={summary.countries} />
+          <MnKv k={summary.airlines === 1 ? 'Airline' : 'Airlines'} v={summary.airlines} />
+          <MnKv k="Aircraft types" v={summary.aircraft} />
+          <p className="mn-note">As passenger only. These hours never count toward your logbook, currency or milestones.</p>
+          <Button as={Link} to="/map" variant="secondary" onClick={() => setTotalsOpen(false)}>See them on the map</Button>
         </div>
-      </div>
+      </Sheet>
 
-      <div className={`${selected ? 'block' : 'hidden lg:block'} min-w-0 flex-1`}>
-        {selected ? <Outlet /> : (
-          <div className="sticky top-10 hidden flex-col items-center justify-center rounded-2xl border border-dashed border-edge p-12 text-center text-slate-500 lg:flex">
-            <Luggage size={32} strokeWidth={1.5} className="mb-3 text-slate-600" />
-            <p className="text-sm">Select a flight to see its details here.</p>
-          </div>
-        )}
-      </div>
+      <Sheet open={jumpSheet} onClose={() => setJumpSheet(false)} title="Jump to a year" detent="medium">
+        <div className="cl pax mn mn-sheet">
+          {grouped.map((g) => (
+            <button key={g.year} type="button" className="bc-pickrow" aria-current={isOpen(g.year) ? 'true' : undefined} aria-label={`${g.year}, ${fmtHours(g.hours)} hours as passenger, ${g.flights} flight${g.flights === 1 ? '' : 's'}`} onClick={() => jumpTo(g.year)}>
+              <span>{g.year}</span><span className="r">{fmtHours(g.hours)}</span>
+            </button>
+          ))}
+        </div>
+      </Sheet>
+
+      <Sheet open={sheet} onClose={() => setSheet(false)} title="Filter" detent="medium">
+        <div className="cl pax mn mn-sheet">
+          <label className="mn-field"><span className="l">Year</span>
+            <select value={filters.year} onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value }))} className="gl-select">
+              <option value="">All</option>{years.map((y) => <option key={y}>{y}</option>)}
+            </select>
+          </label>
+          <label className="mn-field"><span className="l">Airline</span>
+            <select value={filters.airline} onChange={(e) => setFilters((f) => ({ ...f, airline: e.target.value }))} className="gl-select">
+              <option value="">All</option>{airlines.map((a) => <option key={a}>{a}</option>)}
+            </select>
+          </label>
+          <Button variant="pax" size="lg" onClick={() => setSheet(false)}>Show {visible.length}</Button>
+          {chips.length > 0 && <Button variant="ghost" size="sm" onClick={clearAll}>Clear all</Button>}
+        </div>
+      </Sheet>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export default function PhotoPicker({ flightId, pending, onPendingChange }) {
       )}
       <input ref={input} type="file" accept="image/*" multiple onChange={onFiles} className="sr-only" aria-label="Choose photos" tabIndex={-1} />
       <button type="button" onClick={() => input.current?.click()} disabled={busy || total >= MAX_PHOTOS}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-edge-strong text-sm text-accent-strong active:bg-navy-800 disabled:opacity-50">
+        className="gl clear sm block dashed">
         <Camera size={18} />{busy ? 'Preparing…' : total >= MAX_PHOTOS ? 'Photo limit reached' : 'Add photos'}
       </button>
       {error && <p role="alert" className="mt-2 text-sm text-bad">{error}</p>}

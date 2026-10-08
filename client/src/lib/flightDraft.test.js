@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prefillFromFlight, mostRecentFlight, validateFlightPayload, validateQuickFlight, quickFlightPayload, stepHours } from './flightDraft.js';
+import fs from 'node:fs';
+import { followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload, validateQuickFlight, quickFlightPayload, stepHours } from './flightDraft.js';
 import { pilotFlights } from './flightRoles.js';
 
 const last = {
@@ -72,4 +73,26 @@ test('stepHours clamps and formats', () => {
   assert.equal(stepHours('0.00', -0.1), '0.00');
   assert.equal(stepHours('', 0.5), '0.50');
   assert.equal(stepHours('99', 1), '99.00');
+});
+
+test('prefillPassengerFrom carries only the airline and seat class of the last passenger flight', () => {
+  const pax = { id: 5, role: 'passenger', date: '2026-09-18', departure_airport: 'SFO', arrival_airport: 'LHR', airline: 'United', flight_number: 'UA 934', seat_class: 'economy', total_time: 9.85, aircraft_type: 'B77W' };
+  assert.deepEqual(prefillPassengerFrom(pax, '2026-10-05'), { date: '2026-10-05', role: 'passenger', airline: 'United', seat_class: 'economy' });
+  assert.equal(prefillPassengerFrom({ ...pax, airline: '', seat_class: '' }, '2026-10-05'), null);
+  assert.equal(prefillPassengerFrom(null, '2026-10-05'), null);
+});
+
+test('the flight form carries instructor and invoice_ref through an edit (the server replaces the whole row, so omitting them erases them)', () => {
+  const src = fs.readFileSync(new URL('../pages/FlightForm.jsx', import.meta.url), 'utf8');
+  assert.match(src, /instructor: '', invoice_ref: ''/);
+});
+test('followTotal: PIC, dual and solo that equalled the old total follow the new total; others are left alone', async () => {
+  const { parseHours } = await import('./hours.js');
+  const form = { total_time: '2.60', pic_time: '0.00', dual_received: '2.60', solo_time: '0.00' };
+  assert.deepEqual(followTotal(form, '1.50', parseHours), { dual_received: '1.50' });
+  assert.deepEqual(followTotal({ ...form, pic_time: '2.60', solo_time: '2.60' }, '1.5', parseHours), { pic_time: '1.5', dual_received: '1.5', solo_time: '1.5' });
+  assert.deepEqual(followTotal({ ...form, dual_received: '1.00' }, '1.50', parseHours), {}, 'a time that was not the whole flight stays');
+  assert.deepEqual(followTotal(form, '1.', parseHours), { dual_received: '1.' }, 'a partly typed number still follows');
+  assert.deepEqual(followTotal(form, 'abc', parseHours), {}, 'an unparseable total changes nothing');
+  assert.deepEqual(followTotal({ ...form, total_time: '0.00', dual_received: '0.00' }, '1.5', parseHours), {}, 'a zero total has nothing to follow');
 });

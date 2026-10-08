@@ -41,15 +41,15 @@ export default function TravelTab({ passengerFlights, airports }) {
   }
 
   return (
-    <div className="stagger space-y-4">
-      <SummaryStrip icon={Luggage} tint="pax" primary={{ label: 'Total hours', value: fmtHours(data.hours) }} items={[
+    <div className="bc-stack">
+      <SummaryStrip scope="Passenger" tint="pax" primary={{ label: 'Total hours', value: fmtHours(data.hours) }} items={[
         { label: 'Flights', value: data.flights },
         { label: 'Airports', value: data.airports },
         { label: 'Countries', value: data.countries },
       ]} />
       <FlightsPerYearChart rows={data.byYear} note={`By calendar year · ${fmtNm(data.distanceNm)} flown in total.`} />
       <AirlinesCard airlines={data.airlines} />
-      <AircraftBarChart title="Aircraft types" byType={data.aircraft} tint="pax" />
+      <AircraftBarChart title="Aircraft types" byType={data.aircraft} tint="pax" defaultOpen={false} />
       <RankedCard title="Most flown routes" icon={Route} tint="pax" rows={data.routes} />
     </div>
   );

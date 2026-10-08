@@ -7,7 +7,7 @@ export default function Disclosure({ title, defaultOpen = false, children }) {
   return (
     <section className="card card-elevated p-4">
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className="pressable stat-title flex w-full items-center justify-between text-sm text-accent-strong">
+        className="ctl-row pressable stat-title flex w-full items-center justify-between text-sm text-accent-strong">
         {title}
         <ChevronDown size={18} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>

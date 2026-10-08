@@ -58,7 +58,7 @@ export default function AirportSearchField({ label, value, onChange, error, plac
           onBlur={() => remember(query)}
           onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
           onChange={(e) => { const v = e.target.value.toUpperCase(); setQuery(v); onChange(v); setOpen(true); }}
-          className={`h-12 w-full rounded-xl border bg-navy-800 px-3 text-base outline-none focus:border-accent ${error ? 'border-bad' : 'border-edge'}`} />
+          className={`gl-field h-12 w-full px-3 text-base ${error ? 'is-bad' : ''}`} />
       </label>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}
       {(showMatches || showRecents) && (

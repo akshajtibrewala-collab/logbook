@@ -30,16 +30,16 @@ export default function PilotTab({ pilotFlights, settings, onSaveTarget }) {
   }, [pilotFlights, settings]);
 
   return (
-    <div className="stagger space-y-4">
-      <SummaryStrip icon={Plane} tint="pilot" primary={{ label: 'Total hours', value: fmtHours(data.totalHours) }} items={[
-        { label: 'Last 12mo', value: fmtHours(data.hours12mo) },
-        { label: 'PIC hours', value: fmtHours(data.picHours) },
-        { label: 'Toward goal', value: data.goalPercent === null ? 'Not set' : `${data.goalPercent}%` },
+    <div className="bc-stack">
+      <SummaryStrip scope="Pilot" tint="pilot" primary={{ label: 'Total hours', value: fmtHours(data.totalHours) }} items={[
+        { label: 'Last 12 months', value: fmtHours(data.hours12mo) },
+        { label: 'PIC', value: fmtHours(data.picHours) },
+        ...(data.goalPercent === null ? [] : [{ label: 'Goal', value: `${data.goalPercent}%` }]),
       ]} />
-      <MonthlyChart flights={pilotFlights} note="The last 12 months." />
-      <CumulativeChart flights={pilotFlights} settings={settings} onSaveTarget={onSaveTarget} />
-      <CategoryDonut categories={data.categories} />
-      <AircraftBarChart title="Hours by aircraft" byType={data.aircraft} byTail={data.tails} />
+      <MonthlyChart flights={pilotFlights} />
+      <CumulativeChart flights={pilotFlights} settings={settings} onSaveTarget={onSaveTarget} defaultOpen={false} />
+      <CategoryDonut categories={data.categories} defaultOpen={false} />
+      <AircraftBarChart title="Hours by aircraft" byType={data.aircraft} byTail={data.tails} defaultOpen={false} />
     </div>
   );
 }

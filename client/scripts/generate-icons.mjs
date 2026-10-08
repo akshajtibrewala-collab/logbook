@@ -1,62 +1,43 @@
-// Draws the app icon and writes every size the browser, iOS and Android need into client/public.
-//   npm run icons -w client
-// The artwork lives in this file — a wing-chevron "A" (sky blue) with a thick route arc through it
-// (violet) as the crossbar; edit WING/ARC and re-run to change the icon.
+// Draws the app icon (direction C "Large Type", on true black) and writes every size the browser, iOS and Android need.
+//   npm run icons -w client            writes client/public/*  (master SVG, favicons, apple-touch, PWA icons)
+//   npm run icons -w client -- --preview   also writes docs/design/icon-preview.png (512 / 192 / 64 / 32 side by side)
+// The artwork lives in this file: a heavy white capital "A" (one filled chevron shape) with a sky-blue flight arc as the
+// crossbar and a violet destination dot — sky = pilot, violet = passenger, the app's only two accent colours.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-const pub = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
+const here = path.dirname(fileURLToPath(import.meta.url));
+const pub = path.join(here, '..', 'public');
 mkdirSync(path.join(pub, 'icons'), { recursive: true });
 
-const NAVY = '#07090d'; // matches manifest.json's background_color/theme_color
-const SKY = '#38bdf8'; // the app's route/accent color
-const VIOLET = '#a78bfa'; // the app's passenger/role-pax color
+const BLACK = '#000000'; // matches manifest.json background_color/theme_color and index.html
+const WHITE = '#f5f5f7';
+const SKY = '#5bb9ff'; // --ds-pilot
+const VIOLET = '#b7a0ff'; // --ds-pax
 
-// A bold chevron shaped like a capital "A": a solid triangle with a V notch cut from its base-center
-// (apex at 256,264), so the two "legs" read as the letter's strokes. One filled path, no thin strokes.
-const WING = 'M256,110 L372,392 L306,392 L256,264 L206,392 L140,392 Z';
-// A thick ring-segment "route arc" crossing through the chevron's notch as the letter's crossbar —
-// overlapping the legs on both sides so it reads as a real crossbar, not just a sliver in the gap.
-// Ring width is 60px (at the 0-512 viewBox) so it's still a clearly visible band once scaled to 32px.
-const ARC = 'M106,360 A150,150 0 0 1 406,360 L346,360 A90,90 0 0 0 166,360 Z';
+// 1024 viewBox. Outer apex (512,150), legs 120 wide at the base (y=800), inner apex (512,465) on the same slope.
+const A = 'M512,150 L760,800 L640,800 L512,465 L384,800 L264,800 Z';
+const ARC = 'M300,705 Q512,545 724,705';
+// Every point sits within ~380px of the centre (512,512), inside the 410px safe-zone radius (80% of 1024 / 2) that
+// Android's circular maskable crop keeps, so the same artwork works full-bleed for the maskable icon unchanged.
+const art = () => `<path d="${A}" fill="${WHITE}"/><path d="${ARC}" fill="none" stroke="${SKY}" stroke-width="72" stroke-linecap="round"/><circle cx="724" cy="705" r="46" fill="${VIOLET}"/>`;
 
-// Every corner of WING/ARC sits at most ~183px from the icon's center (256,256) — comfortably inside the
-// ~205px-radius safe-zone circle (512 * 0.8 / 2) Android's circular/maskable crop uses — so the same
-// artwork, undistorted, works for the rounded tile, the favicon and the maskable icon with no extra scale.
-function art() {
-  return `<path d="${WING}" fill="${SKY}"/><path d="${ARC}" fill="${VIOLET}"/>`;
-}
-
-// corner: 'rounded' = a tile with rounded corners (favicon, apple-touch, "any"-purpose PWA icons);
-//         'square'  = edge-to-edge, for the maskable icon, which the OS crops to its own shape (a circle
-//                     on stock Android) — content must stay inside the safe-zone circle (see `art`).
-// border: adds a subtle light edge so the tile doesn't disappear into dark browser chrome or a dark
-//         phone wallpaper at a glance (it read as near-invisible without this).
-function tile({ corner, border = true }) {
-  const rx = corner === 'rounded' ? 112 : 0;
-  const edge = border
-    ? `<rect x="1.5" y="1.5" width="509" height="509" rx="${Math.max(0, rx - 1)}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="3"/>`
-    : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="${rx}" fill="${NAVY}"/>
+// corner 'rounded' = a tile with rounded corners (favicon, "any" PWA icons); 'square' = edge to edge (maskable, apple-touch: opaque).
+const tile = ({ corner, edge = false }) => {
+  const rx = corner === 'rounded' ? 224 : 0;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" rx="${rx}" fill="${BLACK}"/>
   ${art()}
-  ${edge}
+  ${edge ? `<rect x="3" y="3" width="1018" height="1018" rx="${Math.max(0, rx - 3)}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>` : ''}
 </svg>`;
-}
-
-const variants = {
-  favicon: tile({ corner: 'rounded' }),
-  // apple-touch-icon and the 192 & 512 "any"-purpose PWA icons: same artwork, rounded tile.
-  rounded: tile({ corner: 'rounded' }),
-  // Maskable: same artwork, full-bleed square (no border) — the OS applies its own crop/mask.
-  maskable: tile({ corner: 'square', border: false }),
 };
 
-/** Renders at the target size; for tiny favicon sizes, a mild sharpen keeps the edges crisp rather than soft. */
-const png = async (source, size, { crisp = false } = {}) => {
-  let img = sharp(Buffer.from(source), { density: 384 }).resize(size, size);
+const variants = { master: tile({ corner: 'square' }), rounded: tile({ corner: 'rounded', edge: true }), square: tile({ corner: 'square' }) };
+
+const png = async (svg, size, { crisp = false } = {}) => {
+  let img = sharp(Buffer.from(svg), { density: 384 }).resize(size, size);
   if (crisp) img = img.sharpen({ sigma: 0.5 });
   return img.png({ compressionLevel: 9 }).toBuffer();
 };
@@ -65,29 +46,33 @@ const write = (file, data) => writeFileSync(path.join(pub, file), data);
 /** .ico container holding PNG images (supported by every current browser). */
 function ico(images) {
   const head = Buffer.alloc(6);
-  head.writeUInt16LE(1, 2); // type: icon
+  head.writeUInt16LE(1, 2);
   head.writeUInt16LE(images.length, 4);
   let offset = 6 + images.length * 16;
   const entries = images.map(({ size, data }) => {
     const e = Buffer.alloc(16);
-    e.writeUInt8(size >= 256 ? 0 : size, 0);
-    e.writeUInt8(size >= 256 ? 0 : size, 1);
-    e.writeUInt16LE(1, 4); // color planes
-    e.writeUInt16LE(32, 6); // bits per pixel
-    e.writeUInt32LE(data.length, 8);
-    e.writeUInt32LE(offset, 12);
+    e.writeUInt8(size >= 256 ? 0 : size, 0); e.writeUInt8(size >= 256 ? 0 : size, 1);
+    e.writeUInt16LE(1, 4); e.writeUInt16LE(32, 6); e.writeUInt32LE(data.length, 8); e.writeUInt32LE(offset, 12);
     offset += data.length;
     return e;
   });
   return Buffer.concat([head, ...entries, ...images.map((i) => i.data)]);
 }
 
-write('favicon.svg', variants.favicon);
-write('favicon.ico', ico(await Promise.all([16, 32, 48].map(async (size) => ({ size, data: await png(variants.favicon, size, { crisp: size <= 32 }) })))));
-write('favicon-32.png', await png(variants.favicon, 32, { crisp: true }));
-write('apple-touch-icon.png', await png(variants.rounded, 180)); // iOS rounds the corners itself, so no transparency
-for (const size of [192, 512]) {
-  write(`icons/icon-${size}.png`, await png(variants.rounded, size));
-  write(`icons/icon-maskable-${size}.png`, await png(variants.maskable, size));
-}
+write('icon-master.svg', variants.master); // 1024, full-bleed black square: the source for everything below
+write('favicon.svg', variants.rounded);
+write('favicon.ico', ico(await Promise.all([16, 32, 48].map(async (size) => ({ size, data: await png(variants.rounded, size, { crisp: size <= 32 }) })))));
+write('favicon-32.png', await png(variants.rounded, 32, { crisp: true }));
+write('apple-touch-icon.png', await png(variants.square, 180)); // 180x180, opaque black; iOS rounds the corners itself
+for (const size of [192, 512]) write(`icons/icon-${size}.png`, await png(variants.rounded, size));
+for (const size of [192, 512]) write(`icons/icon-maskable-${size}.png`, await png(variants.square, size));
 console.log('Icons written to client/public');
+
+if (process.argv.includes('--preview')) {
+  const sizes = [512, 192, 64, 32], pad = 40, w = sizes.reduce((a, s) => a + s + pad, pad), h = 512 + pad * 2;
+  const layers = []; let x = pad;
+  for (const s of sizes) { layers.push({ input: await png(variants.rounded, s, { crisp: s <= 64 }), left: x, top: pad + Math.round((512 - s) / 2) }); x += s + pad; }
+  const out = path.join(here, '..', '..', 'docs', 'design', 'icon-preview.png');
+  await sharp({ create: { width: w, height: h, channels: 3, background: '#1c1c1e' } }).composite(layers).png().toFile(out);
+  console.log('Preview written to docs/design/icon-preview.png');
+}

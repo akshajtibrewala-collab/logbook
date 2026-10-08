@@ -7,7 +7,7 @@ import CollapsibleStatCard from './CollapsibleStatCard.jsx';
 export default function FlightsPerYearChart({ rows, note, defaultOpen = true }) {
   return (
     <CollapsibleStatCard title="Flights per year" note={note} icon={CalendarRange} defaultOpen={defaultOpen}>
-      {rows.length === 0 ? <p className="text-sm text-slate-500">No flights yet.</p> : (
+      {rows.length === 0 ? <p className="text-sm text-slate-400">No flights yet.</p> : (
         <div className="h-56" role="img" aria-label={`Bar chart of flights per year. ${rows.map((r) => `${r.year}: ${r.flights}`).join(', ')}`}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={chartMargin}>

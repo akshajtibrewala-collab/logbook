@@ -78,15 +78,15 @@ The database holds real flight records, not sample data. This overrides convenie
   summarize and stop rather than rolling straight into the next phase.
 - **Don't invent features that aren't in the repo.** If unsure whether something exists or how it currently
   works, inspect the code first rather than assuming.
-- **UI stays clean, minimal, and responsive**, following the existing design language — including dark/light mode
-  (see "Stack") and the personalized greeting on the Dashboard (`client/src/lib/greeting.js`). No clutter, no
+- **UI stays clean, minimal, and responsive**, following the existing design language — dark only (see "Theme")
+  and the personalized greeting on the Dashboard (`client/src/lib/greeting.js`). No clutter, no
   filler stats, no HUD gimmicks (the map's stats panel was deliberately trimmed for this — see "Status"). The
   flight logbook must stay fast and usable on a phone above everything else.
 
 ## Stack
 
-- `client/` — React + Vite + Tailwind, react-router-dom, lucide-react icons. Dark by default, `.light`
-  class for light mode.
+- `client/` — React + Vite + Tailwind, react-router-dom, lucide-react icons. Dark only (see "Theme"); the
+  redesign's design system lives in `client/src/ds/` and is shown on the hidden `/design` route.
 - `server/` — Express + `@libsql/client`. SQLite file locally (`server/logbook.db`), Turso (hosted
   libSQL) when `TURSO_DATABASE_URL` is set — in Vercel, or in `.env.production` for the `:prod` npm
   scripts (see "Running and testing locally" below). **Never** in the plain root `.env`/`.env.local`.
@@ -108,7 +108,7 @@ The database holds real flight records, not sample data. This overrides convenie
 
 ```bash
 npm run dev     # both workspaces; server on :3001, client on :5173 (proxies /api)
-npm test         # server tests, then client tests (currently 156 server + 196 client, all passing)
+npm test         # server tests, then client tests (currently 216 server + 379 client, all passing)
 ```
 
 There is no DOM/component testing: put logic in pure `client/src/lib/*.js` functions and test those. UI changes
@@ -201,8 +201,44 @@ All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details i
 - **Photos and notes:** up to 8 photos per flight, resized in the browser (EXIF rotation applied), stored in the
   database (`flight_photos`) at their natural orientation; the note is the flight's existing remarks field.
 - **Sharing:** a revocable read-only public link (`/share/:token`, unguessable token, notes/photos off by default,
-  never costs or debriefs) and a printable/PDF summary (`/logbook/print`). Dark by default, follows the device
-  setting until the toggle is used.
+  never costs or debriefs) and a printable/PDF summary (`/logbook/print`). Dark on screen like the rest of the app,
+  but **print output is always solid white with dark ink, no shadows or glass** (print stylesheet only), and the
+  public share page and print view stay pilot-only.
+
+## Theme (dark only)
+
+**The redesign's design language is approved and frozen — read `docs/design/DESIGN_LANGUAGE.md` before touching any UI.**
+Summary: direction C (Large Type), Liquid Glass V3, dark only on true black, `--ds-*` tokens only with no literal colours,
+glass only on the floating navigation/control layer with solid content, layer budget of tab bar + top bar + one overlay,
+quality levels Auto/Full/Lite/Solid, sky = pilot / violet = passenger, print stays white. It changes only when the owner asks.
+
+AeroHub is **dark only**: true black page (`#000`), surfaces just above it, hairline borders, no navy tint; sky blue
+for pilot and violet for passenger are the only accent colours (plus the semantic ok/warn/bad). There is no light
+theme, no theme toggle and no theme setting, and the device's light/dark preference is ignored. The browser is told
+(`color-scheme: dark` meta + CSS, black `theme-color`/manifest colours, `black-translucent` iOS status bar, black
+`<html>` before the app mounts) so scrollbars, pickers, selects and the iOS keyboard are dark and nothing flashes white.
+The old `logbook-theme` localStorage key is kept as an unused constant (`lib/theme.js`) so no stored data is touched.
+The pre-redesign pages still carry the old navy/`.light` Tailwind tokens until the redesign replaces them.
+
+- **Tokens:** every colour, shadow, radius, size and duration is a semantic `--ds-*` variable in
+  `client/src/ds/tokens.css`; component CSS (`ds.css`, `glass.css`) uses only those names — no literal colours.
+- **Adding a light theme later** = add one block, `[data-ds-theme="light"] { ... }`, to `tokens.css` that redefines the
+  same `--ds-*` colour/glass/shadow variables (including the glass tint, text-on-glass and print values), set that
+  attribute on `<html>`, and re-measure contrast on glass (`docs/design/contrast2.mjs` models it). No component changes.
+- **Print:** `tokens.css` has an `@media print` block that swaps the tokens to white/dark ink and hides glass.
+- **Every control** (buttons, round icon buttons, filter chips, segmented controls and tabs, selects, switches, steppers, text-action
+  links and the Add button) uses the approved "V-a" lite-glass recipe below; text inputs stay solid with the same rim (`.gl-field`).
+  `client/scripts/check-controls.mjs` fails when a visible control lacks the recipe marker (allowlist: `client/src/lib/controlAudit.js`)
+  or a route exceeds the blur budget — run it on every route at 390px in every phase. The build id is shown in Settings and on `/design`.
+- **Buttons, filter chips, segmented-control buttons and the Add button** use the approved "V-a" lite-glass recipe
+  (`client/src/ds/buttons.css`, no `backdrop-filter`): clear glass with a thin coloured rim and a white label. Sky tint = pilot
+  primary, violet = passenger primary, clear = secondary, restrained red only on a destructive confirm step (a delete trigger is a
+  plain clear button), one primary per screen or sheet. Solid, Reduce transparency and unsupported browsers get solid tinted fills.
+  The Add button is "option 3": a violet-to-sky ring around dark clear glass. Specimens at the hidden `/design/buttons`. This is an
+  approved change to the design language; details in `docs/design/DESIGN_LANGUAGE.md` "Buttons".
+- **Glass (Liquid Glass V3)** is only for the floating navigation/control layer (tab bar, top bar, one popover or sheet at
+  a time); content stays solid. Quality levels Full / Lite / Solid (Auto steps down from measured frame times and never up;
+  Reduce transparency, no `backdrop-filter` and `prefers-reduced-transparency` all mean Solid). See `client/src/ds/glass.js`.
 
 **Behaviours to preserve**
 - **Weather planning:** each leg stores a UTC instant (`lib/planlegs.js`); the airport's time zone only reads and

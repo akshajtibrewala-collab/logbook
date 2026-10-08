@@ -73,8 +73,8 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
     <div>
       <span className="mb-1 block text-xs text-slate-400">{label}</span>
       <button type="button" onClick={() => setOpen(true)}
-        className={`flex h-12 w-full items-center justify-between gap-2 rounded-xl border bg-navy-800 px-3 text-left text-base outline-none ${error ? 'border-bad' : 'border-edge'}`}>
-        <span className={selected ? '' : 'text-slate-500'}>{selected ? aircraftLabel(selected) : 'Choose aircraft'}</span>
+        className={`gl-select nochev flexbox ${error ? 'is-bad' : ''}`}>
+        <span className={selected ? '' : 'text-[var(--ds-text-2)]'}>{selected ? aircraftLabel(selected) : 'Choose aircraft'}</span>
         <ChevronDown size={18} className="shrink-0 text-slate-400" />
       </button>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}
@@ -85,7 +85,7 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
             <div className="relative">
               <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your aircraft"
-                className="h-11 w-full rounded-xl border border-edge bg-navy-800 pl-9 pr-3 text-base outline-none focus:border-accent" />
+                className="gl-field h-11 w-full pl-9 pr-3 text-base" />
             </div>
             <div className="mt-3 max-h-72 space-y-1 overflow-y-auto">
               {!list && <p className="py-4 text-center text-sm text-slate-400">Loading…</p>}

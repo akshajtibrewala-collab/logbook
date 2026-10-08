@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import 'leaflet/dist/leaflet.css'; // only the Map page needs Leaflet's styles, so they load with it, not with the first screen
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Plane, Info, X, ChevronDown, RotateCcw } from 'lucide-react';
@@ -17,9 +18,9 @@ import Toggle from '../components/Toggle.jsx';
 // Each role filter's active-state tint: sky blue for Pilot, violet for Passenger (same tokens as the
 // route lines and FlightRoleTabs), neutral navy for All so it doesn't read as either role.
 const ROLE_FILTERS = [
-  ['all', 'All', 'bg-navy-700 text-slate-100'],
-  ['pilot', 'Pilot', 'bg-accent text-ink'],
-  ['passenger', 'Passenger', 'bg-[rgb(var(--role-pax))] text-ink'],
+  ['all', 'All', 'clear'],
+  ['pilot', 'Pilot', 'pilot'],
+  ['passenger', 'Passenger', 'pax'],
 ];
 
 
@@ -59,16 +60,16 @@ function airportIcon(visits, max) {
 function AttributionToggle() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="absolute bottom-3 right-3 z-[1000] flex items-end gap-2">
+    <div className="ds-map-ov-br flex items-end gap-2">
       {open && (
-        <p id="map-credits" className="max-w-[15rem] rounded-xl border border-edge-strong bg-navy-900/95 p-3 text-[11px] leading-snug text-slate-300 backdrop-blur">
+        <p id="map-credits" className="max-w-[15rem] rounded-xl border border-edge-strong bg-navy-900/95 p-3 text-[11px] leading-snug text-slate-300">
           <a href="https://leafletjs.com" target="_blank" rel="noreferrer" className="underline">Leaflet</a>
           {' | '}Tiles &copy; Esri &mdash; Esri, HERE, Garmin, OpenStreetMap contributors
         </p>
       )}
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-credits"
         aria-label={open ? 'Hide map credits' : 'Show map credits'}
-        className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent">
+        className="gl clear icon sm shrink-0">
         {open ? <X size={16} /> : <Info size={16} />}
       </button>
     </div>
@@ -311,7 +312,7 @@ export default function MapPage() {
   const distanceNm = Math.round(data?.totalDistanceNm ?? 0).toLocaleString();
 
   return (
-    <div className="relative isolate -mx-4 -mt-6 h-[calc(100dvh-var(--bottom-nav-h))] mb-[calc(-1*(var(--bottom-nav-h)+2rem))]">
+    <div className="relative isolate h-dvh">
       <MapContainer center={[39, -98]} zoom={4} zoomControl={false} attributionControl={false} zoomSnap={0.5} zoomDelta={0.5} minZoom={2} worldCopyJump className="h-full w-full bg-navy-950">
         <TileLayer key={`${tileSet}-base`} keepBuffer={4} updateWhenIdle
           url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${tileSet}_Base/MapServer/tile/{z}/{y}/{x}`}
@@ -387,30 +388,30 @@ export default function MapPage() {
       </MapContainer>
 
       {flights && flights.length > 0 && (
-        <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start">
+        <div className="ds-map-ov flex flex-col items-start">
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="map-stats"
-              className="pressable flex h-10 items-center gap-1.5 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 text-xs font-medium text-slate-100 backdrop-blur active:bg-navy-800">
+              className="gl clear gl-chip">
               <span>{counts.airports} airport{counts.airports === 1 ? '' : 's'}</span>
               {counts.regionsKnown && <><span aria-hidden="true" className="text-slate-500">·</span><span>{counts.states} state{counts.states === 1 ? '' : 's'}</span></>}
               <ChevronDown size={14} aria-hidden="true" className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
             <button type="button" onClick={replay} aria-label="Replay route animation" disabled={!affordable}
-              className="pressable flex h-10 w-10 items-center justify-center rounded-full border border-edge-strong bg-navy-900/90 text-slate-300 backdrop-blur active:text-accent disabled:opacity-40">
+              className="gl clear icon sm">
               <RotateCcw size={16} />
             </button>
           </div>
 
           <section id="map-stats" aria-label="Map details and options" aria-hidden={!open} inert={open ? undefined : ''}
-            className={`grid w-64 max-w-full overflow-hidden rounded-[1.25rem] border border-edge-strong bg-navy-900/95 text-sm shadow-[var(--shadow-card)] backdrop-blur transition-[grid-template-rows,opacity,margin-top] duration-200 ease-out ${open ? 'mt-2 opacity-100' : 'mt-0 pointer-events-none opacity-0'}`}
+            className={`grid w-64 max-w-full overflow-hidden rounded-[1.25rem] border border-edge-strong bg-navy-900/95 text-sm shadow-[var(--shadow-card)] transition-[grid-template-rows,opacity,margin-top] duration-200 ease-out ${open ? 'mt-2 opacity-100' : 'mt-0 pointer-events-none opacity-0'}`}
             style={{ gridTemplateRows: open ? '1fr' : '0fr' }}>
             <div className="min-h-0 overflow-hidden p-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Map details</h2>
 
-              <div className="mt-3 flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Filter by role">
+              <div className="gl-seg mt-3" role="group" aria-label="Filter by role">
                 {ROLE_FILTERS.map(([k, l, activeClass]) => (
                   <button key={k} type="button" onClick={() => setRoleFilter(k)} aria-pressed={roleFilter === k}
-                    className={`pressable h-11 flex-1 rounded-lg text-xs font-medium transition-colors ${roleFilter === k ? activeClass : 'text-slate-400'}`}>{l}</button>
+                    className={`gl ${activeClass}`}>{l}</button>
                 ))}
               </div>
 
@@ -433,7 +434,7 @@ export default function MapPage() {
           </section>
 
           {hasPassengerRoutes && (
-            <div className="mt-2 flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/90 px-3.5 py-2 text-[11px] text-slate-300 shadow-[var(--shadow-card)] backdrop-blur">
+            <div className="mt-2 flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/95 px-3.5 py-2 text-[11px] text-slate-300 shadow-[var(--shadow-card)]">
               <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Pilot</span>
               <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Passenger</span>
             </div>
@@ -444,7 +445,7 @@ export default function MapPage() {
       <AttributionToggle />
 
       {data && (data.unresolved.length > 0 || data.unresolvedFlightCount > 0) && (
-        <p className="absolute bottom-3 left-3 right-16 z-[1000] rounded-xl border border-edge-strong bg-navy-900/90 p-3 text-xs text-slate-300 backdrop-blur">
+        <p className="ds-map-ov-bl rounded-xl border border-edge-strong bg-navy-900/95 p-3 text-xs text-slate-300">
           {data.unresolved.length > 0 && (
             <>Couldn’t place {data.unresolved.join(', ')} — check the airport code
             {airports && Object.keys(airports).length === 0 ? ' (has the airport database been seeded? run “npm run seed -w server”)' : ''}.</>
@@ -457,11 +458,11 @@ export default function MapPage() {
         </p>
       )}
 
-      {error && <p role="alert" className="absolute left-4 right-4 top-4 z-[1000] rounded-xl bg-bad/90 p-3 text-sm text-white">{error}</p>}
+      {error && <p role="alert" className="ds-map-ov rounded-xl bg-bad/90 p-3 text-sm text-white">{error}</p>}
 
       {!data && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
-          <div className="card-elevated border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+          <div className="card-elevated border border-edge-strong bg-navy-900/95 p-6">
             <Plane size={36} strokeWidth={1.5} className="mx-auto animate-pulse text-slate-500" />
             <p className="mt-3 font-medium">Loading your flights…</p>
           </div>
@@ -470,7 +471,7 @@ export default function MapPage() {
 
       {data && data.stops.length === 0 && flights?.length === 0 && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
-          <div className="card-elevated border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+          <div className="card-elevated border border-edge-strong bg-navy-900/95 p-6">
             <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-500" />
             <p className="mt-3 font-medium">Nothing to plot yet</p>
             <p className="text-sm text-slate-400">Log a flight with departure and arrival airports.</p>
@@ -480,7 +481,7 @@ export default function MapPage() {
 
       {data && data.stops.length === 0 && flights?.length > 0 && !error && (
         <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center p-8 text-center text-slate-300">
-          <div className="card-elevated border border-edge-strong bg-navy-900/85 p-6 backdrop-blur">
+          <div className="card-elevated border border-edge-strong bg-navy-900/95 p-6">
             <Plane size={36} strokeWidth={1.5} className="mx-auto text-slate-500" />
             <p className="mt-3 font-medium">Nothing to plot for this filter</p>
             <p className="text-sm text-slate-400">Try "All" — no {roleFilter} flights have a placeable airport yet.</p>

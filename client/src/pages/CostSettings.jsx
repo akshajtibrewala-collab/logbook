@@ -44,7 +44,7 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
           <span className="text-slate-400">Effective {formatDate(r.effective_date)}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.hourly_rate)}/hr</span>
-            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="pressable flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="gl plain icon sm"><Trash2 size={14} /></button>
           </div>
         </div>
       ))}
@@ -58,7 +58,7 @@ function HourlyRateHistory({ certificate, rows, onCreate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a rate change</button>
+        <button type="button" onClick={() => setAdding(true)} className="gl link sm"><Plus size={14} /> Add a rate change</button>
       )}
     </div>
   );
@@ -80,7 +80,7 @@ function PlannedCosts({ certificate, rows, onCreate, onDelete }) {
           <span className="text-slate-300">{r.label}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.amount)}</span>
-            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete planned cost" className="pressable flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete planned cost" className="gl plain icon sm"><Trash2 size={14} /></button>
           </div>
         </div>
       ))}
@@ -94,7 +94,7 @@ function PlannedCosts({ certificate, rows, onCreate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a one-time cost</button>
+        <button type="button" onClick={() => setAdding(true)} className="gl link sm"><Plus size={14} /> Add a one-time cost</button>
       )}
     </div>
   );
@@ -122,7 +122,7 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
           <span className="text-slate-400">Effective {formatDate(r.effective_date)}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium">{fmtMoney(r.rental_rate_per_hr)}/hr + {fmtMoney(r.fuel_surcharge_per_hr)}/hr fuel</span>
-            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="pressable flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:text-bad"><Trash2 size={14} /></button>
+            <button type="button" onClick={() => onDelete(r.id)} aria-label="Delete rate" className="gl plain icon sm"><Trash2 size={14} /></button>
           </div>
         </div>
       ))}
@@ -137,7 +137,7 @@ function AircraftRateHistory({ certificate, aircraft, rows, onCreate, onDelete }
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className="pressable flex items-center gap-1.5 text-sm text-accent-strong"><Plus size={14} /> Add a rate change</button>
+        <button type="button" onClick={() => setAdding(true)} className="gl link sm"><Plus size={14} /> Add a rate change</button>
       )}
     </div>
   );
@@ -166,7 +166,7 @@ function PhaseCard({
 
   return (
     <section className="card card-elevated p-0">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="pressable flex w-full items-center justify-between p-4 text-left">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="ctl-row pressable flex w-full items-center justify-between p-4 text-left">
         <div>
           <h2 className="stat-title text-base">{certificateLabel(certificate)}</h2>
           <p className="mt-0.5 text-xs text-slate-400">
@@ -240,6 +240,7 @@ export default function CostSettings() {
   const [message, setMessage] = useState('');
   const [settingsForm, setSettingsForm] = useState({ default_ground_time: '', private_realistic_total_hours: '', cost_cutoff_date: '' });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false); // the Save worked: say so, so it never feels dead
 
   const load = useCallback(() => {
     Promise.all([
@@ -259,9 +260,10 @@ export default function CostSettings() {
   useEffect(load, [load]);
 
   const saveSettings = async () => {
-    setSavingSettings(true);
+    setSavingSettings(true); setSettingsSaved(false); setMessage('');
     try {
       await saveSettingsMerged(settingsForm);
+      setSettingsSaved(true);
     } catch (err) {
       setMessage(err.message);
     } finally {
@@ -278,24 +280,21 @@ export default function CostSettings() {
 
   return (
     <div className="space-y-4 md:mx-auto md:max-w-xl">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/costs')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">Cost settings</h1>
-      </div>
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
       <Section title="Default settings">
         <TextField label="Default ground briefing time (hrs)" type="number" value={settingsForm.default_ground_time}
-          onChange={(v) => setSettingsForm((f) => ({ ...f, default_ground_time: v }))} placeholder="Not set" />
-        <TextField label="Private pilot: realistic total hours target (raised automatically if you pass it)" type="number" value={settingsForm.private_realistic_total_hours}
-          onChange={(v) => setSettingsForm((f) => ({ ...f, private_realistic_total_hours: v }))} placeholder="Defaults to 50" />
+          onChange={(v) => { setSettingsSaved(false); setSettingsForm((f) => ({ ...f, default_ground_time: v })); }} placeholder="Not set" />
+        <TextField label="Private Pilot: realistic total hours target (raised automatically if you pass it)" type="number" value={settingsForm.private_realistic_total_hours}
+          onChange={(v) => { setSettingsSaved(false); setSettingsForm((f) => ({ ...f, private_realistic_total_hours: v })); }} placeholder="Defaults to 50" />
         <div className="col-span-2">
           <DatePicker label="Commercial certificate date — stop counting costs from" value={settingsForm.cost_cutoff_date}
-            onChange={(v) => setSettingsForm((f) => ({ ...f, cost_cutoff_date: v }))} clearable placeholder="Not set — count everything" />
+            onChange={(v) => { setSettingsSaved(false); setSettingsForm((f) => ({ ...f, cost_cutoff_date: v })); }} clearable placeholder="Not set — count everything" />
           <p className="mt-1 text-xs text-slate-500">Optional. Flights and ground sessions on or after this day are left out of every cost total, average and chart. They still count everywhere else, and their saved cost fields are kept.</p>
         </div>
         <Button size="sm" fullWidth={false} onClick={saveSettings} disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save'}</Button>
+        {settingsSaved && <p role="status" className="text-sm text-ok">Saved</p>}
       </Section>
 
       <div>

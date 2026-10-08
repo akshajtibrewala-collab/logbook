@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CloudOff } from 'lucide-react';
 import { api } from '../lib/api.js';
+import '../ds/states.css';
 import { flushOutbox, outboxList, removeFromOutbox } from '../lib/outbox.js';
 
 // Intentionally kept as "aerotrail:" (the app's old name) despite the AeroHub rename — it's an in-page
@@ -49,22 +50,19 @@ export default function OutboxBanner() {
   const waiting = entries.length - rejected.length;
 
   return (
-    <div role="status" className="no-print mb-4 space-y-2 rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn">
+    <div role="status" className="no-print st-note queue" style={{ marginBottom: 16 }}>
       {waiting > 0 && (
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2"><CloudOff size={16} className="shrink-0" />
-            {waiting} flight{waiting === 1 ? '' : 's'} waiting to save — kept safely on this device.</span>
-          <button type="button" onClick={retry} disabled={busy} className="h-11 shrink-0 rounded-lg border border-warn/40 px-3 font-medium disabled:opacity-60">
-            {busy ? 'Trying…' : 'Retry now'}
-          </button>
+        <div className="row">
+          <span><CloudOff size={16} className="shrink-0" aria-hidden="true" />{waiting} flight{waiting === 1 ? '' : 's'} waiting to save, kept safely on this device.</span>
+          <button type="button" onClick={retry} disabled={busy} className="gl clear sm">{busy ? 'Trying…' : 'Retry now'}</button>
         </div>
       )}
       {rejected.map((e) => (
-        <div key={e.id} className="flex items-center justify-between gap-3">
-          <span className="min-w-0">A saved flight from {e.payload.date} couldn’t be accepted: {e.rejected}</span>
-          <span className="flex shrink-0 gap-2">
-            <Link to={`/logbook/new?outbox=${e.id}`} className="flex h-11 items-center rounded-lg border border-warn/40 px-3 font-medium">Fix</Link>
-            <button type="button" onClick={() => { removeFromOutbox(e.id); refresh(); }} className="h-11 rounded-lg px-3 font-medium">Discard</button>
+        <div key={e.id} className="row">
+          <span><span className="st-dot" aria-hidden="true" />A saved flight from {e.payload.date} couldn’t be accepted: {e.rejected}</span>
+          <span className="act">
+            <Link to={`/logbook/new?outbox=${e.id}`} className="gl clear sm">Fix</Link>
+            <button type="button" onClick={() => { removeFromOutbox(e.id); refresh(); }} className="gl clear sm">Discard</button>
           </span>
         </div>
       ))}

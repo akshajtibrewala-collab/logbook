@@ -1,0 +1,241 @@
+/* AeroHub design system components (direction C "Large Type"). Only --ds-* tokens; no literal colours (tokens.css owns them).
+   Content is solid. Glass is confined to the navigation/control layer (see glass.css). Rem units throughout so text
+   scaling (browser text size / 200%) reflows instead of clipping. */
+
+.ds-root { background: var(--ds-bg); color: var(--ds-text); font: 400 var(--ds-fs-body)/1.3 var(--ds-font); min-height: 100dvh; -webkit-text-size-adjust: 100%; overflow-wrap: break-word; }
+.ds-root *, .ds-root *::before, .ds-root *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+.ds-root button, .ds-root a, .ds-root select, .ds-root input, .ds-root summary { touch-action: manipulation; }
+:where(.ds-root) button { font: inherit; color: inherit; } /* :where keeps this at zero specificity so component colours win */
+.ds-root :focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+/* The old app's base styles give h1/h2 a display face; inside the design system everything uses the system stack. */
+.ds-root h1, .ds-root h2, .ds-root h3 { font-family: var(--ds-font); }
+.ds-root :focus-visible { border-radius: inherit; }
+.ds-chrome { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.ds-root ::selection { background: var(--ds-pilot-soft); }
+.ds-nowrap { white-space: nowrap; }
+
+/* ---------- type ---------- */
+.ds-display { font-size: min(var(--ds-fs-display), 12.5vw); /* display sizes scale with text size but are capped by the viewport so a long word never breaks mid-letter at 200% */ line-height: 1.05; font-weight: 800; letter-spacing: -0.035em; margin: 0.25rem 0 0.75rem; }
+.ds-title { font-size: var(--ds-fs-title); line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.ds-num { font-size: min(var(--ds-fs-num), 17vw); line-height: 0.95; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.ds-num-md { font-size: min(2.5rem, 11vw); line-height: 1; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.ds-sub { color: var(--ds-text-2); font-size: var(--ds-fs-sub); }
+.ds-cap { font-size: var(--ds-fs-cap); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ds-text-2); }
+.ds-tab-num { font-variant-numeric: tabular-nums; }
+.ds-pilot { color: var(--ds-pilot); } .ds-pax { color: var(--ds-pax); } .ds-ok { color: var(--ds-ok); } .ds-warn { color: var(--ds-warn); } .ds-bad { color: var(--ds-bad); }
+.ds-page { padding: calc(var(--ds-top) + var(--ds-bar-h) + 1.25rem) var(--ds-gutter) calc(var(--ds-bottom) + var(--ds-tabbar-h) + 7rem); max-width: 40rem; margin: 0 auto; }
+.ds-stack > * + * { margin-top: var(--ds-s-3); }
+
+/* ---------- solid content surfaces ---------- */
+.ds-card { background: var(--ds-surface); border: 1px solid var(--ds-hair); border-radius: var(--ds-r-card); padding: var(--ds-s-4); }
+.ds-card.is-link { display: block; color: inherit; text-decoration: none; transition: transform var(--ds-dur-2) var(--ds-ease-pop), background-color var(--ds-dur-1); }
+.ds-section { border-top: 1px solid var(--ds-rule); padding: var(--ds-s-4) 0; }
+.ds-section > .ds-cap:first-child { display: block; margin-bottom: var(--ds-s-2); }
+.ds-stat .ds-num { display: block; margin: 0.25rem 0 0.375rem; }
+/* Unit after a large numeral: a deliberate smaller, muted unit — thin space before it, baseline lifted so it never reads as punctuation. */
+.ds-unit { font-size: max(0.34em, 0.8125rem); font-weight: 600; letter-spacing: 0.01em; line-height: 0; color: var(--ds-text-2); margin-left: 0.28em; vertical-align: 0.42em; font-variant-numeric: normal; white-space: nowrap; }
+.ds-row .end .ds-unit { font-size: 0.8125rem; vertical-align: baseline; margin-left: 0.25em; }
+.ds-stat-tile .v .ds-unit { vertical-align: 0.12em; margin-left: 0.22em; }
+.ds-stat.is-pilot .ds-num { color: var(--ds-pilot); } .ds-stat.is-pax .ds-num { color: var(--ds-pax); }
+.ds-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); gap: var(--ds-s-3); }
+.ds-stat-tile { background: var(--ds-surface); border: 1px solid var(--ds-hair); border-radius: var(--ds-r-card); padding: var(--ds-s-3) var(--ds-s-4); min-height: 4.75rem; display: flex; flex-direction: column; justify-content: space-between; gap: var(--ds-s-2); color: inherit; text-decoration: none; }
+.ds-stat-tile .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ds-group { background: var(--ds-surface); border: 1px solid var(--ds-hair); border-radius: var(--ds-r-card); overflow: hidden; }
+.ds-row { display: flex; align-items: center; gap: var(--ds-s-3); min-height: 3.25rem; padding: 0.75rem var(--ds-s-4); border-top: 1px solid var(--ds-hair); color: inherit; text-decoration: none; width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; transition: background-color var(--ds-dur-1); }
+.ds-group > .ds-row:first-child { border-top: 0; }
+.ds-row .main { flex: 1; min-width: 0; } .ds-row .t { font-weight: 600; } .ds-row .s { color: var(--ds-text-2); font-size: var(--ds-fs-sub); }
+.ds-row .end { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+.ds-row .chev { color: var(--ds-text-3); flex: none; }
+.ds-row.is-tap:active, .ds-card.is-link:active, .ds-stat-tile:active { background: var(--ds-surface-2); }
+.ds-row.is-tap:active { transform: none; } .ds-card.is-link:active { transform: scale(0.985); }
+.ds-group-head { padding: var(--ds-s-4) var(--ds-s-1) var(--ds-s-2); }
+
+/* ---------- controls ---------- */
+.ds-spin { width: 1.1em; height: 1.1em; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: ds-spin 0.8s linear infinite; }
+@keyframes ds-spin { to { transform: rotate(360deg); } }
+.ds-iconbtn { width: var(--ds-tap); height: var(--ds-tap); border-radius: 50%; border: 0; display: grid; place-items: center; background: transparent; color: var(--ds-text); cursor: pointer; transition: transform var(--ds-dur-2) var(--ds-ease-pop), background-color var(--ds-dur-1); flex: none; }
+.ds-iconbtn:active { transform: scale(0.9); background: var(--ds-g-lite); }
+.ds-iconbtn svg, .ds-i { width: 1.375rem; height: 1.375rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ds-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.625rem; border-radius: 999px; font-size: var(--ds-fs-cap); font-weight: 650; letter-spacing: 0.03em; background: var(--ds-surface-3); color: var(--ds-text-2); white-space: nowrap; }
+.ds-badge.pilot { background: var(--ds-pilot-soft); color: var(--ds-pilot); } .ds-badge.pax { background: var(--ds-pax-soft); color: var(--ds-pax); }
+.ds-badge.ok { background: var(--ds-ok-soft); color: var(--ds-ok); } .ds-badge.warn { background: var(--ds-warn-soft); color: var(--ds-warn); } .ds-badge.bad { background: var(--ds-bad-soft); color: var(--ds-bad); }
+.ds-progress { height: 0.5rem; border-radius: 999px; background: var(--ds-surface-3); overflow: hidden; } .ds-progress > i { display: block; height: 100%; width: var(--v, 0%); background: var(--ds-pilot); border-radius: inherit; }
+.ds-progress.pax > i { background: var(--ds-pax); }
+
+/* ---------- fields (16px minimum so iOS Safari never zooms on focus) ---------- */
+.ds-field { display: block; } .ds-field > .l { display: block; margin-bottom: var(--ds-s-2); font-size: var(--ds-fs-sub); font-weight: 600; color: var(--ds-text-2); }
+.ds-field > .h { display: block; margin-top: var(--ds-s-1); font-size: var(--ds-fs-cap); color: var(--ds-text-2); } .ds-field > .e { display: block; margin-top: var(--ds-s-1); font-size: var(--ds-fs-sub); color: var(--ds-bad); }
+.ds-input { width: 100%; min-height: 3rem; padding: 0.625rem var(--ds-s-3); background: var(--ds-surface-2); color: var(--ds-text); border: 1px solid var(--ds-hair-strong); border-radius: var(--ds-r-ctl); font: inherit; font-size: max(var(--ds-fs-input), 16px); appearance: none; -webkit-appearance: none; color-scheme: dark; }
+textarea.ds-input { min-height: 6rem; resize: vertical; }
+select.ds-input { padding-right: 2.25rem; background-image: linear-gradient(45deg, transparent 50%, var(--ds-text-2) 50%), linear-gradient(135deg, var(--ds-text-2) 50%, transparent 50%); background-position: calc(100% - 1.25rem) 55%, calc(100% - 0.9rem) 55%; background-size: 0.35rem 0.35rem; background-repeat: no-repeat; }
+.ds-input::placeholder { color: var(--ds-text-3); }
+.ds-input:focus { outline: none; border-color: var(--ds-focus); box-shadow: 0 0 0 3px var(--ds-pilot-soft); }
+.ds-input[aria-invalid="true"] { border-color: var(--ds-bad); } .ds-input:disabled { opacity: 0.45; }
+
+/* ---------- navigation (glass) ---------- */
+.ds-topbar { position: fixed; z-index: 30; top: calc(var(--ds-top) + 8px); left: 12px; right: 12px; min-height: var(--ds-bar-h); --ds-g-r: var(--ds-r-bar); }
+.ds-topbar > .g-in { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-2); padding: 0 6px; min-height: var(--ds-bar-h); }
+.ds-topbar .ttl { flex: 1; text-align: center; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: var(--p, 0); transition: opacity 120ms linear; }
+.ds-topbar .side { display: flex; align-items: center; min-width: var(--ds-tap); }
+/* The wordmark stands in for the empty bar at scroll-top on tab roots (no back button), and hands over to the page title as the large title collapses. */
+.ds-topbar .mark { padding-left: 0.875rem; font-size: 0.9375rem; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-text); white-space: nowrap; opacity: calc(1 - var(--p, 0)); transition: opacity 120ms linear; }
+.ds-topbar .grp { border-radius: 999px; padding: 0 2px; }
+.ds-tabbar { position: fixed; z-index: 30; left: 14px; right: 14px; bottom: calc(var(--ds-bottom) + 12px); --ds-g-r: var(--ds-r-tabbar); transform-origin: 50% 100%; transition: transform var(--ds-dur-3) var(--ds-ease-spring); }
+.ds-tabbar.is-collapsed { transform: translateY(8px) scale(0.86, 0.82); }
+.ds-tabbar.is-collapsed .tab span { opacity: 0; }
+.ds-tabs { position: relative; display: flex; padding: 6px; min-height: var(--ds-tabbar-h); }
+.ds-tabs .tab { position: relative; z-index: 2; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: var(--ds-tap); border: 0; border-radius: 999px; background: transparent; color: var(--ds-text-2); font-size: 0.6875rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: transform var(--ds-dur-2) var(--ds-ease-pop), background-color var(--ds-dur-1); }
+.ds-tabs .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity var(--ds-dur-1); }
+.ds-tabs .tab svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ds-tabs .tab:active { transform: scale(0.9); background: var(--ds-g-lite); }
+.ds-tabs .tab[aria-current="page"], .ds-tabs .tab[aria-selected="true"] { color: var(--ds-text); } .ds-tabs .tab[aria-current="page"] svg, .ds-tabs .tab[aria-selected="true"] svg { color: var(--ds-pilot); }
+.ds-tabs .tab.pax[aria-current="page"] svg, .ds-tabs .tab.pax[aria-selected="true"] svg { color: var(--ds-pax); }
+.ds-tabs[data-compact] .tab span { display: none; }
+.ds-ind { position: absolute; top: 6px; bottom: 6px; left: 0; width: 0; border-radius: 999px; z-index: 1; will-change: transform; }
+.ds-fab { position: fixed; z-index: 31; right: 18px; bottom: calc(var(--ds-bottom) + 12px + var(--ds-tabbar-h) + 14px); width: 3.5rem; height: 3.5rem; cursor: pointer; }
+.ds-menu { position: fixed; z-index: 32; right: 18px; bottom: calc(var(--ds-bottom) + 12px + var(--ds-tabbar-h) + 14px + 3.5rem + 10px); width: 16rem; max-width: calc(100% - 36px); --ds-g-r: var(--ds-r-menu); transform-origin: 100% 100%; visibility: hidden; opacity: 0; transform: scale(0.3); transition: transform var(--ds-dur-3) var(--ds-ease-pop), opacity var(--ds-dur-1), visibility 0s linear var(--ds-dur-3); }
+.ds-menu.is-open { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
+.ds-menu > .g-in { padding: 6px; }
+.ds-menu .mi { display: flex; align-items: center; gap: var(--ds-s-3); width: 100%; min-height: 3.25rem; padding: 0 0.875rem; border: 0; border-radius: 16px; background: transparent; color: var(--ds-text); text-align: left; font-weight: 600; cursor: pointer; text-decoration: none; transition: transform var(--ds-dur-2) var(--ds-ease-pop), background-color var(--ds-dur-1); }
+.ds-menu .mi:active { transform: scale(0.96); background: var(--ds-g-lite); }
+.ds-menu .dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; flex: none; }
+html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
+.ds-scrim-dim { position: fixed; inset: 0; z-index: 40; background: var(--ds-scrim); opacity: 0; pointer-events: none; transition: opacity var(--ds-dur-2); } .ds-scrim-dim.is-on { opacity: 1; pointer-events: auto; }
+.ds-sheet { position: fixed; z-index: 41; left: 8px; right: 8px; bottom: 0; height: 92dvh; --ds-g-r: var(--ds-r-sheet); will-change: transform; transform: translateY(110%); transition: transform var(--ds-dur-3) var(--ds-ease-out), visibility 0s linear var(--ds-dur-3); touch-action: none;
+  visibility: hidden; pointer-events: none; /* closed: out of the tab order and never able to intercept a tap */ }
+.ds-sheet.is-open { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.ds-sheet.is-drag { transition: none; }
+.ds-sheet > .g-in { display: flex; flex-direction: column; padding: 8px var(--ds-s-4) 0; overflow: hidden; }
+.ds-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--ds-text-2); opacity: 0.55; margin: 4px auto 14px; flex: none; }
+.ds-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-3); margin-bottom: var(--ds-s-3); flex: none; }
+.ds-sheet-body { overflow-y: auto; flex: 1; padding-bottom: calc(var(--ds-bottom) + 6rem); overscroll-behavior: contain; touch-action: pan-y; }
+@media (max-width: 480px) { .ds-sheet { left: 4px; right: 4px; } }
+@media (min-width: 768px) { .ds-sheet { left: 50%; right: auto; width: 34rem; margin-left: -17rem; } }
+
+/* ---------- app shell layout (only inside .ds-app; the /design device frames keep the phone layout at any width) ---------- */
+.ds-app { min-height: 100dvh; --bottom-nav-h: calc(var(--ds-tabbar-h) + 12px + var(--ds-bottom)); } /* keeps the old pages' sticky save bars above the floating tab bar */
+.ds-mt { margin-top: var(--ds-s-4); }
+.ds-app .sticky.top-0 { top: calc(var(--ds-top) + var(--ds-bar-h) + 16px); } /* interim: pre-redesign sticky headers (Stats tabs) sit below the glass top bar */
+.ds-link { display: inline-flex; align-items: center; min-height: var(--ds-tap); font-weight: 600; text-decoration: none; }
+.ds-main.bleed { padding: 0; max-width: none; }
+.ds-main { padding: calc(var(--ds-top) + var(--ds-bar-h) + 1.25rem) var(--ds-gutter) calc(var(--ds-bottom) + var(--ds-tabbar-h) + 7rem); max-width: 40rem; margin: 0 auto; outline: none; }
+.ds-main.wide { max-width: 72rem; }
+.ds-main > .ds-stagger > * { animation: ds-rise 0.45s var(--ds-ease-out) both; }
+@keyframes ds-rise { from { opacity: 0; transform: translateY(10px); } }
+/* Full-bleed map hero that sits under the glass top bar (Home). */
+.ds-hero { position: relative; display: block; color: inherit; text-decoration: none; height: 14rem; margin: 0 0 var(--ds-s-4); border-radius: var(--ds-r-card); overflow: hidden; }
+.ds-hero .ds-map { position: absolute; inset: 0; }
+.ds-hero .ds-overlay-chip { bottom: 14px; }
+.ds-hero .ds-overlay-chip.l { left: var(--ds-gutter); } .ds-hero .ds-overlay-chip.r { right: var(--ds-gutter); }
+/* ONE top bar width everywhere (Home's): the content column, centred beside the rail, on every route including the full-bleed Map.
+   --ds-bar-l / --ds-bar-r are that column's edges; the bar, the Add button and menu, and every Map overlay anchor to them. */
+.ds-app { --ds-bar-l: max(var(--ds-gutter), calc(50% - 36rem + var(--ds-gutter))); --ds-bar-r: var(--ds-bar-l); --ds-bar-bottom: calc(var(--ds-top) + 8px + var(--ds-bar-h)); --ds-ov-bottom: calc(var(--ds-bottom) + var(--ds-tabbar-h) + 28px); } /* phones and tablets: clear the floating tab bar */
+.ds-app > .ds-topbar { left: var(--ds-bar-l); right: var(--ds-bar-r); }
+/* Map overlays sit just under the bar, on its left edge, clear of the rail. */
+.ds-map-ov { position: absolute; z-index: 1000; left: var(--ds-bar-l); top: calc(var(--ds-bar-bottom) + 12px); max-width: calc(100% - var(--ds-bar-l) - var(--ds-bar-r)); }
+.ds-map-ov-bl { position: absolute; z-index: 1000; left: var(--ds-bar-l); right: calc(var(--ds-bar-r) + 3.5rem); bottom: var(--ds-ov-bottom); }
+.ds-map-ov-br { position: absolute; z-index: 1000; right: calc(var(--ds-bar-r) + 4.75rem); /* phones/tablets: clear the Add button above the tab bar */ bottom: var(--ds-ov-bottom); }
+.ds-legend { position: absolute; left: var(--ds-gutter); bottom: 14px; z-index: 2; display: flex; gap: 0.875rem; padding: 0.4375rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; color: var(--ds-g-text); }
+.ds-legend span { display: inline-flex; align-items: center; gap: 0.375rem; }
+.ds-legend svg { overflow: visible; } .ds-legend .rp, .ds-legend .rv { fill: none; stroke-width: 1.6; stroke-linecap: round; } .ds-legend .rp { stroke: var(--ds-pilot); } .ds-legend .rv { stroke: var(--ds-pax); }
+.ds-map .home .ring { fill: none; stroke: var(--ds-pilot); stroke-width: 1.6; } .ds-map .home .core { fill: var(--ds-pilot); }
+.ds-map .home text { fill: var(--ds-text); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; paint-order: stroke; stroke: var(--ds-bg); stroke-width: 5px; stroke-linejoin: round; stroke-opacity: .92; }
+@media (min-width: 768px) {
+  .ds-app .ds-tabbar { left: 0; right: 0; margin: 0 auto; width: min(32rem, calc(100% - 28px)); }
+  /* Tablet and desktop: a taller map card (phones use a shorter 14rem card; none of them float under the bar). */
+  .ds-app .ds-hero { height: 22rem; }
+}
+/* Tablet (768 to 1023px): the content column is the top bar's own width (the bar spans the same edges), not a narrower centred column. */
+@media (min-width: 768px) and (max-width: 1023.98px) { .ds-app .ds-main { max-width: 72rem; } }
+/* Desktop: the tab bar becomes a floating glass rail on the left (same sliding capsule, vertical) and the Add button moves to the header. */
+@media (min-width: 1024px) {
+  /* Anchored under the top bar (not centred on the viewport height) so it is always in the first screenful, even when the page is
+     captured or zoomed tall; it never moves with scroll. A short window shrinks the tabs instead of pushing the rail off screen. */
+  .ds-app .ds-tabbar { left: 16px; right: auto; margin: 0; width: 5.5rem; top: calc(var(--ds-top) + 8px + var(--ds-bar-h) + 16px); bottom: auto; transform: none; transition: none; --ds-g-r: 30px; }
+  .ds-app .ds-tabbar.is-collapsed { transform: none; } .ds-app .ds-tabbar.is-collapsed .tab span { opacity: 1; }
+  .ds-app .ds-tabs { flex-direction: column; min-height: 0; }
+  .ds-app .ds-tabs .tab { flex: none; min-height: 4.5rem; }
+  @media (max-height: 640px) { .ds-app .ds-tabs .tab { min-height: 3.5rem; } }
+  .ds-app .ds-ind { left: 4px; right: 4px; top: 0; bottom: auto; width: auto; }
+  /* Content column = main (max 80rem, centred) minus its 7.5rem rail gap and 5.5rem right gap: its centre is 50% + 1rem. */
+  .ds-app { --ds-col-l: max(7.5rem, calc(50% + 1rem - 33.5rem)); --ds-col-r: max(5.5rem, calc(50% - 1rem - 33.5rem)); --ds-bar-l: var(--ds-col-l); --ds-bar-r: var(--ds-col-r); --ds-ov-bottom: 12px; }
+  .ds-map-ov-br { right: var(--ds-bar-r); }
+  .ds-app > .ds-topbar.has-add .side:last-child { padding-right: 3.5rem; } /* room for the Add button, which sits inside the bar's right end */
+  .ds-app .ds-main { padding-left: 7.5rem; padding-right: 5.5rem; max-width: 80rem; }
+  .ds-app .ds-main.wide { max-width: 80rem; }
+  .ds-app .ds-hero { height: 24rem; }
+  .ds-app > .ds-fab { top: calc(var(--ds-top) + 8px + (var(--ds-bar-h) - 3rem) / 2); bottom: auto; right: calc(var(--ds-col-r) + (var(--ds-bar-h) - 3rem) / 2); width: 3rem; height: 3rem; }
+  .ds-app > .ds-fab svg { width: 1.375rem; height: 1.375rem; }
+  .ds-app > .ds-menu { top: calc(var(--ds-top) + 8px + var(--ds-bar-h) + 8px); bottom: auto; right: var(--ds-col-r); transform-origin: 100% 0; }
+  .ds-app .ds-toasts { bottom: 2rem; }
+  .ds-app { --bottom-nav-h: var(--ds-bottom); }
+  .ds-app .ds-main.bleed { padding: 0; max-width: none; }
+}
+.ds-app .fab-clearance, .ds-app .fab { display: none !important; } /* the old per-page "+" is replaced by the shell's Add button */
+
+/* ---------- feedback ---------- */
+.ds-empty { text-align: center; padding: var(--ds-s-6) var(--ds-s-4); border-top: 1px solid var(--ds-rule); }
+.ds-empty .ic { width: 3rem; height: 3rem; margin: 0 auto var(--ds-s-3); display: grid; place-items: center; border-radius: 50%; background: var(--ds-surface-2); color: var(--ds-text-2); } .ds-empty h3 { margin: 0 0 var(--ds-s-1); font-size: var(--ds-fs-title); }
+.ds-skel { background: var(--ds-surface-2); border-radius: var(--ds-r-ctl); animation: ds-pulse 1.4s ease-in-out infinite; } @keyframes ds-pulse { 50% { opacity: 0.45; } }
+.ds-toasts { position: fixed; z-index: 70; left: 0; right: 0; bottom: calc(var(--ds-bottom) + var(--ds-tabbar-h) + 7rem); display: grid; gap: var(--ds-s-2); justify-items: center; padding: 0 var(--ds-gutter); pointer-events: none; }
+.ds-toast { pointer-events: auto; display: flex; align-items: center; gap: var(--ds-s-3); max-width: 28rem; width: 100%; padding: 0.75rem var(--ds-s-4); background: var(--ds-surface-3); border: 1px solid var(--ds-hair-strong); border-radius: var(--ds-r-card); box-shadow: var(--ds-shadow-pop); animation: ds-toast-in var(--ds-dur-3) var(--ds-ease-pop) both; }
+.ds-toast.ok { border-color: var(--ds-ok); } .ds-toast.bad { border-color: var(--ds-bad); } .ds-toast .m { flex: 1; min-width: 0; }
+@keyframes ds-toast-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } }
+
+/* ---------- charts ---------- */
+.ds-chart-tip { background: var(--ds-surface-3); border: 1px solid var(--ds-hair-strong); border-radius: var(--ds-r-card); padding: 0.5rem 0.75rem; box-shadow: var(--ds-shadow-pop); font-size: var(--ds-fs-sub); color: var(--ds-text); }
+.ds-chart-tip .l { color: var(--ds-text-2); font-size: var(--ds-fs-cap); margin-bottom: 2px; }
+.ds-chart-tip .r { display: flex; align-items: center; gap: var(--ds-s-2); font-weight: 650; font-variant-numeric: tabular-nums; } .ds-chart-tip .sw { width: 0.625rem; height: 0.625rem; border-radius: 2px; flex: none; }
+.ds-chart .recharts-text, .ds-chart text { fill: var(--ds-text-2); font-size: 0.6875rem; }
+
+/* ---------- map preview (tile-free) ---------- */
+.ds-map { position: relative; overflow: hidden; background: var(--ds-map-sea); } .ds-map > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ds-map .sea { fill: var(--ds-map-sea); } .ds-map .land { fill: var(--ds-map-land); }
+.ds-map .rp { fill: none; stroke: var(--ds-pilot); stroke-width: 1.6; stroke-linecap: round; } .ds-map .rv { fill: none; stroke: var(--ds-pax); stroke-width: 1.6; stroke-linecap: round; } .ds-map circle { fill: var(--ds-text); }
+.ds-overlay-chip { position: absolute; padding: 0.625rem 0.875rem; border-radius: 16px; z-index: 2; }
+.ds-overlay-chip .n { font-size: 2rem; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+
+/* ---------- /design page chrome (not part of the product UI) ---------- */
+.ds-frame { position: relative; width: min(390px, 100%); height: 760px; overflow: hidden; border-radius: 40px; border: 1px solid var(--ds-hair-strong); background: var(--ds-bg); transform: translateZ(0); }
+.ds-frame .ds-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: calc(var(--ds-bar-h) + 3.75rem) var(--ds-gutter) 9rem; }
+.ds-frame .ds-scroll::-webkit-scrollbar { display: none; }
+.ds-frame .ds-topbar { top: 12px; } .ds-frame .ds-edge { position: absolute; }
+.ds-frame .ds-sheet { height: 88%; left: 8px; right: 8px; width: auto; margin-left: 0; }
+.ds-frame .ds-menu { right: 18px; }
+.ds-frame .ds-fab, .ds-frame .ds-menu, .ds-frame .ds-tabbar, .ds-frame .ds-topbar, .ds-frame .ds-sheet, .ds-frame .ds-scrim-dim, .ds-frame .ds-edge { position: absolute; }
+.ds-frame .ds-tabbar { bottom: 12px; } .ds-frame .ds-fab { bottom: calc(12px + var(--ds-tabbar-h) + 14px); } .ds-frame .ds-menu { bottom: calc(12px + var(--ds-tabbar-h) + 14px + 3.5rem + 10px); }
+.ds-frames { display: flex; gap: 1.25rem; overflow-x: auto; padding: 0.5rem 0.25rem 1.25rem; scroll-snap-type: x mandatory; align-items: flex-start; } .ds-frames > * { flex: none; scroll-snap-align: start; width: min(390px, calc(100vw - 2 * var(--ds-gutter))); }
+.ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: var(--ds-s-2); }
+.ds-sw { border: 1px solid var(--ds-hair-strong); border-radius: var(--ds-r-ctl); padding: var(--ds-s-2); font-size: var(--ds-fs-cap); } .ds-sw i { display: block; height: 2.25rem; border-radius: 6px; margin-bottom: 0.375rem; border: 1px solid var(--ds-hair); }
+.ds-probe-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--ds-s-2); }
+.ds-probe { position: relative; height: 8rem; border-radius: var(--ds-r-card); overflow: hidden; } .ds-probe .ds-glass { position: absolute; left: 8px; right: 8px; top: 50%; transform: translateY(-50%); --ds-g-r: 20px; }
+@media print { .ds-skip { display: none !important; } .ds-root { background: var(--ds-bg); } .ds-card, .ds-group, .ds-stat-tile { box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .ds-root *, .ds-root *::before, .ds-root *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
+
+/* ---------- Home layout helpers ---------- */
+.ds-flat-row { border-top: 1px solid var(--ds-rule) !important; padding-left: 0 !important; padding-right: 0 !important; }
+.ds-home-grid { display: grid; gap: 0 var(--ds-s-5); }
+@media (min-width: 768px) { .ds-home-grid { grid-template-columns: 1fr 1fr; } }
+
+/* Wide desktop Home (1280px+): greeting on top, the map on the left (~60%) and the two role numbers stacked on the right (~40%). */
+@media (min-width: 1280px) {
+  .ds-home { display: grid; grid-template-columns: 3fr 2fr; column-gap: var(--ds-s-5); align-items: start; }
+  .ds-home > .hm-greet { grid-column: 1 / -1; grid-row: 1; }
+  .ds-home > .hm-map { grid-column: 1; grid-row: 2; align-self: stretch; height: auto; min-height: 24rem; }
+  .ds-home > .ds-stagger { display: contents; }
+  .ds-home > .ds-stagger > .ds-home-grid { grid-column: 2; grid-row: 2; grid-template-columns: 1fr; align-self: start; }
+  .ds-home > .ds-stagger > :not(.ds-home-grid), .ds-home > :not(.hm-map):not(.hm-greet):not(.ds-stagger) { grid-column: 1 / -1; }
+}
+
+/* Focused form screens: no floating tab bar, so the sticky Save bar sits at the bottom edge; fields scroll clear of the top bar and the Save bar. */
+.ds-app[data-focus] { --bottom-nav-h: var(--ds-bottom); }
+.ds-app[data-focus] .ds-main { padding-bottom: calc(var(--ds-bottom) + 8rem); }
+.ds-app input, .ds-app select, .ds-app textarea { scroll-margin-block: 6.5rem 9rem; }
+html[data-kb] .save-bar { position: static; }
+
+/* ---------- form Save bar: glass in the tab bar's slot ---------- */
+.ds-savebar { position: sticky; bottom: calc(var(--bottom-nav-h) + 12px); z-index: 30; margin-top: var(--ds-s-4); --ds-g-r: 28px; }
+.ds-savebar > .g-in { display: grid; gap: var(--ds-s-2); padding: var(--ds-s-2); }
+/* A page that keeps its tab bar (Aircraft edit) is already at the blur budget: this bar is a solid floor there, no blur layers. */
+.ds-app:not([data-focus]) .ds-savebar { --ds-g-base: var(--ds-g-solid); --ds-g-border: var(--ds-g-solid-edge); }
+.ds-app:not([data-focus]) .ds-savebar > .g-core, .ds-app:not([data-focus]) .ds-savebar > .g-lens, .ds-app:not([data-focus]) .ds-savebar > .g-scrim { display: none; }

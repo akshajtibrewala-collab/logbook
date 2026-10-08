@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, Plus, X, CloudSun } from 'lucide-react';
+import { Info, Plus, Settings, X } from 'lucide-react';
 import { api } from '../lib/api.js';
 import {
   blankLeg, changeAirport, applyResolved, setLegWall, legWall, legZone, legTimeLabel, legDateLabel, tzNotice, planPayload,
@@ -9,14 +9,17 @@ import AirportSearchField from '../components/AirportSearchField.jsx';
 import WeatherConditions from '../components/WeatherConditions.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import Button from '../components/Button.jsx';
-import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
+import { Sheet } from '../ds/Overlays.jsx';
+import { Segmented } from '../ds/Controls.jsx';
+import { MnSkeleton } from '../components/mn/Mn.jsx';
+import '../ds/logbook.css';
 
-const NOTE = 'A personal planning aid, not a substitute for an official weather briefing. Conditions are shown as within, near, or outside your minimums — never as "safe".';
+const NOTE = 'A personal planning aid, not a substitute for an official weather briefing. Conditions are shown as within, near, or outside your minimums, never as "safe".';
+const MODES = [{ value: 'airport', label: 'Airport' }, { value: 'plan', label: 'Plan' }];
 
-// "Thu 15:00 MDT / 21:00Z" — the airport's own zone plus Zulu, never the device's zone, since a device in
-// one time zone checking weather for an airport in another would otherwise mislabel it. A missing zone
-// is stated plainly (UTC) rather than guessed. See lib/planlegs.js.
+// "Thu 15:00 MDT / 21:00Z": the airport's own zone plus Zulu, never the device's zone, since a device in one time zone checking weather for an airport in
+// another would otherwise mislabel it. A missing zone is stated plainly (UTC) rather than guessed. See lib/planlegs.js.
 const timeLabel = (instant, tz) => legTimeLabel({ etaUtc: new Date(instant).toISOString(), tz: tz ?? null });
 
 function AirportCheck() {
@@ -30,9 +33,8 @@ function AirportCheck() {
     api.getSettings().then((s) => { if (s.home_airport_ident) setIdent(s.home_airport_ident); }).finally(() => setDefaultLoaded(true));
   }, []);
 
-  // Every change of airport drops whatever was loaded for the previous one immediately (so its conditions
-  // are never shown under the new airport's name) and ignores any answer that arrives late for an
-  // airport the pilot has already moved on from.
+  // Every change of airport drops whatever was loaded for the previous one immediately (so its conditions are never shown under the new airport's name)
+  // and ignores any answer that arrives late for an airport the pilot has already moved on from.
   useEffect(() => {
     setData(null);
     setError('');
@@ -49,33 +51,21 @@ function AirportCheck() {
   }, [ident, defaultLoaded]);
 
   return (
-    <div className="space-y-4">
+    <div className="mn mn-form">
       <AirportSearchField label="Airport" value={ident} onChange={setIdent} />
       {error && <ErrorNote message={error} />}
-      {loading && !data && <><Skeleton className="h-40" /><Skeleton className="h-24" /></>}
+      {loading && !data && <MnSkeleton rows={2} />}
       {data && (
         <>
           {!data.airport.tz && (
-            <p role="status" className="rounded-xl bg-warn/10 p-3 text-xs text-warn">
-              Time zone for {data.airport.ident} isn't available — forecast times are shown in UTC (Z).
-            </p>
+            <p role="status" className="mn-err">Time zone for {data.airport.ident} isn't available. Forecast times are shown in UTC (Z).</p>
           )}
-          <div>
-            <h2 className="stat-title mb-2 text-sm text-slate-400">Current conditions{data.airport.name ? ` — ${data.airport.name}` : ''}</h2>
-            <WeatherConditions data={data.current} />
-          </div>
-          <div>
-            <h2 className="stat-title mb-2 text-sm text-slate-400">Forecast</h2>
-            {data.forecast.unavailable
-              ? <WeatherConditions data={data.forecast} />
-              : (
-                <div className="space-y-2">
-                  {data.forecast.periods.map((p) => (
-                    <WeatherConditions key={p.time} data={p} label={timeLabel(p.time, data.airport.tz)} />
-                  ))}
-                </div>
-              )}
-          </div>
+          <h2 className="mn-sub">Now{data.airport.name ? `, ${data.airport.name}` : ''}</h2>
+          <WeatherConditions data={data.current} />
+          <h2 className="mn-sub">Forecast</h2>
+          {data.forecast.unavailable
+            ? <WeatherConditions data={data.forecast} />
+            : data.forecast.periods.map((p) => <WeatherConditions key={p.time} data={p} label={timeLabel(p.time, data.airport.tz)} />)}
         </>
       )}
     </div>
@@ -88,17 +78,15 @@ function PlanFlight() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Anything the pilot changes makes the last answer stale, so it is cleared rather than left on screen
-  // next to inputs it no longer matches.
+  // Anything the pilot changes makes the last answer stale, so it is cleared rather than left on screen next to inputs it no longer matches.
   const edit = (fn) => { setResults(null); setError(''); setLegs(fn); };
   const setLeg = (i, fn) => edit((ls) => ls.map((l, idx) => (idx === i ? fn(l) : l)));
   const addStop = () => edit((ls) => [...ls.slice(0, -1), blankLeg(), ls[ls.length - 1]]);
   const removeStop = (i) => edit((ls) => ls.filter((_, idx) => idx !== i));
 
-  // Airport time zones are looked up as soon as an ident looks complete (debounced while typing). The
-  // answer is applied only to a leg still waiting on that same ident, so a slow reply for an airport the
-  // pilot has already changed can never land on the wrong leg. Times are UTC instants throughout — the
-  // zone is used purely to read and display them.
+  // Airport time zones are looked up as soon as an ident looks complete (debounced while typing). The answer is applied only to a leg still waiting on that
+  // same ident, so a slow reply for an airport the pilot has already changed can never land on the wrong leg. Times are UTC instants throughout; the zone is
+  // used purely to read and display them.
   const pendingKey = legs.map((l) => (l.tzStatus === 'pending' ? l.ident.trim().toUpperCase() : '')).join(',');
   useEffect(() => {
     const idents = [...new Set(pendingKey.split(',').filter(Boolean))];
@@ -134,76 +122,64 @@ function PlanFlight() {
   const labels = legs.map((_, i) => (i === 0 ? 'Departure' : i === legs.length - 1 ? 'Destination' : `Stop ${i}`));
 
   return (
-    <form onSubmit={check} className="space-y-4">
+    <form onSubmit={check} className="mn mn-form">
       {legs.map((leg, i) => {
         const notice = tzNotice(leg);
         const dateLabel = legDateLabel(i, leg);
         return (
-          <div key={i} className="card card-elevated space-y-2 p-4">
-            <div className="flex items-center justify-between">
-              <span className="stat-title text-sm text-slate-400">{labels[i]}</span>
+          <div key={i} className="mn-card" style={{ padding: 20, gap: 16 }}>
+            <div className="mn-ctl">
+              <span className="mn-lab">{labels[i]}</span>
               {i > 0 && i < legs.length - 1 && (
-                <button type="button" onClick={() => removeStop(i)} aria-label="Remove stop" className="pressable flex h-11 w-11 items-center justify-center text-slate-500 active:text-bad"><X size={16} /></button>
+                <button type="button" onClick={() => removeStop(i)} aria-label="Remove stop" title="Remove stop" className="gl plain icon"><X className="ds-i" aria-hidden="true" /></button>
               )}
             </div>
             <AirportSearchField value={leg.ident} onChange={(v) => setLeg(i, (l) => changeAirport(l, v))} />
-            {/* The picker reads/writes the wall clock in THIS airport's zone; the value is derived from the
-                stored UTC instant, so switching airports re-reads the same moment rather than moving it.
-                `min` is a real UTC instant, compared in that same zone. */}
+            {/* The picker reads/writes the wall clock in THIS airport's zone; the value is derived from the stored UTC instant, so switching airports
+                re-reads the same moment rather than moving it. `min` is a real UTC instant, compared in that same zone. */}
             <DatePicker label={dateLabel} withTime zone={legZone(leg)} min={new Date().toISOString()}
               value={legWall(leg)} onChange={(v) => setLeg(i, (l) => setLegWall(l, v))} />
-            {leg.etaUtc && <p className="text-xs text-slate-400" data-testid={`leg-time-${i}`}>{legTimeLabel(leg)}</p>}
-            {notice && <p role="status" className="text-xs text-warn">{notice}</p>}
+            {leg.etaUtc && <p className="mn-mut" data-testid={`leg-time-${i}`}>{legTimeLabel(leg)}</p>}
+            {notice && <p role="status" className="mn-mut" style={{ color: 'var(--ds-warn)' }}>{notice}</p>}
           </div>
         );
       })}
 
       <Button type="button" variant="secondary" icon={Plus} onClick={addStop}>Add a stop</Button>
       {error && <ErrorNote message={error} />}
-      <Button disabled={loading}>{loading ? 'Checking…' : 'Check forecast'}</Button>
+      <Button size="lg" disabled={loading}>{loading ? 'Checking…' : 'Check forecast'}</Button>
 
-      {results && (
-        <div className="space-y-2 pt-2">
-          {results.legs.map((leg, i) => {
-            if (leg.error) return <p key={i} className="text-sm text-bad">{leg.ident}: {leg.error}</p>;
-            const period = leg.forecast?.periods?.[0];
-            return (
-              <WeatherConditions key={i} data={period ?? leg.forecast}
-                label={`${leg.airport?.ident ?? leg.ident} — ${timeLabel(leg.eta, leg.airport?.tz)}`} />
-            );
-          })}
-        </div>
-      )}
+      {results && results.legs.map((leg, i) => {
+        if (leg.error) return <p key={i} className="mn-err">{leg.ident}: {leg.error}</p>;
+        const period = leg.forecast?.periods?.[0];
+        return <WeatherConditions key={i} data={period ?? leg.forecast} label={`${leg.airport?.ident ?? leg.ident}, ${timeLabel(leg.eta, leg.airport?.tz)}`} />;
+      })}
     </form>
   );
 }
 
+/** Weather (minimalist system): the verdict against your personal minimums, the numbers, and the detail one tap down. The planning-aid note is behind the info button. */
 export default function Weather() {
   const [mode, setMode] = useState('airport');
+  const [note, setNote] = useState(false);
 
   return (
-    <div className="stagger space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <h1 className="flex min-w-0 flex-1 items-center gap-2 truncate text-2xl font-semibold"><CloudSun size={22} className="shrink-0 text-accent" /><span className="truncate">Weather</span></h1>
-        <Link to="/weather/settings" aria-label="Weather settings" className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
-          <Settings size={20} />
-        </Link>
-      </div>
-
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setMode('airport')}
-          className={`pressable h-10 flex-1 rounded-xl text-sm font-medium transition-colors ${mode === 'airport' ? 'bg-accent text-ink' : 'border border-edge text-slate-400'}`}>
-          This airport
-        </button>
-        <button type="button" onClick={() => setMode('plan')}
-          className={`pressable h-10 flex-1 rounded-xl text-sm font-medium transition-colors ${mode === 'plan' ? 'bg-accent text-ink' : 'border border-edge text-slate-400'}`}>
-          Plan a flight
-        </button>
+    <div className="cl mn">
+      <div className="mn-ctl">
+        <Segmented label="Weather check" scope="pilot" options={MODES} value={mode} onChange={setMode} />
+        <span className="ic">
+          <button type="button" className="gl clear icon" aria-label="About this check" title="About this check" onClick={() => setNote(true)}><Info className="ds-i" aria-hidden="true" /></button>
+          <Link to="/weather/settings" className="gl clear icon" aria-label="Weather settings" title="Weather settings"><Settings className="ds-i" aria-hidden="true" /></Link>
+        </span>
       </div>
 
       {mode === 'airport' ? <AirportCheck /> : <PlanFlight />}
 
-      <p className="px-1 text-xs text-slate-500">{NOTE}</p>
+      <p className="mn-note">{NOTE}</p>
+
+      <Sheet open={note} onClose={() => setNote(false)} title="About this check" detent="medium">
+        <div className="cl mn mn-sheet"><p className="mn-note" style={{ fontSize: 'var(--fs-p)' }}>{NOTE}</p></div>
+      </Sheet>
     </div>
   );
 }

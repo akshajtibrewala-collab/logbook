@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Printer, Plane } from 'lucide-react';
 import SummaryDocument from '../components/SummaryDocument.jsx';
-import ThemeToggle from '../components/ThemeToggle.jsx';
 import Skeleton from '../components/Skeleton.jsx';
 import Button from '../components/Button.jsx';
+import '../ds/tokens.css';
+import '../ds/summary.css';
 
 /**
  * The read-only public summary. It deliberately does not use lib/api.js (no passcode, no edit calls):
@@ -39,22 +40,21 @@ export default function PublicShare() {
   }, []);
 
   return (
-    <div className="mx-auto min-h-dvh max-w-3xl px-4 py-6 md:px-8 md:py-10">
-      <div className="no-print mb-4 flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm text-slate-400"><Plane size={16} />AeroHub · read-only view</span>
+    <div className="sd-page">
+      <div className="no-print sd-bar">
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Plane size={16} aria-hidden="true" />AeroHub · read-only view</span>
         <div className="flex items-center gap-2">
           {state === 'ok' && <Button size="sm" fullWidth={false} variant="secondary" icon={Printer} iconSize={16} onClick={() => window.print()}>Print</Button>}
-          <ThemeToggle />
         </div>
       </div>
-      {state === 'loading' && <div className="space-y-4"><Skeleton className="h-16" /><Skeleton className="h-40" /></div>}
+      {state === 'loading' && <div role="status" aria-label="Loading" style={{ display: 'grid', gap: 16 }}><Skeleton className="h-16" /><Skeleton className="h-40" /></div>}
       {state === 'invalid' && (
-        <div className="py-20 text-center">
-          <p className="text-lg font-medium">This link isn’t active.</p>
-          <p className="mt-1 text-sm text-slate-400">It may have been turned off or replaced. Ask the pilot for a new link.</p>
+        <div className="sd-state">
+          <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>This link isn’t active.</p>
+          <p className="mut">It may have been turned off or replaced. Ask the pilot for a new link.</p>
         </div>
       )}
-      {state === 'error' && <p role="alert" className="py-20 text-center text-slate-400">Couldn’t load this summary right now. Try again in a moment.</p>}
+      {state === 'error' && <div role="alert" className="sd-state"><p>Couldn’t load this summary right now.</p><p className="mut">Try again in a moment.</p></div>}
       {state === 'ok' && (
         <SummaryDocument summary={summary} photoSrc={(id) => `/api/public/${encodeURIComponent(token)}/photos/${id}`} />
       )}

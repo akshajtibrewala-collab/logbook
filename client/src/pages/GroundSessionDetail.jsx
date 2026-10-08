@@ -1,30 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, GraduationCap } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Pencil } from 'lucide-react';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
-import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
-import { formatDateWithWeekday as fmtDate } from '../lib/calendar.js';
+import Button from '../components/Button.jsx';
+import { MnFold, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
+import { formatDate as fmtDate } from '../lib/calendar.js';
+import '../ds/logbook.css';
 
-
-function Section({ title, children }) {
-  return (
-    <section className="card card-elevated p-4">
-      <h2 className="stat-title mb-3 text-sm text-accent-strong">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
+/** A ground session in the minimalist detail layout: its hours (never part of flight hours), topics, instructor, notes and cost. */
 export default function GroundSessionDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [error, setError] = useState('');
   const [rates, setRates] = useState(null);
   const [phases, setPhases] = useState(null);
+  const [open, setOpen] = useState({});
+  const fold = (k) => ({ open: Boolean(open[k]), onToggle: () => setOpen((o) => ({ ...o, [k]: !o[k] })) });
 
   const load = useCallback(() => {
     setError('');
@@ -37,61 +31,37 @@ export default function GroundSessionDetail() {
 
   const cost = session && rates && phases ? computeGroundSessionCost(session, rates, phases) : null;
 
+  if (error) return <div className="cl mn"><ErrorNote message={error} onRetry={load} /></div>;
+  if (!session) return <div className="cl mn"><MnSkeleton rows={2} /></div>;
+
   return (
-    <div className="stagger space-y-4">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 lg:hidden" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Ground session</h1>
-        {session && (
-          <Link to={`/logbook/ground/${id}/edit`} aria-label="Edit ground session" className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800 text-slate-300 active:text-accent">
-            <Pencil size={18} />
-          </Link>
-        )}
-      </div>
+    <div className="cl mn">
+      <div className="mn-detail">
+        <div className="head">
+          <span className="mn-mut">{fmtDate(session.date)} · Ground</span>
+          <h1>{session.topics?.trim() ? session.topics : 'Ground instruction'}</h1>
+          <div className="num-row" role="img" aria-label={`${fmtHours(session.hours)} ground hours, not part of flight hours`}><span className="mn-num accent">{fmtHours(session.hours)}</span><span className="mn-u">h</span></div>
+        </div>
 
-      {error && <ErrorNote message={error} onRetry={load} />}
-      {!session && !error && <><Skeleton className="h-24" /><Skeleton className="h-32" /></>}
-
-      {session && (
-        <>
-          <section className="card card-hero p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="stat-title flex items-center gap-2 text-lg"><GraduationCap size={18} className="text-accent" />Ground instruction</div>
-                <div className="mt-0.5 text-sm text-slate-400">{fmtDate(session.date)}</div>
-              </div>
-              <div className="stat-value shrink-0 text-right text-3xl text-accent">{fmtHours(session.hours)}</div>
-            </div>
-            {session.instructor && <p className="mt-3 border-t border-edge pt-3 text-sm text-slate-300">Instructor: {session.instructor}</p>}
-          </section>
-
+        <div className="mn-card">
+          <MnKv k="Instructor" v={session.instructor} />
+          <MnKv k="Counts toward" v="Ground time only" />
+          {session.notes && <MnFold label="Notes" value="" {...fold('notes')}><p>{session.notes}</p></MnFold>}
           {cost && (cost.total > 0 || cost.override) && (
-            <Section title="Cost">
-              <div className="flex items-baseline justify-between">
-                <span className="stat-value text-2xl">{fmtMoney(cost.total)}</span>
-                {cost.override && (
-                  <span className="text-xs text-slate-400">
-                    Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}
-                  </span>
-                )}
+            <MnFold label="Cost" value={fmtMoney(cost.total)} {...fold('cost')}>
+              <div>
+                <MnKv k="Cost" v={fmtMoney(cost.total)} />
+                {cost.override && <p className="mn-note">Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}</p>}
+                {cost.missingRate && <p className="mn-note" style={{ color: 'var(--ds-bad)' }}>The ground rate wasn't set for this date. See Costs settings.</p>}
               </div>
-              {cost.missingRate && <p className="mt-1 text-xs text-bad">The ground rate wasn't set for this date — see Costs settings.</p>}
-            </Section>
+            </MnFold>
           )}
+        </div>
 
-          {session.topics && (
-            <Section title="Topics covered">
-              <p className="whitespace-pre-wrap text-sm text-slate-300">{session.topics}</p>
-            </Section>
-          )}
-
-          {session.notes && (
-            <Section title="Notes">
-              <p className="whitespace-pre-wrap text-sm text-slate-300">{session.notes}</p>
-            </Section>
-          )}
-        </>
-      )}
+        <div className="mn-actions">
+          <Button as={Link} to={`/logbook/ground/${id}/edit`} variant="primary" size="lg" icon={Pencil}>Edit ground session</Button>
+        </div>
+      </div>
     </div>
   );
 }

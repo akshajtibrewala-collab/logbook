@@ -46,7 +46,7 @@ export default function ShareSettings() {
   return (
     <div className="space-y-4 md:mx-auto md:max-w-xl">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
+        <button type="button" onClick={() => navigate('/logbook')} className="gl clear icon sm" aria-label="Back"><ArrowLeft size={20} /></button>
         <h1 className="text-2xl font-semibold">Share & print</h1>
       </div>
 
@@ -70,7 +70,7 @@ export default function ShareSettings() {
             <>
               <label className="mt-3 block text-xs text-slate-400">Your link
                 <input readOnly value={url} onFocus={(e) => e.target.select()}
-                  className="mt-1 h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-sm outline-none focus:border-accent" />
+                  className="gl-field mt-1 h-12 w-full px-3 text-sm" />
               </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <Button size="md" variant="secondary" icon={Copy} iconSize={16} onClick={copy}>{copied ? 'Copied' : 'Copy link'}</Button>

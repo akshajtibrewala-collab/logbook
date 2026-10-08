@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Minus, Plus } from 'lucide-react';
 import { api } from '../lib/api.js';
@@ -20,7 +21,7 @@ const today = () => iso(new Date());
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return iso(d); };
 const CHIPS = ['0.5', '1.0', '1.5', '2.0'];
 
-const bigBtn = 'pressable flex h-14 items-center justify-center rounded-2xl border text-base font-medium transition-colors';
+const bigBtn = 'gl lg';
 
 /**
  * Log a flight in a few taps, right after landing: date, route, aircraft, time. Everything else takes
@@ -104,7 +105,7 @@ export default function QuickFlight() {
 
   if (saved) {
     return (
-      <div className="space-y-4 md:mx-auto md:max-w-xl">
+      <div className="cl mn mn-form md:mx-auto md:max-w-xl">
         <div className="card card-hero p-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok/15 text-ok"><Check size={28} /></span>
           <h1 className="stat-title mt-3 text-2xl">Flight logged</h1>
@@ -118,11 +119,7 @@ export default function QuickFlight() {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">Quick log</h1>
-      </div>
+    <form onSubmit={submit} className="cl mn mn-form md:mx-auto md:max-w-xl">
       {notice && <p role="status" className="rounded-xl bg-accent/10 p-3 text-sm text-accent-strong">{notice}</p>}
 
       <section className="card card-elevated space-y-3 p-4">
@@ -130,7 +127,7 @@ export default function QuickFlight() {
         <div className="grid grid-cols-2 gap-2">
           {[['Today', today()], ['Yesterday', yesterday()]].map(([label, value]) => (
             <button key={label} type="button" onClick={() => set({ date: value })} aria-pressed={form.date === value}
-              className={`${bigBtn} ${form.date === value ? 'border-accent bg-accent text-ink' : 'border-edge bg-navy-800 text-slate-300'}`}>{label}</button>
+              className={`${bigBtn} ${form.date === value ? 'pilot' : 'clear'}`}>{label}</button>
           ))}
         </div>
         <DatePicker label="Other date" value={form.date} onChange={(v) => set({ date: v })} error={errors.date} />
@@ -142,7 +139,7 @@ export default function QuickFlight() {
           <AirportSearchField label="To" value={form.arrival_airport} onChange={(v) => set({ arrival_airport: v })} error={errors.arrival_airport} placeholder="KSQL" />
         </div>
         <button type="button" onClick={() => set({ departure_airport: form.arrival_airport, arrival_airport: form.departure_airport })}
-          className="pressable h-11 text-sm text-accent-strong">Swap From and To</button>
+          className="gl link sm">Swap From and To</button>
       </section>
 
       <section className="card card-elevated space-y-3 p-4">
@@ -152,7 +149,7 @@ export default function QuickFlight() {
             <div className="grid gap-2">
               {recentAircraft.map((a) => (
                 <button key={a.id} type="button" onClick={() => set({ aircraft: a })} aria-pressed={form.aircraft?.id === a.id}
-                  className={`${bigBtn} ${form.aircraft?.id === a.id ? 'border-accent bg-accent/15 text-accent' : 'border-edge bg-navy-800 text-slate-300'}`}>
+                  className={`${bigBtn} ${form.aircraft?.id === a.id ? 'pilot' : 'clear'}`}>
                   {[a.tail_number, a.model].filter(Boolean).join(' · ') || 'Aircraft'}
                 </button>
               ))}
@@ -166,33 +163,33 @@ export default function QuickFlight() {
         <span className="block text-xs text-slate-400">Flight time (hours)</span>
         <div className="flex items-center gap-3">
           <button type="button" aria-label="0.1 hour less" onClick={() => set({ total_time: stepHours(form.total_time, -0.1) })}
-            className="pressable flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-edge bg-navy-800 active:bg-navy-700"><Minus size={24} /></button>
+            className="gl clear icon sm shrink-0"><Minus size={24} /></button>
           <input aria-label="Flight time in hours" inputMode="decimal" value={form.total_time}
             onChange={(e) => set({ total_time: e.target.value })} onBlur={() => { const n = Number(String(form.total_time).replace(',', '.')); if (Number.isFinite(n) && n >= 0) set({ total_time: n.toFixed(2) }); }}
-            className={`stat-value h-16 min-w-0 flex-1 rounded-2xl border bg-navy-800 text-center text-3xl outline-none focus:border-accent ${errors.total_time ? 'border-bad' : 'border-edge'}`} />
+            className={`stat-value gl-field h-16 min-w-0 flex-1 text-center text-3xl ${errors.total_time ? 'is-bad' : ''}`} />
           <button type="button" aria-label="0.1 hour more" onClick={() => set({ total_time: stepHours(form.total_time, 0.1) })}
-            className="pressable flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-edge bg-navy-800 active:bg-navy-700"><Plus size={24} /></button>
+            className="gl clear icon sm shrink-0"><Plus size={24} /></button>
         </div>
         {errors.total_time && <p role="alert" className="text-sm text-bad">{errors.total_time}</p>}
         <div className="grid grid-cols-4 gap-2">
           {CHIPS.map((c) => (
             <button key={c} type="button" onClick={() => set({ total_time: Number(c).toFixed(2) })}
-              className={`${bigBtn} h-12 ${Number(form.total_time) === Number(c) ? 'border-accent text-accent' : 'border-edge bg-navy-800 text-slate-300'}`}>{c}</button>
+              className={`${bigBtn} sm ${Number(form.total_time) === Number(c) ? 'pilot' : 'clear'}`}>{c}</button>
           ))}
         </div>
         <div className="grid grid-cols-2 gap-2">
           {[[false, 'Pilot in command'], [true, 'Dual received']].map(([value, label]) => (
             <button key={label} type="button" onClick={() => set({ dual: value })} aria-pressed={form.dual === value}
-              className={`${bigBtn} h-12 text-sm ${form.dual === value ? 'border-accent bg-accent text-ink' : 'border-edge bg-navy-800 text-slate-300'}`}>{label}</button>
+              className={`${bigBtn} sm ${form.dual === value ? 'pilot' : 'clear'}`}>{label}</button>
           ))}
         </div>
       </section>
 
       {message && <p role="alert" className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
-      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-        <Button size="lg" disabled={saving}>{saving ? 'Saving…' : 'Save flight'}</Button>
-      </div>
       <p className="text-center text-xs text-slate-500">Landings default to one full stop. Add night time, approaches, notes and photos later from the flight.</p>
+      <SaveBar>
+        <Button size="lg" disabled={saving}>{saving ? 'Saving…' : 'Save flight'}</Button>
+      </SaveBar>
     </form>
   );
 }

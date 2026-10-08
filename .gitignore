@@ -21,5 +21,8 @@ server/imports/
 server/scripts/one-off-*
 server/scripts/prod/one-off-*
 
-# Private design notes and standing plan (never commit)
+# Private design notes and standing plan, and mockup versions that contain the pilot's real hours and costs: local only, never committed
 docs/design/_private/
+
+# private local expectations for the checks (real figures, never committed)
+client/scripts/.local-expected.json

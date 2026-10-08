@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Upload, FileText, CheckCircle2, AlertTriangle, XCircle, DatabaseBackup, RotateCcw } from 'lucide-react';
+import { Download, Upload, FileText, CheckCircle2, AlertTriangle, XCircle, DatabaseBackup, RotateCcw } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { flightsToCsv, parseImport, TEMPLATE_CSV } from '../lib/csv.js';
 import { pilotFlights } from '../lib/flightRoles.js';
@@ -44,7 +43,6 @@ const STATUS = {
 };
 
 export default function ImportExport() {
-  const navigate = useNavigate();
   const fileRef = useRef(null);
   const [existing, setExisting] = useState(null);
   const [existingAircraft, setExistingAircraft] = useState(null);
@@ -238,43 +236,38 @@ export default function ImportExport() {
     else doRestore();
   }
 
-  const btn = 'pressable flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold disabled:opacity-60';
+  const btn = 'gl lg block';
   const result = preview?.result;
   const restoreCounts = restorePreview ? Object.entries(restorePreview.data.tables ?? {}) : [];
   const sampleFlights = [...(restorePreview?.data.tables.flights ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/logbook')} className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Import & export</h1>
-      </div>
-
+    <div className="cl mn mn-form">
       {message && (
         <p className={`rounded-xl p-3 text-sm ${message.kind === 'ok' ? 'bg-ok/10 text-ok-strong' : 'bg-bad/10 text-bad'}`}>{message.text}</p>
       )}
 
-      <section className="card card-elevated space-y-3 p-4">
-        <h2 className="stat-title text-sm text-slate-300">Export</h2>
+      <section className="mn-card">
+        <h2 className="mn-sub">Export</h2>
         <p className="text-sm text-slate-400">Your pilot logbook as a CSV — for insurance, job applications, or backup. It can be re-imported here.</p>
         <button onClick={exportCsv} disabled={busy} className={`${btn} bg-accent text-ink active:bg-accent-dark`}><Download size={20} />Export CSV</button>
-        <button onClick={exportAllCsv} disabled={busy} className={`${btn} bg-navy-800 text-slate-300 active:text-accent`}><Download size={20} />Export all flights (with role)</button>
+        <button onClick={exportAllCsv} disabled={busy} className={`${btn} clear`}><Download size={20} />Export all flights (with role)</button>
       </section>
 
-      <section className="card card-elevated space-y-3 p-4">
-        <h2 className="stat-title text-sm text-slate-300">Import</h2>
+      <section className="mn-card">
+        <h2 className="mn-sub">Import</h2>
         <p className="text-sm text-slate-400">
           Choose a CSV from ForeFlight or LogTen, or use this app's template. You'll see a preview and can fix problems before anything is added.
         </p>
         <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv" onChange={onFile} className="hidden" />
-        <button onClick={() => fileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent-strong active:bg-navy-800`}><Upload size={20} />Choose CSV file</button>
-        <button onClick={() => download('logbook-template.csv', TEMPLATE_CSV)} className="pressable flex h-10 w-full items-center justify-center gap-2 text-sm text-slate-400">
+        <button onClick={() => fileRef.current?.click()} disabled={busy} className={`${btn} clear`}><Upload size={20} />Choose CSV file</button>
+        <button onClick={() => download('logbook-template.csv', TEMPLATE_CSV)} className="gl plain sm block">
           <FileText size={16} />Download the template
         </button>
       </section>
 
-      <section className="card card-elevated space-y-3 p-4">
-        <h2 className="stat-title text-sm text-slate-300">Full backup</h2>
+      <section className="mn-card">
+        <h2 className="mn-sub">Full backup</h2>
         <BackupStatus />
         <p className="text-sm text-slate-400">
           Everything in one file — flights, stops, approaches, aircraft, flight reviews and expirations —
@@ -284,14 +277,14 @@ export default function ImportExport() {
           <DatabaseBackup size={20} />Export everything
         </button>
         <input ref={backupFileRef} type="file" accept="application/json,.json" onChange={onBackupFile} className="hidden" />
-        <button onClick={() => backupFileRef.current?.click()} disabled={busy} className={`${btn} border border-edge-strong text-accent-strong active:bg-navy-800`}>
+        <button onClick={() => backupFileRef.current?.click()} disabled={busy} className={`${btn} clear`}>
           <RotateCcw size={20} />Restore from backup
         </button>
       </section>
 
       {restorePreview && (
-        <section className="card card-elevated space-y-3 p-4">
-          <h2 className="stat-title text-sm text-slate-300">Restore preview — {restorePreview.name}</h2>
+        <section className="mn-card">
+          <h2 className="mn-sub">Restore preview — {restorePreview.name}</h2>
           <p className="text-xs text-slate-500">
             Exported {restorePreview.data.exported_at ? formatInstant(restorePreview.data.exported_at) : 'unknown date'}
             {' · '}format v{restorePreview.data.format_version ?? '?'}
@@ -378,7 +371,7 @@ export default function ImportExport() {
           <button onClick={runImport} disabled={busy || toImport + groundToImport === 0} className={`${btn} bg-accent text-ink active:bg-accent-dark`}>
             {busy ? 'Importing…' : toImport + groundToImport === 0 ? 'Nothing to import' : `Import ${toImport} flight${toImport === 1 ? '' : 's'}${groundToImport ? ` + ${groundToImport} ground session${groundToImport === 1 ? '' : 's'}` : ''}`}
           </button>
-          <button onClick={() => setPreview(null)} className="pressable h-10 w-full text-sm text-slate-400">Cancel</button>
+          <button onClick={() => setPreview(null)} className="gl plain sm block">Cancel</button>
         </section>
       )}
 

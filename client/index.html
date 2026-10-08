@@ -1,9 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background:#000;color-scheme:dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#07090d" />
+    <!-- Dark only: true black before the app mounts (no white flash), dark scrollbars, form controls, pickers and iOS keyboard. -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <style>html,body{background:#000;color-scheme:dark}</style>
     <title>AeroHub</title>
 
     <!-- Icons: browser tab, iOS home screen, Android/Chrome install (see client/scripts/generate-icons.mjs) -->
@@ -17,11 +20,10 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="AeroHub" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="application-name" content="AeroHub" />
   </head>
   <body>
-    <script>try{var t=localStorage.getItem('logbook-theme');if(t==='light'||(t!=='dark'&&window.matchMedia('(prefers-color-scheme: light)').matches))document.documentElement.classList.add('light')}catch(e){}</script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

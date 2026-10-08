@@ -61,11 +61,16 @@ test('passenger rows are never read by any cost, pace or milestone code', () => 
   assert.deepEqual(figures([...poisoned, ...pilot]), figures(pilot));
 });
 
-test('the Costs page filters at the load point and computes only through computeCostsFigures', () => {
-  const src = fs.readFileSync(new URL('../pages/Costs.jsx', import.meta.url), 'utf8');
-  assert.match(src, /setData\(\{ flights: pilotFlights\(flights\)/);
-  assert.match(src, /computeCostsFigures\(data,/);
-  for (const banned of ['computeMilestones(', 'spentPerFlightHour(', 'buildCertificateProjection(', 'recentFlyingFrequency(']) {
-    assert.ok(!src.includes(banned), `Costs.jsx must not call ${banned} directly`);
+test('the Costs screens get their data from one hook that filters at the load point and computes only through computeCostsFigures', () => {
+  const hook = fs.readFileSync(new URL('../hooks/useCostsData.js', import.meta.url), 'utf8');
+  assert.match(hook, /setData\(\{ flights: pilotFlights\(flights\)/);
+  assert.match(hook, /computeCostsFigures\(data,/);
+  for (const page of ['Costs', 'CostsSpending', 'CostsPhases', 'CostsExpenses', 'CostsProjection']) {
+    const src = fs.readFileSync(new URL(`../pages/${page}.jsx`, import.meta.url), 'utf8');
+    assert.match(src, /useCostsData\(/, `${page}.jsx loads through useCostsData`);
+    assert.ok(!/api\.listFlights\(/.test(src), `${page}.jsx must not load flights itself (passenger flights must never reach Costs)`);
+    for (const banned of ['computeMilestones(', 'spentPerFlightHour(', 'buildCertificateProjection(', 'recentFlyingFrequency(']) {
+      assert.ok(!src.includes(banned), `${page}.jsx must not call ${banned} directly`);
+    }
   }
 });

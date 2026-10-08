@@ -4,7 +4,7 @@ export default function Select({ label, value, onChange, options, placeholder = 
     <label className={`block ${className}`}>
       {label && <span className="mb-1 block text-xs text-slate-400">{label}</span>}
       <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}
-        className={`h-12 w-full rounded-xl border bg-navy-800 px-3 text-base outline-none focus:border-accent ${error ? 'border-bad' : 'border-edge'}`}>
+        className={`gl-field h-12 w-full px-3 text-base ${error ? 'is-bad' : ''}`}>
         <option value="">{placeholder}</option>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

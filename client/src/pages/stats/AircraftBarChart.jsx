@@ -68,14 +68,14 @@ export default function AircraftBarChart({ title, note, byType, byTail, tint = '
   return (
     <CollapsibleStatCard title={title} note={note} icon={Plane} defaultOpen={defaultOpen}>
       {byTail && (
-        <div className="mb-3 flex gap-1 rounded-xl bg-navy-800 p-1" role="group" aria-label="Group aircraft by">
+        <div className="gl-seg mb-3" role="group" aria-label="Group aircraft by">
           {[['type', 'By type'], ['tail', 'By tail number']].map(([k, l]) => (
             <button key={k} type="button" onClick={() => setGroupBy(k)} aria-pressed={groupBy === k}
-              className={`pressable h-11 flex-1 rounded-lg text-sm font-medium transition-colors ${groupBy === k ? 'bg-accent text-ink' : 'text-slate-400'}`}>{l}</button>
+              className="gl clear">{l}</button>
           ))}
         </div>
       )}
-      {rows.length === 0 ? <p className="text-sm text-slate-500">No aircraft logged yet.</p> : (
+      {rows.length === 0 ? <p className="text-sm text-slate-400">No aircraft logged yet.</p> : (
         <div ref={containerRef} style={{ height: rows.length * ROW_HEIGHT + CHART_PAD }}>
           <ResponsiveContainer>
             <BarChart data={rows} layout="vertical" barCategoryGap={ROW_GAP}

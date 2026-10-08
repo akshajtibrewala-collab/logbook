@@ -2,21 +2,25 @@ import { useCallback, useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { LOCKED_EVENT, api, setPasscode } from '../lib/api.js';
 import Button from './Button.jsx';
+import '../ds/tokens.css';
+import '../ds/states.css';
 
 function LockScreen({ onUnlock, error, busy }) {
   const [value, setValue] = useState('');
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onUnlock(value); }} className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 px-6">
-      <div className="text-center">
-        <Lock size={36} strokeWidth={1.5} className="mx-auto text-accent" />
-        <h1 className="mt-3 text-2xl font-semibold">AeroHub</h1>
-        <p className="mt-1 text-sm text-slate-400">Enter your passcode to continue.</p>
-      </div>
-      <input type="password" autoFocus autoComplete="current-password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Passcode"
-        className={`h-12 w-full rounded-xl border bg-navy-800 px-3 text-base outline-none focus:border-accent ${error ? 'border-bad' : 'border-edge'}`} />
-      {error && <p className="text-sm text-bad">{error}</p>}
-      <Button size="md" disabled={busy || !value}>{busy ? 'Checking…' : 'Unlock'}</Button>
-    </form>
+    <main className="st-page">
+      <form onSubmit={(e) => { e.preventDefault(); onUnlock(value); }} aria-label="Unlock AeroHub">
+        <div style={{ display: 'grid', gap: 8, justifyItems: 'center' }}>
+          <Lock className="st-lock" aria-hidden="true" />
+          <h1 className="st-mark">AeroHub</h1>
+          <p className="st-sub">Enter your passcode.</p>
+        </div>
+        <input type="password" autoFocus autoComplete="current-password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Passcode" aria-label="Passcode"
+          aria-invalid={error ? 'true' : undefined} className={`gl-field h-12 w-full px-3 text-base ${error ? 'is-bad' : ''}`} />
+        {error && <p role="alert" className="st-err"><span className="st-dot" aria-hidden="true" />{error}</p>}
+        <Button size="md" disabled={busy || !value}>{busy ? 'Checking…' : 'Unlock'}</Button>
+      </form>
+    </main>
   );
 }
 
@@ -61,10 +65,11 @@ export default function AuthGate({ children }) {
   if (state === 'checking') return null;
   if (state === 'offline') {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-slate-400">Can’t reach the server right now.</p>
+      <main className="st-page" role="alert">
+        <h1 className="st-mark">AeroHub</h1>
+        <p className="st-sub">Can’t reach the server right now. Anything you logged is kept on this device.</p>
         <Button size="md" fullWidth={false} variant="secondary" onClick={() => { setState('checking'); check(); }}>Retry</Button>
-      </div>
+      </main>
     );
   }
   if (state === 'locked') return <LockScreen onUnlock={unlock} error={error} busy={busy} />;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { claimOverlay } from '../ds/overlayRegistry.js';
 import { createPortal } from 'react-dom';
 import { Calendar, CalendarClock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import {
@@ -7,7 +8,7 @@ import {
 import { localAndZulu, utcToZonedParts, zonedToUtc, zoneAbbreviation } from '../lib/timezone.js';
 import Button from './Button.jsx';
 
-const navBtn = 'flex h-10 w-10 items-center justify-center rounded-full text-slate-300 active:bg-navy-800 active:text-accent';
+const navBtn = 'gl clear icon sm';
 const wrap = (n, mod) => ((n % mod) + mod) % mod;
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -34,7 +35,7 @@ function TimeStepper({ label, value, mod, onCommit, onInc, onDec }) {
         onFocus={(e) => e.target.select()}
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        className="h-11 w-14 rounded-xl border border-edge bg-navy-800 text-center text-lg font-semibold tabular-nums outline-none focus:border-accent" />
+        className="gl-field h-11 w-14 text-center text-lg font-semibold tabular-nums" />
       <button type="button" onClick={onDec} aria-label={`${label}, decrease`} className={navBtn}><ChevronDown size={18} /></button>
     </div>
   );
@@ -62,13 +63,16 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min, zone }) {
   const [hour, setHour] = useState(initialTime?.hour ?? nowInZone?.hour ?? now.getHours());
   const [minute, setMinute] = useState(initialTime?.minute ?? Math.round((nowInZone?.minute ?? now.getMinutes()) / 5) * 5 % 60);
 
+  const closeRef = useRef(onClose); closeRef.current = onClose;
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const stableClose = () => closeRef.current();
+    const release = claimOverlay(stableClose); // one overlay at a time, and the browser Back button closes the picker
+    const onKey = (e) => e.key === 'Escape' && stableClose();
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [onClose]);
+    return () => { release(); document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, []);
 
   useEffect(() => { ref.current?.querySelector('[data-focus]')?.focus(); }, [view, ym]);
 
@@ -135,11 +139,11 @@ function Sheet({ value, onPick, onClose, clearable, withTime, min, zone }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Choose a date">
-      <button type="button" aria-label="Close date picker" onClick={onClose} className="sheet-fade absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
+      <button type="button" aria-label="Close date picker" onClick={onClose} className="sheet-fade absolute inset-0 bg-black/55" />
       <div ref={ref} className="sheet-in safe-bottom relative w-full max-w-sm rounded-t-3xl border border-edge-strong bg-navy-900 p-4 shadow-2xl sm:rounded-3xl">
         <div className="mb-2 flex items-center justify-between">
           <button type="button" onClick={() => step(-1)} aria-label="Previous" className={navBtn}><ChevronLeft size={20} /></button>
-          <button type="button" onClick={cycleView} className="rounded-lg px-3 py-2 text-base font-semibold active:bg-navy-800" aria-label={`${title}, change view`}>{title}</button>
+          <button type="button" onClick={cycleView} className="gl plain sm" aria-label={`${title}, change view`}>{title}</button>
           <button type="button" onClick={() => step(1)} aria-label="Next" className={navBtn}><ChevronRight size={20} /></button>
         </div>
 
@@ -257,8 +261,8 @@ export default function DatePicker({ label, value, onChange, error, clearable = 
     <div>
       {label && <span className="mb-1 block text-xs text-slate-400">{label}</span>}
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`${label || 'Date'}: ${shownWithZone || 'not set'}`}
-        className={`flex h-12 w-full items-center justify-between gap-2 rounded-xl border bg-navy-800 px-3 text-left text-base outline-none focus-visible:border-accent ${error ? 'border-bad' : open ? 'border-accent' : 'border-edge'}`}>
-        <span className={shown ? '' : 'text-slate-500'}>{shownWithZone || shownPlaceholder}</span>
+        className={`gl-select nochev flexbox ${error ? 'is-bad' : ''}`}>
+        <span className={shown ? '' : 'text-[var(--ds-text-2)]'}>{shownWithZone || shownPlaceholder}</span>
         <Icon size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
       </button>
       {error && <span className="mt-1 block text-xs text-bad">{error}</span>}

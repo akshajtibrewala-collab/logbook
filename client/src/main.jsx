@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import 'leaflet/dist/leaflet.css';
 import './index.css';
 import App from './App.jsx';
 import AuthGate from './components/AuthGate.jsx';
 import PublicShare from './pages/PublicShare.jsx';
+import ChunkBoundary from './components/ChunkBoundary.jsx';
 import { applyTheme, currentTheme } from './lib/theme.js';
+
+const DesignPage = lazy(() => import('./ds/DesignPage.jsx'));
+const ButtonsPage = lazy(() => import('./ds/ButtonsPage.jsx'));
 
 applyTheme(currentTheme());
 
@@ -16,6 +19,9 @@ createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Routes>
       <Route path="/share/:token" element={<PublicShare />} />
+      {/* Hidden design-system specimen sheet: not linked from anywhere, behind the passcode gate like the app. */}
+      <Route path="/design" element={<AuthGate><ChunkBoundary resetKey="design"><Suspense fallback={null}><DesignPage /></Suspense></ChunkBoundary></AuthGate>} />
+      <Route path="/design/buttons" element={<AuthGate><ChunkBoundary resetKey="buttons"><Suspense fallback={null}><ButtonsPage /></Suspense></ChunkBoundary></AuthGate>} />
       <Route path="*" element={<AuthGate><App /></AuthGate>} />
     </Routes>
   </BrowserRouter>

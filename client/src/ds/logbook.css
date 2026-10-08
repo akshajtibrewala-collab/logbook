@@ -1,0 +1,86 @@
+@import './calm.css';
+/* The Logbook / Travel list pattern (docs/design/logbook-layouts, Option A): a totals strip, one search + Filter bar, removable filter chips,
+   month (or year) headers with their hours, and flat rows with a date block. Solid content only — no glass here. Tokens only. */
+
+.lb-totals { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: var(--ds-s-2); align-items: end; padding: var(--ds-s-3) 0 var(--ds-s-2); border-top: 1px solid var(--ds-rule); margin-top: var(--ds-s-2); }
+.lb-totals .big { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ds-pilot); }
+.lb-totals.pax .big { color: var(--ds-pax); }
+.lb-totals .cap { display: block; font-size: var(--ds-fs-cap); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ds-text-2); margin-bottom: var(--ds-s-1); }
+.lb-totals .s { display: grid; gap: 2px; min-width: 0; }
+.lb-totals .s i { font-style: normal; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ds-text-2); }
+.lb-totals .s b { font-size: 1.125rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+@media (max-width: 479px) { .lb-totals { grid-template-columns: 1fr 1fr 1fr; } .lb-totals > :first-child { grid-column: 1 / -1; } }
+
+.lb-bar { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); align-items: center; margin: var(--ds-s-2) 0; } /* at large text the Filter button drops to its own row instead of squeezing the field */
+.lb-search { position: relative; flex: 1 1 10rem; min-width: 0; }
+.lb-search svg { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; fill: none; stroke: var(--ds-text-2); stroke-width: 2; pointer-events: none; }
+.lb-search input { width: 100%; min-height: 3rem; border-radius: 999px; padding: 0 min(2.75rem, 44px) 0 min(2.6rem, 42px); font: inherit; font-size: max(var(--ds-fs-input), 16px); color: var(--ds-text); }
+.lb-search .clear { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); }
+.lb-chips { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); margin: var(--ds-s-1) 0; }
+.lb-chips .gl-chip svg { width: 0.875rem; height: 0.875rem; }
+.lb-count { font-size: var(--ds-fs-sub); color: var(--ds-text-2); margin: var(--ds-s-1) 0; }
+
+.lb-month { position: sticky; top: calc(var(--ds-top) + var(--ds-bar-h) + 16px); z-index: 5; display: flex; justify-content: space-between; align-items: baseline; gap: var(--ds-s-3); padding: 0.9rem 0 0.4rem; background: var(--ds-bg); font-size: var(--ds-fs-cap); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ds-text-2); }
+.lb-month .h { letter-spacing: 0; text-transform: none; font-weight: 600; font-size: var(--ds-fs-sub); }
+.lb-month .h .gr { color: var(--ds-text-3); font-weight: 500; }
+.lb-gbadge { display: inline-grid; place-items: center; width: 1.375rem; height: 1.375rem; margin-right: 0.5rem; border: 1px solid var(--ds-hair-strong); border-radius: 50%; color: var(--ds-text-2); vertical-align: -3px; }
+.lb-gbadge svg { width: 0.75rem; height: 0.75rem; fill: none; stroke: currentColor; stroke-width: 2; }
+.lb-month .h b { color: var(--ds-pilot); } .lb-month.pax .h b { color: var(--ds-pax); }
+
+.lb-row { display: grid; grid-template-columns: 3.1rem minmax(0, 1fr) auto; gap: var(--ds-s-3); align-items: center; min-height: 4.5rem; padding: 0.5rem 0; border-top: 1px solid var(--ds-hair); color: inherit; text-decoration: none; width: 100%; text-align: left; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; cursor: pointer; font: inherit; }
+.lb-row:active { background: var(--ds-surface); }
+.lb-row[aria-current="true"] { background: var(--ds-surface); box-shadow: inset 3px 0 0 var(--ds-pilot); }
+.lb-row.pax[aria-current="true"] { box-shadow: inset 3px 0 0 var(--ds-pax); }
+.lb-date { display: grid; justify-items: center; line-height: 1; }
+.lb-date b { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.lb-date i { font-style: normal; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; color: var(--ds-text-2); margin-top: 3px; }
+.lb-date.icon { width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--ds-surface-2); place-items: center; color: var(--ds-text-2); justify-self: center; }
+.lb-main { display: grid; gap: 2px; min-width: 0; }
+.lb-main strong { font-size: var(--ds-fs-body); font-weight: 650; overflow-wrap: anywhere; }
+.lb-main em { font-style: normal; font-weight: 500; font-size: 0.8125rem; color: var(--ds-text-2); margin-left: 0.5rem; }
+.lb-main .air { border: 1px solid var(--ds-hair-strong); border-radius: 6px; padding: 0 0.35rem; font-weight: 700; font-size: 0.6875rem; }
+.lb-main span { font-size: var(--ds-fs-sub); color: var(--ds-text-2); overflow-wrap: anywhere; }
+.lb-main .t { font-size: 0.8125rem; }
+/* Fixed three-line structure: 1 route (+ flight number), 2 badge · gap · aircraft (one line, ellipsis), 3 times and class (one line, ellipsis). */
+.lb-main .l2 { display: flex; align-items: center; gap: 0.5rem; min-width: 0; overflow-wrap: normal; }
+.lb-main .l2 .ty, .lb-main .l3 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-main .l3 { font-size: 0.8125rem; }
+.lb-main .l3:empty { display: none; }
+.lb-end { display: grid; justify-items: end; gap: 2px; }
+.lb-end b { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ds-pilot); }
+.lb-row.pax .lb-end b { color: var(--ds-pax); }
+.lb-end i { font-style: normal; font-size: 0.75rem; color: var(--ds-text-3); }
+.lb-photo { width: 0.875rem; height: 0.875rem; vertical-align: -2px; margin-left: 0.4rem; color: var(--ds-text-3); fill: none; stroke: currentColor; stroke-width: 2; }
+
+.lb-fs { display: grid; gap: var(--ds-s-4); }
+.lb-two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ds-s-3); }
+.lb-more { margin-top: var(--ds-s-3); }
+
+
+/* Flight / ground session detail */
+.lb-dt { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ds-s-4); }
+.lb-dh .lb-route { font-size: clamp(1.75rem, 8vw, 2.25rem); margin: 0.1rem 0 var(--ds-s-2); letter-spacing: -0.03em; line-height: 1.05; font-weight: 800; overflow-wrap: anywhere; }
+.lb-badges { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); align-items: center; }
+.lb-hero { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--ds-s-2) var(--ds-s-3); }
+.lb-big { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ds-pilot); }
+.lb-big.pax { color: var(--ds-pax); }
+.lb-cost { text-align: right; } .lb-cost i, .lb-st i { display: block; font-style: normal; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ds-text-2); }
+.lb-cost b { font-size: 1.5rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.lb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: var(--ds-s-3) var(--ds-s-4); }
+.lb-st b { display: block; font-size: 1.375rem; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lb-note { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lb-ul { list-style: none; margin: var(--ds-s-3) 0 0; padding: 0; }
+.lb-ul li { display: flex; justify-content: space-between; gap: var(--ds-s-3); padding: var(--ds-s-2) 0; border-top: 1px solid var(--ds-hair); color: var(--ds-text-2); } .lb-ul li span:first-child { color: var(--ds-text); }
+.lb-actions { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); margin-top: var(--ds-s-2); }
+
+/* Two panes on wide screens: the list keeps its own width, the detail fills the rest. */
+.lb-panes { display: block; }
+@media (min-width: 1024px) {
+  /* The divider is the detail pane's own left border: the pane stretches to the list's height and is never shorter than the window. */
+  .lb-panes { display: flex; align-items: stretch; gap: 28px; }
+  .lb-panes > .lb-list { width: 26rem; flex: none; }
+  .lb-panes.is-ledger > .lb-list { width: auto; flex: 1; min-width: 0; } /* the Ledger is a full-width table */
+  .lb-panes > .lb-detail { flex: 1; min-width: 0; border-left: 1px solid var(--ds-hair); padding-left: 28px; min-height: calc(100dvh - var(--ds-top) - var(--ds-bar-h) - 4rem); }
+}
+.lb-totals.many { grid-template-columns: repeat(3, 1fr); row-gap: var(--ds-s-3); } .lb-totals.many > :first-child { grid-column: 1 / -1; }
+.lb-totals .s i, .lb-totals .s b { min-width: 0; overflow-wrap: anywhere; }

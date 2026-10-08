@@ -1,0 +1,140 @@
+/* AeroHub design system tokens (direction C "Large Type", dark only).
+
+   Structure: every colour, shadow, radius, size and duration lives here as a semantic --ds-* variable, and
+   component CSS (ds.css, glass.css) only ever uses those names — no literal colours anywhere else. Adding a
+   second theme later therefore means adding one block, `[data-ds-theme="light"] { ... }`, that redefines the
+   colour/glass/shadow variables below (see CLAUDE.md "Theme"); no component changes. The theme block is
+   selected by an attribute on <html>, which today is always "dark" (or absent, which means dark).
+
+   --ds-* and not the old --accent/--ok/... names because the old app (navy tokens, Tailwind) still runs until
+   the redesign replaces it, and its variables use a different (space-separated RGB) format. */
+
+:root, [data-ds-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces: true black page, surfaces just above it, hairline borders. No tint. */
+  --ds-bg: #000000;
+  --ds-surface: #0a0a0b;
+  --ds-surface-2: #151517;
+  --ds-surface-3: #1f1f23;
+  --ds-hair: rgb(255 255 255 / 0.12);
+  --ds-hair-strong: rgb(255 255 255 / 0.24);
+  --ds-scrim: rgb(0 0 0 / 0.5);
+
+  /* Text */
+  --ds-text: #f5f5f7;
+  --ds-text-2: #a1a1aa;
+  --ds-text-3: #8e8e96;
+  --ds-rule: var(--ds-text);           /* the strong top rule that opens a flat section (direction C) */
+
+  /* Accents: sky = pilot data only, violet = passenger data only. Semantic colours for status only. */
+  --ds-pilot: #5bb9ff;
+  --ds-pax: #b7a0ff;
+  --ds-ok: #3dd68c;
+  --ds-warn: #ffb340;
+  --ds-bad: #ff7a7a;
+  --ds-on-accent: #001a2e;             /* text on a solid pilot/pax/ok/warn/bad fill */
+  --ds-pilot-soft: color-mix(in srgb, var(--ds-pilot) 16%, transparent);
+  --ds-pax-soft: color-mix(in srgb, var(--ds-pax) 16%, transparent);
+  --ds-ok-soft: color-mix(in srgb, var(--ds-ok) 16%, transparent);
+  --ds-warn-soft: color-mix(in srgb, var(--ds-warn) 16%, transparent);
+  --ds-bad-soft: color-mix(in srgb, var(--ds-bad) 16%, transparent);
+  --ds-focus: var(--ds-pilot);
+  /* Channel triplets and fixed colours for the glass control recipe (buttons.css builds its tints from these). */
+  --ds-white: #ffffff; --ds-white-rgb: 255 255 255; --ds-black-rgb: 0 0 0;
+  --ds-sky-rgb: 91 185 255; --ds-violet-rgb: 183 160 255; --ds-red-rgb: 255 122 122; --ds-red-rim-rgb: 255 150 150;
+  --ds-bad-deep: #5a2323;              /* solid fill of a destructive confirm at the Solid level */
+
+  /* Neutral categorical ramp for charts (colour is reserved for pilot vs passenger). */
+  --ds-chart-1: var(--ds-text);
+  --ds-chart-2: color-mix(in srgb, var(--ds-text) 62%, transparent);
+  --ds-chart-3: color-mix(in srgb, var(--ds-text) 38%, transparent);
+  --ds-chart-4: color-mix(in srgb, var(--ds-text) 22%, transparent);
+  --ds-chart-grid: var(--ds-hair);
+
+  /* Map (tile-free preview) */
+  --ds-map-sea: #0a1522;
+  --ds-map-land: #1d2128;
+
+  /* Elevation */
+  --ds-shadow-solid: 0 8px 22px -6px rgb(0 0 0 / 0.5);
+  --ds-shadow-pop: 0 18px 40px -12px rgb(0 0 0 / 0.7);
+
+  /* Liquid glass (navigation/control layer only). Nearly clear: very low tint, small blur, boosted saturation. */
+  --ds-g-tint-lo: rgb(24 24 28 / 0.1);
+  --ds-g-tint-pop: rgb(12 12 16 / 0.35);       /* floor for menus/sheets; the scrim below applies only where the backdrop is bright */
+  --ds-g-tint-hi: rgb(12 12 16 / 0.7);        /* adaptive scrim, faded in over bright content */
+  --ds-g-blur: 6px;
+  --ds-g-sat: 1.9;
+  --ds-g-bri: 1.06;
+  /* Busy or colourful backdrops (a map): neutral, heavier tint, a heavier blur to wash out detail, and NO saturation boost. */
+  --ds-g-tint-busy: rgb(10 10 12 / 0.74);
+  --ds-g-blur-busy: 16px;
+  --ds-g-sat-busy: 1;
+  --ds-g-bri-busy: 1;
+  --ds-g-lens: 9px;                          /* width of the edge-lens ring */
+  --ds-g-lens-fill: rgb(255 255 255 / 0.05);
+  --ds-g-text: #ffffff;                        /* text/icons ON glass; --ds-text/--ds-text-2 are remapped to these inside glass */
+  --ds-g-text-2: #ededf0;
+  --ds-g-accent: #7cc8ff;
+  --ds-g-pax: #c9b8ff;
+  --ds-g-rim-a: rgb(255 255 255 / 0.42);       /* inner highlight, top-left */
+  --ds-g-rim-b: rgb(255 255 255 / 0.2);        /* inner highlight, bottom-right */
+  --ds-g-glow: rgb(255 255 255 / 0.07);
+  --ds-g-edge-out: rgb(255 255 255 / 0.07);
+  /* Specular rim: bright pools at the top-left and bottom-right corners that fall away along each edge, over a very dim base —
+     radial (fixed px) rather than a 135deg linear gradient, so a long thin bar still has bright ends and dim middles. */
+  --ds-g-rim-grad: radial-gradient(circle 150px at 0% 0%, rgb(255 255 255 / 0.62), transparent 100%), radial-gradient(circle 150px at 100% 100%, rgb(255 255 255 / 0.4), transparent 100%), linear-gradient(rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.07));
+  --ds-g-inner: rgb(255 255 255 / 0.08);         /* the thin inner highlight just inside the rim */
+  --ds-g-lite: rgb(255 255 255 / 0.1);         /* grouped-control capsule and selected-tab capsule fill */
+  --ds-g-bleed: rgb(0 0 0 / 0.4);              /* outer shadow; JS tints it with the colour sampled behind the bar */
+  --ds-g-shadow: 0 2px 8px rgb(0 0 0 / 0.22);
+  --ds-g-solid: var(--ds-surface-2);           /* Solid level: opaque, high contrast */
+  --ds-g-solid-edge: var(--ds-hair-strong);
+
+  /* Type: system stack first (SF Pro on Apple), Inter elsewhere. rem, so browser/text-size scaling works. */
+  --ds-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, system-ui, "Segoe UI", sans-serif;
+  --ds-fs-num: 4rem;        /* hero numeral */
+  --ds-fs-display: 2.75rem; /* large title */
+  --ds-fs-title: 1.375rem;
+  --ds-fs-body: 1.0625rem;
+  --ds-fs-sub: 0.9375rem;
+  --ds-fs-cap: 0.75rem;     /* uppercase caption */
+  --ds-fs-input: 1rem;      /* >= 16px so iOS Safari never zooms on focus */
+
+  /* Space, radii */
+  --ds-s-1: 0.25rem; --ds-s-2: 0.5rem; --ds-s-3: 0.75rem; --ds-s-4: 1rem; --ds-s-5: 1.5rem; --ds-s-6: 2.5rem;
+  --ds-gutter: 16px;       /* px, not rem: side margins shouldn't eat the screen at large text sizes */
+  --ds-r-card: 10px;
+  --ds-r-ctl: 8px;
+  --ds-r-bar: 27px;
+  --ds-r-tabbar: 34px;
+  --ds-r-menu: 24px;
+  --ds-r-sheet: 30px;
+  --ds-tap: 44px;           /* minimum tap target */
+
+  /* Motion: transform and opacity only, never blur radius. */
+  --ds-ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+  --ds-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ds-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-dur-1: 150ms; --ds-dur-2: 280ms; --ds-dur-3: 480ms;
+
+  /* Layout */
+  --ds-bar-h: 54px;
+  --ds-tabbar-h: max(68px, calc(2.45rem + 14px)); /* grows with text size so the Add button always clears the bar */
+  --ds-top: env(safe-area-inset-top, 0px);
+  --ds-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Print stays solid white with dark ink and no shadows or glass, whatever the screen theme is. */
+@media print {
+  :root, [data-ds-theme="dark"] {
+    --ds-bg: #ffffff; --ds-surface: #ffffff; --ds-surface-2: #f3f4f6; --ds-surface-3: #e5e7eb;
+    --ds-hair: rgb(17 24 39 / 0.2); --ds-hair-strong: rgb(17 24 39 / 0.35);
+    --ds-text: #111827; --ds-text-2: #374151; --ds-text-3: #4b5563; --ds-rule: #111827;
+    --ds-pilot: #0369a1; --ds-pax: #6d28d9; --ds-ok: #047857; --ds-warn: #92400e; --ds-bad: #be123c;
+    --ds-on-accent: #ffffff;
+    --ds-shadow-solid: none; --ds-shadow-pop: none; --ds-g-shadow: none; --ds-g-bleed: transparent;
+    color-scheme: light;
+  }
+}

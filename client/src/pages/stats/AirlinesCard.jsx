@@ -7,7 +7,7 @@ export default function AirlinesCard({ airlines, defaultOpen = false }) {
   const teaser = airlines[0] ? `Top: ${airlines[0].name} · ${fmtHours(airlines[0].hours)} h` : 'No airline recorded yet.';
   return (
     <CollapsibleStatCard title="Airlines" note={teaser} icon={Building2} defaultOpen={defaultOpen}>
-      {airlines.length === 0 ? <p className="text-sm text-slate-500">No airline recorded yet.</p> : (
+      {airlines.length === 0 ? <p className="text-sm text-slate-400">No airline recorded yet.</p> : (
         <ul className="space-y-3">
           {airlines.map((a) => (
             <li key={a.name} className="flex items-center gap-3">

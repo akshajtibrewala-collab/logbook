@@ -1,0 +1,97 @@
+/* Liquid glass (V3 recipe) — the floating navigation and control layer only. Content stays solid.
+
+   A glass element is a stack of SIBLING layers, never nested (a nested backdrop-filter only sees its parent's own
+   painting, because every backdrop-filter element is a "backdrop root"):
+     .ds-glass            shadow, rim light, inner glow, base (lo) tint
+       .g-core            small blur + saturate + brightness           (backdrop-filter)
+       .g-lens            9px masked edge ring: less blur, brighter    (backdrop-filter, masked)
+       .g-scrim           adaptive hi tint, faded in over bright content (opacity only)
+       .g-in              content
+   Only transform and opacity are ever animated — never blur radius.
+
+   Quality level comes from the nearest ancestor's data-glass attribute (set on <html> by glass.js, and overridable
+   on any wrapper, which is how /design shows all three levels side by side):
+     full   everything above
+     lite   no edge-lens ring on menus/sheets (data-role="pop"); ring kept on the tab bar and top bar
+     solid  no blur: opaque, high-contrast surfaces. Also used for Reduce transparency, prefers-reduced-transparency,
+            prefers-contrast: more, and browsers without backdrop-filter. */
+
+:root, [data-glass="full"] {
+  --ds-gc: block; --ds-gl: block; --ds-gl-pop: block; --ds-gs: block; --gb-m: ; --gb-fx: block; /* button glass layers on */
+  --ds-g-base: var(--ds-g-tint-lo);
+  --ds-g-base-pop: var(--ds-g-tint-pop);  /* menus and sheets carry text, so they get a mid tint floor (still adaptive above it) */
+  --ds-g-ins: var(--ds-g-lens);        /* core inset: leaves room for the lens ring */
+  --ds-g-pop-ins: var(--ds-g-lens);
+  --ds-g-border: var(--ds-g-edge-out); --ds-g-rim-op: 1;
+}
+[data-glass="lite"] { --ds-gl-pop: none; --ds-g-pop-ins: 0px; --gb-m: ; --gb-fx: block; }
+[data-glass="solid"] {
+  --ds-gc: none; --ds-gl: none; --ds-gl-pop: none; --ds-gs: none; --gb-m: initial; --gb-fx: none;
+  --ds-g-base: var(--ds-g-solid); --ds-g-base-pop: var(--ds-g-solid); --ds-g-ins: 0px; --ds-g-pop-ins: 0px; --ds-g-border: var(--ds-g-solid-edge); --ds-g-rim-op: 0.5;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, [data-glass] { --ds-gc: none; --ds-gl: none; --ds-gl-pop: none; --ds-gs: none; --gb-m: initial; --gb-fx: none; --ds-g-base: var(--ds-g-solid); --ds-g-base-pop: var(--ds-g-solid); --ds-g-ins: 0px; --ds-g-pop-ins: 0px; --ds-g-border: var(--ds-g-solid-edge); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root, [data-glass] { --ds-gc: none; --ds-gl: none; --ds-gl-pop: none; --ds-gs: none; --gb-m: initial; --gb-fx: none; --ds-g-base: var(--ds-g-solid); --ds-g-base-pop: var(--ds-g-solid); --ds-g-ins: 0px; --ds-g-pop-ins: 0px; --ds-g-border: var(--ds-g-solid-edge); }
+}
+@media (prefers-contrast: more) {
+  :root, [data-glass] { --ds-gc: none; --ds-gl: none; --ds-gl-pop: none; --ds-gs: none; --gb-m: initial; --gb-fx: none; --ds-g-base: var(--ds-g-solid); --ds-g-base-pop: var(--ds-g-solid); --ds-g-ins: 0px; --ds-g-pop-ins: 0px; --ds-g-border: var(--ds-g-solid-edge); }
+}
+
+.ds-glass {
+  position: relative; isolation: isolate; border-radius: var(--ds-g-r, var(--ds-r-bar));
+  background: var(--ds-g-base);
+  /* Text and icons on glass use the glass text colours, so every control inside works unchanged. */
+  --ds-text: var(--ds-g-text); --ds-text-2: var(--ds-g-text-2); --ds-pilot: var(--ds-g-accent); --ds-pax: var(--ds-g-pax);
+  color: var(--ds-g-text);
+  box-shadow: 0 12px 32px -10px var(--ds-g-bleed), var(--ds-g-shadow), 0 0 0 0.5px var(--ds-g-border),
+              inset 0 0 0 1px var(--ds-g-inner), inset 0 0 18px var(--ds-g-glow);
+}
+.ds-glass[data-role="pop"] { background: var(--ds-g-base-pop); }
+.ds-glass[data-solid] { box-shadow: 0 0 0 1px var(--ds-g-solid-edge), var(--ds-shadow-pop); }
+.ds-glass > .g-core, .ds-glass > .g-lens, .ds-glass > .g-scrim { position: absolute; pointer-events: none; }
+.g-core {
+  inset: var(--ds-g-ins); border-radius: max(0px, calc(var(--ds-g-r, var(--ds-r-bar)) - var(--ds-g-ins))); z-index: 0; display: var(--ds-gc);
+  -webkit-backdrop-filter: blur(var(--ds-g-blur)) saturate(var(--ds-g-sat)) brightness(var(--ds-g-bri));
+  backdrop-filter: blur(var(--ds-g-blur)) saturate(var(--ds-g-sat)) brightness(var(--ds-g-bri));
+}
+.ds-glass[data-role="pop"] > .g-core { inset: var(--ds-g-pop-ins); border-radius: max(0px, calc(var(--ds-g-r) - var(--ds-g-pop-ins))); }
+.g-lens {
+  inset: 0; border-radius: inherit; z-index: 1; display: var(--ds-gl); padding: var(--ds-g-lens); background: var(--ds-g-lens-fill);
+  -webkit-backdrop-filter: blur(1px) saturate(2.1) brightness(1.2); backdrop-filter: blur(1px) saturate(2.1) brightness(1.2);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+.ds-glass[data-role="pop"] > .g-lens { display: var(--ds-gl-pop); }
+/* Chromium-desktop-only enhancement: real displacement of the backdrop in the ring (see GlassDefs). Gated by JS. */
+html.ds-refract .g-lens { -webkit-backdrop-filter: url(#ds-refract) saturate(1.8) brightness(1.15); backdrop-filter: url(#ds-refract) saturate(1.8) brightness(1.15); }
+.g-scrim { inset: 0; border-radius: inherit; z-index: 2; display: var(--ds-gs); background: var(--ds-g-tint-hi); opacity: 0; transition: opacity var(--ds-dur-2) ease; }
+.ds-glass[data-bk="hi"] > .g-scrim, .ds-glass[data-force] > .g-scrim { opacity: 1; }
+/* Busy or colourful backdrop (set by glass.js, which measures colour spread as well as brightness): a neutral dark state with a
+   heavier blur and no saturation boost, so a map's land, sea, routes and labels never show through as a mottled colour wash.
+   Same layers as before (no extra blur layer), so the layer budget is unchanged; Solid has no backdrop-filter at all. */
+.ds-glass[data-busy] > .g-scrim { background: var(--ds-g-tint-busy); opacity: 1; }
+.ds-glass[data-busy] > .g-core {
+  -webkit-backdrop-filter: blur(var(--ds-g-blur-busy)) saturate(var(--ds-g-sat-busy)) brightness(var(--ds-g-bri-busy));
+  backdrop-filter: blur(var(--ds-g-blur-busy)) saturate(var(--ds-g-sat-busy)) brightness(var(--ds-g-bri-busy));
+}
+.ds-glass[data-busy] > .g-lens, html.ds-refract .ds-glass[data-busy] > .g-lens {
+  -webkit-backdrop-filter: blur(var(--ds-g-blur-busy)) saturate(var(--ds-g-sat-busy)) brightness(var(--ds-g-bri-busy));
+  backdrop-filter: blur(var(--ds-g-blur-busy)) saturate(var(--ds-g-sat-busy)) brightness(var(--ds-g-bri-busy));
+}
+/* Specular rim: masked gradient border, bright top-left and bottom-right, dim elsewhere. */
+.ds-glass::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; z-index: 4; pointer-events: none; background: var(--ds-g-rim-grad); opacity: var(--ds-g-rim-op, 1);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+.ds-glass > .g-in { position: relative; z-index: 3; height: 100%; }
+/* "Lite" glass for overlay chips and grouped capsules inside glass: tint and rim only, no backdrop filter. */
+.ds-lite { position: relative; background: var(--ds-g-lite); box-shadow: inset 1px 1px 0 var(--ds-g-rim-a), inset -1px -1px 0 var(--ds-g-rim-b); }
+
+/* Scroll-edge effect: content fades softly beneath the glass instead of ending at a hard bar. */
+.ds-edge { position: fixed; left: 0; right: 0; z-index: 20; pointer-events: none; }
+.ds-edge.top { top: 0; height: calc(var(--ds-top) + 120px); background: linear-gradient(to bottom, color-mix(in srgb, var(--ds-bg) 50%, transparent), color-mix(in srgb, var(--ds-bg) 22%, transparent) 55%, transparent); }
+.ds-edge.bot { bottom: 0; height: calc(var(--ds-bottom) + 150px); background: linear-gradient(to top, color-mix(in srgb, var(--ds-bg) 60%, transparent), color-mix(in srgb, var(--ds-bg) 25%, transparent) 55%, transparent); }
+@media print { .ds-glass, .ds-edge { display: none !important; } }

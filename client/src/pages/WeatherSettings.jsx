@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { api, saveSettingsMerged } from '../lib/api.js';
@@ -56,10 +57,6 @@ export default function WeatherSettings() {
 
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/weather')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">Weather settings</h1>
-      </div>
 
       <section className="card card-elevated space-y-3 p-4">
         <h2 className="stat-title text-sm text-slate-400">Home airport</h2>
@@ -89,9 +86,9 @@ export default function WeatherSettings() {
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+      <SaveBar>
         <Button disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</Button>
-      </div>
+      </SaveBar>
     </form>
   );
 }

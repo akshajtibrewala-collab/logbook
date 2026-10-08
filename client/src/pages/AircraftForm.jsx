@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api.js';
 import TextField from '../components/TextField.jsx';
 import Select from '../components/Select.jsx';
@@ -85,11 +85,6 @@ export default function AircraftForm() {
 
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/aircraft')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">{id ? 'Edit aircraft' : 'Add aircraft'}</h1>
-      </div>
-
       <Section title="Identity">
         <Toggle label="This is a simulator or training device" checked={form.is_simulator} onChange={set('is_simulator')} />
         {form.is_simulator ? (
@@ -135,17 +130,17 @@ export default function AircraftForm() {
       <section className="card card-elevated p-4">
         <h2 className="stat-title mb-3 text-sm text-accent-strong">Notes</h2>
         <textarea value={form.notes} onChange={(e) => set('notes')(e.target.value)} rows={3}
-          className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+          className="gl-field w-full p-3 text-base" />
       </section>
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+      <SaveBar>
         <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add aircraft'}</Button>
         {id && (
           <Button type="button" variant="danger" onClick={() => setConfirmArchive(true)}>Archive aircraft</Button>
         )}
-      </div>
+      </SaveBar>
 
       <ConfirmDialog open={confirmArchive} title="Archive this aircraft?"
         description="It will no longer appear when logging a new flight, but existing flights and their history are untouched. You can unarchive it later."

@@ -1,28 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plane, Moon, Gauge, ClipboardCheck, HeartPulse, FileClock, Plus, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { passengerCurrency, instrumentCurrency, flightReviewStatus, medicalCurrency, customExpirations } from '../lib/currency.js';
 import { pilotFlights } from '../lib/flightRoles.js';
-import Skeleton from '../components/Skeleton.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
-import EmptyState from '../components/EmptyState.jsx';
-import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import DatePicker from '../components/DatePicker.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import CurrencyStatusCard, { TONE, daysText } from '../components/CurrencyStatusCard.jsx';
+import { daysText } from '../components/CurrencyStatusCard.jsx';
+import { Sheet } from '../ds/Overlays.jsx';
+import { MnDot, MnEmpty, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
+import '../ds/logbook.css';
 
 const today = () => new Date().toLocaleDateString('en-CA');
 const newestFirst = (a, b) => b.date.localeCompare(a.date) || b.id - a.id;
+const TONE = { current: { dot: 'ok', label: 'Current' }, expiring: { dot: 'warn', label: 'Expiring soon' }, expired: { dot: 'bad', label: 'Not current' } };
 
+/** One status line: a dot (colour is never the only signal: the status is also written), the name, the status, and the days left or overdue. */
+function StatusRow({ title, result, onOpen, to }) {
+  const tone = TONE[result.status];
+  const days = daysText(result);
+  const Tag = to ? Link : 'button';
+  const props = to ? { to } : { type: 'button', onClick: onOpen };
+  return (
+    <Tag {...props} className="mn-st" aria-label={`${title}: ${tone.label}, ${days.big} ${days.small}`}>
+      <MnDot tone={tone.dot} label={tone.label} />
+      <span className="t"><span className="pri">{title}</span><span className="mn-mut">{tone.label}</span></span>
+      <span className="v" aria-hidden="true">{days.big}{typeof days.big === 'number' && <small>d</small>}</span>
+    </Tag>
+  );
+}
+
+/** Currency (minimalist system): one calm row per currency or expiration, the working behind a tap (a sheet), the flight review logged from its sheet. */
 export default function Currency() {
   const navigate = useNavigate();
   const [flights, setFlights] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [expirations, setExpirations] = useState([]);
   const [error, setError] = useState('');
+  const [sheet, setSheet] = useState(null); // 'day' | 'night' | 'instrument' | 'review' | 'medical'
   const [reviewDate, setReviewDate] = useState(today);
   const [logging, setLogging] = useState(false);
   const [editingId, setEditingId] = useState(null); // id of the review being re-dated, or null when adding
@@ -78,100 +96,69 @@ export default function Currency() {
     }
   }
 
-  return (
-    <div className="stagger space-y-4">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/')} className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">Currency & expirations</h1>
-      </div>
+  const detail = data && {
+    day: ['Day passenger currency', data.pax.day, data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`],
+    night: ['Night passenger currency', data.pax.night, '3 night landings within the preceding 90 days'],
+    instrument: ['Instrument currency', data.inst, `${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`],
+    review: ['Flight review', data.review, data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)} · due ${fmtDate(data.review.expires)}` : 'No flight review logged'],
+    medical: ['Medical certificate', data.medical, data.medical.item ? data.medical.item.label : 'No medical certificate logged'],
+  };
+  const open = sheet && detail ? detail[sheet] : null;
 
+  return (
+    <div className="cl mn">
       {error && <ErrorNote message={error} onRetry={load} />}
-      {!data && !error && (
-        <><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></>
-      )}
+      {!data && !error && <MnSkeleton rows={5} />}
 
       {data && (
         <>
-          <div className="grid gap-4 md:grid-cols-2">
-            <CurrencyStatusCard title="Day passenger currency" Icon={Plane} result={data.pax.day}
-              detail={data.pax.day.count >= 3 ? `${data.pax.day.count} landings in the last 90 days` : `${data.pax.day.count} of 3 landings in the last 90 days`} />
-
-            <CurrencyStatusCard title="Night passenger currency" Icon={Moon} result={data.pax.night}
-              detail="3 night landings within the preceding 90 days" />
-
-            <CurrencyStatusCard title="Instrument currency" Icon={Gauge} result={data.inst}
-              detail={`${data.inst.approaches}/${data.inst.requiredApproaches} approaches · ${data.inst.holds}/${data.inst.requiredHolds} hold in 6 months`} />
-
-            <CurrencyStatusCard title="Flight review" Icon={ClipboardCheck} result={data.review}
-              detail={data.review.lastReview ? `Last review ${fmtDate(data.review.lastReview)} · due ${fmtDate(data.review.expires)}` : 'No flight review logged'}>
-              {logging ? (
-                <form onSubmit={logReview} className="space-y-2">
-                  <DatePicker label={editingId ? 'Change review date' : 'Flight review date'} value={reviewDate} onChange={setReviewDate} />
-                  <div className="flex gap-2">
-                    <Button size="md" fullWidth={false} className="flex-1">Save</Button>
-                    <Button type="button" variant="ghost" size="md" fullWidth={false} onClick={cancelReview}>Cancel</Button>
-                  </div>
-                </form>
-              ) : (
-                <div className="space-y-1">
-                  <Button variant="secondary" size="md" onClick={startAdd}>Log a flight review</Button>
-                  {reviews.length > 0 && (
-                    <div className="flex justify-center gap-2 text-sm">
-                      <Button variant="ghost" size="sm" fullWidth={false} onClick={startEdit}>Change date</Button>
-                      <Button variant="danger" size="sm" fullWidth={false} onClick={() => setConfirmRemove(true)}>Remove</Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CurrencyStatusCard>
-
-            <CurrencyStatusCard title="Medical certificate" Icon={HeartPulse} result={data.medical}
-              detail={data.medical.item ? data.medical.item.label : 'No medical certificate logged'} />
+          <div className="mn-card mn-rise">
+            {Object.entries(detail).map(([k, [title, result]]) => <StatusRow key={k} title={title} result={result} onOpen={() => setSheet(k)} />)}
           </div>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-slate-400">Other expirations</h2>
-              <button onClick={() => navigate('/currency/new')} className="flex items-center gap-1 text-sm text-accent-strong">
-                <Plus size={15} />Add
-              </button>
+          <div className="mn-ctl">
+            <h2 className="mn-sub">Other expirations</h2>
+            <button type="button" onClick={() => navigate('/currency/new')} className="gl clear gl-chip" aria-label="Add an expiration" title="Add an expiration"><Plus aria-hidden="true" />Add</button>
+          </div>
+          {data.custom.length === 0 ? (
+            <MnEmpty title="Nothing else tracked" compact />
+          ) : (
+            <div className="mn-card">
+              {data.custom.map((r) => (
+                <StatusRow key={r.item.id} title={r.item.label} result={r} to={`/currency/${r.item.id}`} />
+              ))}
             </div>
-
-            {data.custom.length === 0 ? (
-              <EmptyState icon={FileClock} title="Nothing else tracked"
-                description="Add a passport, insurance renewal, or anything else with an expiry date." />
-            ) : (
-              <ul className="grid gap-2 md:grid-cols-2">
-                {data.custom.map((r) => {
-                  const tone = TONE[r.status];
-                  const days = daysText(r);
-                  return (
-                    <li key={r.item.id}>
-                      <Card as="button" onClick={() => navigate(`/currency/${r.item.id}`)} className="w-full text-left active:bg-navy-800">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-medium">{r.item.label}</div>
-                            <div className={`mt-0.5 flex items-center gap-1.5 text-sm ${tone.textStrong}`}>
-                              <tone.Icon size={14} />{tone.label} · {fmtDate(r.expires)}
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <div className="text-right">
-                              <div className={`stat-value text-lg ${tone.textStrong}`}>{days.big}</div>
-                              <div className="text-xs text-slate-400">{days.small}</div>
-                            </div>
-                            <ChevronRight size={18} className="text-slate-600" />
-                          </div>
-                        </div>
-                      </Card>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          )}
         </>
       )}
+
+      <Sheet open={Boolean(open)} onClose={() => { setSheet(null); cancelReview(); }} title={open ? open[0] : 'Currency'} detent="medium">
+        {open && (
+          <div className="cl mn mn-sheet">
+            <MnKv k="Status" v={TONE[open[1].status].label} />
+            <MnKv k={daysText(open[1]).small === 'no qualifying history' ? 'History' : 'Days'} v={daysText(open[1]).small === 'no qualifying history' ? 'None qualifying' : `${daysText(open[1]).big} ${daysText(open[1]).small}`} />
+            <p className="mn-note">{open[2]}</p>
+            {sheet === 'review' && (logging ? (
+              <form onSubmit={logReview} className="mn-sheet" style={{ padding: 0 }}>
+                <DatePicker label={editingId ? 'Change review date' : 'Flight review date'} value={reviewDate} onChange={setReviewDate} />
+                <Button size="lg">Save</Button>
+                <Button type="button" variant="ghost" onClick={cancelReview}>Cancel</Button>
+              </form>
+            ) : (
+              <>
+                <Button size="lg" onClick={startAdd}>Log a flight review</Button>
+                {reviews.length > 0 && (
+                  <>
+                    <Button variant="secondary" onClick={startEdit}>Change date</Button>
+                    <Button variant="danger" onClick={() => setConfirmRemove(true)}>Remove last review</Button>
+                  </>
+                )}
+              </>
+            ))}
+            {sheet === 'medical' && !data.medical.item && <Button as={Link} to="/currency/new" size="lg">Add a medical</Button>}
+          </div>
+        )}
+      </Sheet>
 
       <ConfirmDialog open={confirmRemove} title="Remove flight review?"
         description="This removes your most recently logged flight review. This cannot be undone."

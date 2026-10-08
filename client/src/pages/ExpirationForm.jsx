@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api.js';
@@ -71,11 +72,6 @@ export default function ExpirationForm() {
 
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => navigate('/currency')} className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-navy-800" aria-label="Back"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-semibold">{id ? 'Edit expiration' : 'Add expiration'}</h1>
-      </div>
-
       <section className="card card-elevated space-y-3 p-4">
         <Select label="Type" value={form.kind} onChange={set('kind')} options={KINDS} />
         <TextField label="Label" value={form.label} onChange={set('label')} error={errors.label}
@@ -85,18 +81,18 @@ export default function ExpirationForm() {
         <div>
           <span className="mb-1 block text-xs text-slate-400">Notes</span>
           <textarea value={form.notes} onChange={(e) => set('notes')(e.target.value)} rows={3}
-            className="w-full rounded-xl border border-edge bg-navy-800 p-3 text-base outline-none focus:border-accent" />
+            className="gl-field w-full p-3 text-base" />
         </div>
       </section>
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 
-      <div className="save-bar sticky bottom-[calc(var(--bottom-nav-h)+0.75rem)] z-10 -mx-4 space-y-2 border-t border-edge bg-navy-950/90 px-4 pb-1 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+      <SaveBar>
         <Button disabled={saving}>{saving ? 'Saving…' : id ? 'Save changes' : 'Add expiration'}</Button>
         {id && (
           <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>Delete</Button>
         )}
-      </div>
+      </SaveBar>
 
       <ConfirmDialog open={confirmDelete} title="Delete this expiration?"
         description="This cannot be undone."

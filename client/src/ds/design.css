@@ -1,0 +1,43 @@
+/* /design page only: layout for the specimen sheet, plus the contrast-probe backdrops. The probe backdrops are test
+   fixtures for measuring text on glass over worst-case content (a pale map tile, bright chart fills, a white photo);
+   they are the only literal colours outside tokens.css and are never used by the product UI. */
+.dz { padding: calc(var(--ds-top) + 1rem) var(--ds-gutter) 8rem; max-width: 72rem; margin: 0 auto; }
+.dz h2 { margin: 2.5rem 0 var(--ds-s-3); }
+.dz .row-wrap { display: flex; flex-wrap: wrap; gap: var(--ds-s-3); align-items: center; }
+.dz .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: var(--ds-s-4); align-items: start; }
+.dz .lbl { font-size: var(--ds-fs-cap); color: var(--ds-text-2); margin: 0 0 var(--ds-s-1); }
+.dz .state { padding: var(--ds-s-3); border: 1px dashed var(--ds-hair-strong); border-radius: var(--ds-r-card); }
+.dz .type-row { display: flex; align-items: baseline; gap: var(--ds-s-4); padding: var(--ds-s-2) 0; border-top: 1px solid var(--ds-hair); flex-wrap: wrap; } .dz .type-row code { color: var(--ds-text-3); font-size: var(--ds-fs-cap); }
+.dz .stat-readout { font: 600 0.75rem/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--ds-ok); }
+.dz-bg-black { background: #000000; } .dz-bg-gray { background: #808080; } .dz-bg-map { background: #e8edf1; } .dz-bg-sky { background: #5bb9ff; } .dz-bg-violet { background: #b7a0ff; } .dz-bg-white { background: #ffffff; }
+.dz-probe-label { position: absolute; left: 8px; top: 6px; font-size: 0.6875rem; font-weight: 700; color: #000000; mix-blend-mode: difference; z-index: 3; }
+.dz-bar-sky { background: #5bb9ff; display: block; border-radius: 3px 3px 0 0; } .dz-bar-violet { background: #b7a0ff; display: block; border-radius: 3px 3px 0 0; }
+
+/* ---- lab layout (used only on /design and /design/buttons) ---- */
+.lab .lab-h { margin: 2.5rem 0 var(--ds-s-3); }
+.lab-note { max-width: 44rem; padding: var(--ds-s-3) var(--ds-s-4); border: 1px solid var(--ds-hair-strong); border-radius: var(--ds-r-card); margin: var(--ds-s-3) 0; }
+.lab-bd { position: relative; border-radius: var(--ds-r-card); overflow: hidden; min-height: 4rem; }
+.lab-bd .lab-in { position: relative; z-index: 2; padding: var(--ds-s-3); }
+.lab-black { background: #000; } .lab-sheet { background: #141418; border: 1px solid var(--ds-hair); }
+.lab-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--ds-s-4); }
+.lab-var { display: grid; gap: var(--ds-s-2); align-content: start; }
+.lab-minirow, .lab-actions, .lab-chips { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); align-items: center; }
+.lab-levels { display: flex; gap: var(--ds-s-2); flex-wrap: wrap; }
+.lab-lv { display: flex; gap: var(--ds-s-2); align-items: center; padding: var(--ds-s-2); border: 1px dashed var(--ds-hair-strong); border-radius: var(--ds-r-card); }
+.lab-controls { display: flex; gap: var(--ds-s-3); flex-wrap: wrap; margin-bottom: var(--ds-s-3); }
+.lab-boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: var(--ds-s-4); }
+.lab-matrix { display: grid; gap: var(--ds-s-3); }
+.lab-row { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); align-items: center; }
+.lab-rl { width: 5.5rem; font-size: var(--ds-fs-cap); color: var(--ds-text-2); flex: none; }
+.lab-ctx { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--ds-s-3); }
+.lab-card { background: var(--ds-surface); border: 1px solid var(--ds-hair); border-radius: var(--ds-r-card); padding: var(--ds-s-4); }
+.lab-form { display: grid; gap: var(--ds-s-3); }
+.lab-fabrow { margin-top: var(--ds-s-4); }
+.lab-stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--ds-s-3); }
+.lab-stage { height: 11rem; }
+.lab-stage .lab-in { position: absolute; inset: 0; padding: 0; }
+.lab-list { padding: var(--ds-s-3); display: grid; }
+.lab-li { display: flex; justify-content: space-between; padding: .625rem 0; border-top: 1px solid var(--ds-hair); }
+/* Add button over moving content: the clear options get a deeper dark underlay so a list scrolling beneath never shows through the glyph. */
+.lab-stage { border: 1px solid var(--ds-hair); }
+.lab-stage .gl.gfab { position: absolute; right: 14px; bottom: 14px; }

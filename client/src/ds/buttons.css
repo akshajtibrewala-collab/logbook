@@ -1,0 +1,195 @@
+/* Liquid glass CONTROLS — the approved "V-a" recipe (clear glass, thin coloured rim, white label) for buttons, icon buttons, chips,
+   segmented controls, selects, switches, steppers and the Add button. Text inputs stay solid but share the rim language (.gl-field).
+   See docs/design/DESIGN_LANGUAGE.md ("Buttons") and the specimen sheet at /design/buttons.
+
+   "Lite glass": NO backdrop-filter anywhere in this file, so controls cost nothing against the blur-layer budget (real blur stays on
+   the tab bar, top bar and the one open sheet/popover). A control is a translucent tint over a dark underlay, a curved specular
+   rim (bright pools top-left and bottom-right), a thin inner highlight, a soft inner glow and a soft outer shadow.
+   Only transform and opacity animate. No literal colours: everything comes from the --ds-* tokens.
+
+   Roles (class on the control):  pilot (sky, primary in pilot scope) · pax (violet, primary in passenger scope) ·
+   clear (secondary) · bad (destructive — the confirm step only) · plain (text only) · link (plain, sky text).
+
+   Solid fallback — Solid quality, Reduce transparency, prefers-reduced-transparency, prefers-contrast: more, and browsers without
+   backdrop-filter: glass.css sets --gb-m / --gb-fx next to the other fallbacks. --gb-m is an empty value in glass mode and
+   `initial` in solid mode, which makes every --gb-*-g value invalid so each property falls back to its solid --gb-*-s value. */
+
+.gl {
+  --r: var(--ds-sky-rgb); --rim: var(--ds-sky-rgb); --rim-a1: .95; --rim-a2: .6; --rim-a0: .5;
+  --gb-bg-s: var(--ds-pilot); --gb-fg-s: var(--ds-on-accent); --gb-bd-s: transparent; --gb-bd-g: var(--gb-m) transparent;
+  --gb-bg-g: var(--gb-m) linear-gradient(180deg, rgb(var(--r) / .46), rgb(var(--r) / .28)), linear-gradient(rgb(var(--ds-black-rgb) / .42), rgb(var(--ds-black-rgb) / .42));
+  --gb-fg-g: var(--gb-m) var(--ds-white);
+  --gb-sh-g: var(--gb-m) inset 0 1px 0 rgb(var(--ds-white-rgb) / .26), inset 0 0 14px rgb(var(--r) / .16), 0 8px 18px -9px rgb(var(--r) / .55), 0 1px 2px rgb(var(--ds-black-rgb) / .5);
+  --band-o: 0;
+  position: relative; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; gap: var(--ds-s-2);
+  min-height: 3rem; min-width: var(--ds-tap); padding: 0.5rem 1.375rem; border-radius: 999px; border: 1px solid var(--gb-bd-g, var(--gb-bd-s));
+  font: inherit; font-weight: 650; font-size: var(--ds-fs-body); line-height: 1.15; letter-spacing: -0.005em; text-align: center;
+  text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  background: var(--gb-bg-g, var(--gb-bg-s)); color: var(--gb-fg-g, var(--gb-fg-s)); box-shadow: var(--gb-sh-g, none);
+  transition: transform var(--ds-dur-2) var(--ds-ease-pop), opacity var(--ds-dur-1);
+}
+.gl.pax { --r: var(--ds-violet-rgb); --rim: var(--ds-violet-rgb); --gb-bg-s: var(--ds-pax); }
+.gl.clear {
+  --r: var(--ds-white-rgb); --rim: var(--ds-white-rgb); --rim-a1: .8; --rim-a2: .55; --rim-a0: .42;
+  --gb-bg-s: var(--ds-surface-2); --gb-fg-s: var(--ds-text); --gb-bd-s: var(--ds-hair-strong);
+  --gb-bg-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-white-rgb) / .12), rgb(var(--ds-white-rgb) / .05)), linear-gradient(rgb(var(--ds-black-rgb) / .42), rgb(var(--ds-black-rgb) / .42));
+  --gb-sh-g: var(--gb-m) inset 0 1px 0 rgb(var(--ds-white-rgb) / .2), inset 0 0 14px rgb(var(--ds-white-rgb) / .06), 0 6px 14px -8px rgb(var(--ds-black-rgb) / .9), 0 1px 2px rgb(var(--ds-black-rgb) / .5);
+}
+.gl.bad {
+  --r: var(--ds-red-rgb); --rim: var(--ds-red-rim-rgb); --rim-a1: 1; --rim-a2: .9; --rim-a0: .78; --gb-bg-s: var(--ds-bad-deep); --gb-fg-s: var(--ds-white); --gb-bd-s: var(--ds-bad);
+  --gb-bg-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-red-rgb) / .26), rgb(var(--ds-red-rgb) / .14)), linear-gradient(rgb(var(--ds-black-rgb) / .7), rgb(var(--ds-black-rgb) / .7));
+}
+.gl.plain, .gl.link { --gb-bg-s: transparent; --gb-fg-s: var(--ds-text); --gb-bg-g: initial; --gb-sh-g: initial; background: transparent; box-shadow: none; }
+.gl.plain::before, .gl.plain::after, .gl.link::before, .gl.link::after { display: none; }
+.gl.link { --gb-fg-s: var(--ds-pilot); --gb-fg-g: var(--gb-m) var(--ds-pilot); font-weight: 600; font-size: var(--ds-fs-sub); padding-inline: 0.75rem; }
+.gl.link.pax { --gb-fg-s: var(--ds-pax); --gb-fg-g: var(--gb-m) var(--ds-pax); }
+.gl svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.gl > *:not(.absolute) { position: relative; z-index: 2; }
+/* rim: a masked gradient border (a thin line, brighter at the top-left and bottom-right) */
+.gl::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.25px; z-index: 1; pointer-events: none; display: var(--gb-fx, none);
+  background: radial-gradient(circle 64px at 0% 0%, rgb(var(--rim) / var(--rim-a1)), transparent 100%), radial-gradient(circle 64px at 100% 100%, rgb(var(--rim) / var(--rim-a2)), transparent 100%), linear-gradient(rgb(var(--rim) / var(--rim-a0)), rgb(var(--rim) / var(--rim-a0)));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+/* highlight band: invisible at rest, brightens on hover, slides down and brightens when pressed */
+.gl::after {
+  content: ""; position: absolute; inset: 1px 1px auto 1px; height: 46%; border-radius: 999px 999px 40% 40% / 999px 999px 18px 18px; z-index: 1; pointer-events: none; display: var(--gb-fx, none);
+  background: linear-gradient(180deg, rgb(var(--ds-white-rgb) / .38), rgb(var(--ds-white-rgb) / 0)); opacity: var(--band-o);
+  transition: transform var(--ds-dur-2) var(--ds-ease-pop), opacity var(--ds-dur-1);
+}
+@media (hover: hover) { .gl:not(:disabled):not([aria-disabled="true"]):hover::after { opacity: .14; } }
+.gl:not(:disabled):not([aria-disabled="true"]):active { transform: scale(1.015, .955); }
+.gl:not(:disabled):not([aria-disabled="true"]):active::after { transform: translateY(3px); opacity: .22; }
+.gl:focus-visible, .gl-select:focus-visible { outline: 2px solid var(--ds-white); outline-offset: 3px; }
+.gl-switch:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -3px; }
+.gl:disabled, .gl[aria-disabled="true"] { opacity: .42; cursor: not-allowed; box-shadow: none; }
+.gl.is-loading { pointer-events: none; }
+.gl.is-loading .ds-spin { width: 1.05em; height: 1.05em; }
+.gl.lg { min-height: 3.5rem; padding-inline: 1.75rem; font-size: 1.125rem; }
+.gl.sm { min-height: var(--ds-tap); padding: 0.375rem 1.0625rem; font-size: var(--ds-fs-sub); }
+.gl.icon { width: 3rem; padding: 0; } .gl.icon.sm { width: var(--ds-tap); } .gl.icon.lg { width: 3.5rem; }
+.gl.icon svg { width: 1.25rem; height: 1.25rem; }
+.gl.block { display: flex; width: 100%; }
+.gl.dashed { border-style: dashed; }
+@media (prefers-reduced-motion: reduce) { .gl, .gl::after { transition: none; } .gl:not(:disabled):active { transform: none; } }
+/* forced states, for the specimen sheet only */
+.gl.f-hover::after { opacity: .14; } .gl.f-press { transform: scale(1.015, .955); } .gl.f-press::after { transform: translateY(3px); opacity: .22; } .gl.f-focus { outline: 2px solid var(--ds-white); outline-offset: 3px; }
+
+/* ---- filter chips and segmented controls (same recipe) ---- */
+.gl-chip { min-height: var(--ds-tap); padding: 0.375rem 1rem; font-size: var(--ds-fs-sub); font-weight: 600; }
+.gl-chip[aria-pressed="true"] { --gb-bg-s: var(--ds-pilot); --gb-fg-s: var(--ds-on-accent); --gb-bd-s: transparent; --rim: var(--ds-sky-rgb); --rim-a0: .6;
+  --gb-bg-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-sky-rgb) / .34), rgb(var(--ds-sky-rgb) / .2)), linear-gradient(rgb(var(--ds-black-rgb) / .42), rgb(var(--ds-black-rgb) / .42)); }
+.gl-chip.pax[aria-pressed="true"] { --gb-bg-s: var(--ds-pax); --rim: var(--ds-violet-rgb);
+  --gb-bg-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-violet-rgb) / .34), rgb(var(--ds-violet-rgb) / .2)), linear-gradient(rgb(var(--ds-black-rgb) / .42), rgb(var(--ds-black-rgb) / .42)); }
+.gl-seg { display: flex; flex-wrap: wrap; padding: 3px; gap: 2px; border-radius: min(999px, 26px); background: var(--ds-surface-2); border: 1px solid var(--ds-hair); }
+.gl-seg.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .gl-seg.scroll::-webkit-scrollbar { display: none; } .gl-seg.scroll > .gl { flex: 0 0 auto; }
+.gl-seg > .gl { flex: 1 1 auto; min-height: var(--ds-tap); padding: 0.25rem 1rem; font-size: var(--ds-fs-sub); }
+.gl-seg > .gl:not([aria-selected="true"]):not([aria-current="page"]):not([aria-pressed="true"]) {
+  --gb-bg-g: initial; --gb-sh-g: initial; --gb-bg-s: transparent; --gb-fg-g: initial; --gb-fg-s: var(--ds-text-2); --gb-bd-s: transparent;
+  background: transparent; box-shadow: none; color: var(--ds-text-2);
+}
+.gl-seg > .gl:not([aria-selected="true"]):not([aria-current="page"]):not([aria-pressed="true"])::before,
+.gl-seg > .gl:not([aria-selected="true"]):not([aria-current="page"]):not([aria-pressed="true"])::after { display: none; }
+
+/* ---- the Add button: one circle that opens the one menu. A violet-to-sky ring around dark-underlaid clear glass. ---- */
+.gl.gfab { padding: 0; border-radius: 50%; min-height: 0; --rim-a0: .5;
+  --gb-bg-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-white-rgb) / .2), rgb(var(--ds-white-rgb) / .08)), linear-gradient(rgb(var(--ds-black-rgb) / .74), rgb(var(--ds-black-rgb) / .74)); }
+.gl.gfab:not(.ds-fab) { width: 3.5rem; height: 3.5rem; }
+.gl.gfab svg { width: 1.625rem; height: 1.625rem; stroke-width: 2.3; }
+.gl.gfab::before { display: block; padding: 2.5px; inset: -1px; background: conic-gradient(from 200deg, var(--ds-pax), var(--ds-pilot) 55%, var(--ds-pax)); opacity: 1; }
+.gl.gfab::after { display: none; }
+.ds-fab.gl { position: fixed; z-index: 31; }
+.ds-fab.gl svg { transition: transform var(--ds-dur-2) var(--ds-ease-pop); }
+.ds-fab.gl[aria-expanded="true"] svg { transform: rotate(45deg); }
+
+/* Skip link: off-screen until it takes keyboard focus. */
+.ds-skip:not(:focus) { position: absolute; left: -9999px; width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; border: 0; }
+.ds-skip:focus { position: fixed; left: 0.75rem; top: 0.75rem; z-index: 3000; }
+
+/* ---- fields (text inputs, textareas, the stepper frame): SOLID fill, the same rim language as the glass controls ---- */
+.gl-field {
+  border: 1px solid transparent; border-radius: 12px; color: var(--ds-text); outline: none;
+  background: linear-gradient(var(--ds-surface-2), var(--ds-surface-2)) padding-box,
+    linear-gradient(135deg, rgb(var(--ds-white-rgb) / .38), rgb(var(--ds-white-rgb) / .13) 36%, rgb(var(--ds-white-rgb) / .13) 64%, rgb(var(--ds-white-rgb) / .3)) border-box;
+}
+.gl-field:focus, .gl-field:focus-within { background: linear-gradient(var(--ds-surface-2), var(--ds-surface-2)) padding-box, linear-gradient(var(--ds-focus), var(--ds-focus)) border-box; }
+.gl-field.is-bad { background: linear-gradient(var(--ds-surface-2), var(--ds-surface-2)) padding-box, linear-gradient(var(--ds-bad), var(--ds-bad)) border-box; }
+.gl-field::placeholder { color: var(--ds-text-3); }
+.gl-field:disabled { opacity: .45; }
+/* stepper: a field frame holding two glass round buttons */
+.gl-step { display: flex; align-items: center; gap: 2px; padding: 3px; min-height: 3.25rem; }
+.gl-step > input, .gl-step > span.v { flex: 1 1 auto; min-width: 0; background: transparent; border: 0; color: inherit; text-align: center; font: inherit; font-size: max(var(--ds-fs-input), 16px); outline: none; }
+
+/* ---- select: a glass button with a chevron (the native picker still opens). Works on <select> and on a <button> trigger. ---- */
+.gl-select {
+  --chev: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  --rim-line: linear-gradient(135deg, rgb(var(--ds-white-rgb) / .8), rgb(var(--ds-white-rgb) / .42) 40%, rgb(var(--ds-white-rgb) / .42) 60%, rgb(var(--ds-white-rgb) / .6));
+  appearance: none; -webkit-appearance: none; display: block; width: 100%; min-height: 3rem; padding: 0.5rem 2.5rem 0.5rem 1.125rem; border-radius: 999px; border: 1px solid transparent;
+  font: inherit; font-weight: 600; font-size: max(var(--ds-fs-input), 16px); text-align: left; cursor: pointer; color-scheme: dark; -webkit-tap-highlight-color: transparent;
+  color: var(--gb-fg-g, var(--ds-text)); box-shadow: var(--gb-sh-g, none);
+  --gb-sel-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-white-rgb) / .12), rgb(var(--ds-white-rgb) / .05)), linear-gradient(rgb(var(--ds-black-rgb) / .42), rgb(var(--ds-black-rgb) / .42)), linear-gradient(var(--ds-bg), var(--ds-bg)), var(--rim-line);
+  --gb-sh-g: var(--gb-m) inset 0 1px 0 rgb(var(--ds-white-rgb) / .2), 0 6px 14px -8px rgb(var(--ds-black-rgb) / .9);
+  background-image: var(--chev), var(--gb-sel-g, linear-gradient(var(--ds-surface-2), var(--ds-surface-2)), linear-gradient(var(--ds-surface-2), var(--ds-surface-2)), linear-gradient(var(--ds-surface-2), var(--ds-surface-2)), linear-gradient(var(--ds-hair-strong), var(--ds-hair-strong)));
+  background-position: calc(100% - 1.3rem) 52%, calc(100% - 0.95rem) 52%, 0 0, 0 0, 0 0, 0 0;
+  background-size: 0.36rem 0.36rem, 0.36rem 0.36rem, auto, auto, auto, auto; background-repeat: no-repeat;
+  background-clip: padding-box, padding-box, padding-box, padding-box, padding-box, border-box; background-origin: padding-box, padding-box, padding-box, padding-box, padding-box, border-box;
+  transition: transform var(--ds-dur-2) var(--ds-ease-pop);
+}
+.gl-select.nochev { background-image: none, none, var(--gb-sel-g, linear-gradient(var(--ds-surface-2), var(--ds-surface-2)), linear-gradient(var(--ds-surface-2), var(--ds-surface-2)), linear-gradient(var(--ds-surface-2), var(--ds-surface-2)), linear-gradient(var(--ds-hair-strong), var(--ds-hair-strong))); padding-right: 1.125rem; }
+.gl-select.sm { min-height: var(--ds-tap); font-size: var(--ds-fs-sub); }
+.gl-select:active:not(:disabled) { transform: scale(1.01, .965); }
+.gl-select:disabled { opacity: .42; cursor: not-allowed; }
+.gl-select.is-bad { --rim-line: linear-gradient(var(--ds-bad), var(--ds-bad)); }
+.gl-select option { background: var(--ds-surface-2); color: var(--ds-text); }
+
+/* ---- switch: a glass track with a tinted knob track when on (hit area is 44px via .gl-switch-hit) ---- */
+.gl-switch-hit { position: relative; display: inline-grid; place-items: center; min-width: var(--ds-tap); min-height: var(--ds-tap); flex: none; }
+.gl-switch {
+  position: relative; box-sizing: border-box; width: calc(3.25rem + 12px); height: 2.75rem; border-radius: 999px; border: 6px solid transparent; padding: 0; cursor: pointer; flex: none; -webkit-tap-highlight-color: transparent;
+  --gb-sw-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-white-rgb) / .1), rgb(var(--ds-white-rgb) / .04)), linear-gradient(rgb(var(--ds-black-rgb) / .5), rgb(var(--ds-black-rgb) / .5));
+  --gb-sw-sh: var(--gb-m) inset 0 0 0 1px rgb(var(--ds-white-rgb) / .34), inset 0 1px 0 rgb(var(--ds-white-rgb) / .16);
+  background: var(--gb-sw-g, var(--ds-surface-3)); box-shadow: var(--gb-sw-sh, inset 0 0 0 1px var(--ds-hair-strong));
+  transition: background-color var(--ds-dur-2);
+}
+.gl-switch::after { content: ""; position: absolute; left: 0.1875rem; top: 0.1875rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--ds-white); box-shadow: 0 1px 3px rgb(var(--ds-black-rgb) / .5); transition: transform var(--ds-dur-2) var(--ds-ease-spring); }
+.gl-switch[aria-checked="true"], .gl-switch.on {
+  --gb-sw-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-sky-rgb) / .62), rgb(var(--ds-sky-rgb) / .4)), linear-gradient(rgb(var(--ds-black-rgb) / .3), rgb(var(--ds-black-rgb) / .3));
+  --gb-sw-sh: var(--gb-m) inset 0 0 0 1px rgb(var(--ds-sky-rgb) / .9), 0 0 12px -2px rgb(var(--ds-sky-rgb) / .5);
+  background: var(--gb-sw-g, var(--ds-pilot)); box-shadow: var(--gb-sw-sh, none);
+}
+.gl-switch[aria-checked="true"]::after, .gl-switch.on::after { transform: translateX(1.25rem); background: var(--gb-sw-knob, var(--ds-on-accent)); } /* Solid: a dark knob on the solid sky/violet track (white on sky is only ~2:1) */
+.gl-switch[aria-checked="true"], .gl-switch.on { --gb-sw-knob: var(--gb-m) var(--ds-white); }
+.gl-switch.pax[aria-checked="true"], .gl-switch.pax.on {
+  --gb-sw-g: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-violet-rgb) / .62), rgb(var(--ds-violet-rgb) / .4)), linear-gradient(rgb(var(--ds-black-rgb) / .3), rgb(var(--ds-black-rgb) / .3));
+  --gb-sw-sh: var(--gb-m) inset 0 0 0 1px rgb(var(--ds-violet-rgb) / .9), 0 0 12px -2px rgb(var(--ds-violet-rgb) / .5);
+  background: var(--gb-sw-g, var(--ds-pax)); box-shadow: var(--gb-sw-sh, none);
+}
+/* The button itself is the 44px tap target: a 6px transparent border around the 32px track, which is painted on the padding box only. */
+.gl-switch, .gl-switch[aria-checked="true"], .gl-switch.on, .gl-switch.pax[aria-checked="true"], .gl-switch.pax.on { background-clip: padding-box; }
+@media (prefers-reduced-motion: reduce) { .gl-switch, .gl-switch::after { transition: none; } }
+
+/* Select-like triggers that are buttons (date and aircraft pickers) lay out label + icon in a row. */
+.gl-select.flexbox { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-2); }
+/* Legacy Tailwind display utilities used together with .gl (the recipe sets display, so restate them with higher specificity). */
+.gl.hidden { display: none; }
+@media (min-width: 768px) { .gl.md\:flex { display: inline-flex; } }
+@media (min-width: 1024px) { .gl.lg\:hidden { display: none; } }
+.gl-switch-hit:focus-within .gl-switch { outline: 2px solid var(--ds-white); outline-offset: -3px; }
+
+/* Content rows that are buttons (disclosure headers, list rows) still meet the 44px tap target; stepper number boxes fill their frame. */
+.ctl-row { min-height: var(--ds-tap); }
+.gl-step > input { align-self: stretch; }
+/* A stepper in a narrow column (two per row on a phone, or large text sizes) moves its number box to its own row above the buttons. */
+.gl-stepbox { container-type: inline-size; }
+@container (max-width: 9.5rem) {
+  .gl-step { flex-wrap: wrap; justify-content: space-between; }
+  .gl-step > input, .gl-step > span.v { order: -1; flex: 1 0 100%; min-height: 2.75rem; }
+}
+/* A segmented control whose segments must stay on one row (labels truncate rather than wrap). */
+.gl-seg.nowrap { flex-wrap: nowrap; }
+/* Lite-glass strip (Stats tabs): the clear-glass tint over a dark underlay with a bright rim, and NO backdrop blur — so it adds no layer to the
+   blur budget. Solid / Reduce transparency / unsupported browsers fall back to the plain surface (--gb-m turns the glass values invalid). */
+.gl-seg.strip { background: var(--gb-strip, var(--ds-surface-2)); box-shadow: var(--gb-strip-sh, none); border-color: var(--ds-hair-strong);
+  --gb-strip: var(--gb-m) linear-gradient(180deg, rgb(var(--ds-white-rgb) / .12), rgb(var(--ds-white-rgb) / .04)), linear-gradient(rgb(var(--ds-black-rgb) / .62), rgb(var(--ds-black-rgb) / .62));
+  --gb-strip-sh: var(--gb-m) inset 0 1px 0 rgb(var(--ds-white-rgb) / .22), inset 0 0 0 1px rgb(var(--ds-white-rgb) / .1), 0 8px 18px -10px rgb(var(--ds-black-rgb) / .9); }
+.gl-seg.nowrap > .gl { flex: 1 1 0; min-width: 0; padding-inline: 0.5rem; }

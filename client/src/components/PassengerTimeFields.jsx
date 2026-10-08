@@ -5,7 +5,7 @@ import { zoneSummary } from '../lib/timezone.js';
 import { parseISO } from '../lib/calendar.js';
 import HoursInput from './HoursInput.jsx';
 
-const timeInputCls = 'h-12 w-full rounded-xl border border-edge bg-navy-800 px-3 text-base outline-none focus:border-accent';
+const timeInputCls = 'gl-field h-12 w-full px-3 text-base';
 
 const durationLabel = (hours) => {
   const h = Math.floor(hours);
@@ -64,7 +64,7 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
       <div className="col-span-2 space-y-2">
         <HoursInput label="Total time" value={value.total_time} onChange={(v) => onChange({ total_time: v })} error={errors.total_time} />
         {depCode && arrCode && depCode.length >= 3 && arrCode.length >= 3 && (
-          <button type="button" onClick={switchToLocalTimes} className="text-xs text-accent-strong underline">
+          <button type="button" onClick={switchToLocalTimes} className="gl link sm">
             Enter local departure/arrival times instead
           </button>
         )}
@@ -106,10 +106,10 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" aria-label="Earlier arrival day" onClick={() => setOffset((offsetOverride ?? result?.arrDayOffset ?? 0) - 1)}
-              className="pressable flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-lg text-slate-300">−</button>
+              className="gl clear icon sm">−</button>
             <span className="w-14 text-center text-xs text-slate-400">+{offsetOverride ?? result?.arrDayOffset ?? 0}d</span>
             <button type="button" aria-label="Later arrival day" onClick={() => setOffset((offsetOverride ?? result?.arrDayOffset ?? 0) + 1)}
-              className="pressable flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-lg text-slate-300">+</button>
+              className="gl clear icon sm">+</button>
           </div>
         </div>
       )}
@@ -118,7 +118,7 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
       )}
       {errors.arr_day_offset && <p className="text-xs text-bad">{errors.arr_day_offset}</p>}
 
-      <button type="button" onClick={switchToManual} className="text-xs text-accent-strong underline">
+      <button type="button" onClick={switchToManual} className="gl link sm">
         Enter duration manually instead
       </button>
     </div>

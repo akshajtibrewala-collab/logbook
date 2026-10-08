@@ -36,7 +36,7 @@ export default function ApproachesEditor({ approaches, onChange }) {
       )}
 
       <button type="button" onClick={add}
-        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-edge-strong text-sm text-accent-strong active:bg-navy-800">
+        className="gl clear sm block dashed mt-2">
         <Plus size={16} />Add approach
       </button>
     </div>
