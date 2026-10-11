@@ -1,5 +1,5 @@
 /* Login, error and offline states (B-calm): one solid surface or one centred column, one muted line, one action. Tokens only; restrained (no red boxes). */
-.st-page { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 16px; padding: 24px; width: min(100%, 24rem); margin: 0 auto; text-align: center; color: var(--ds-text); box-sizing: border-box; }
+.st-page { min-height: 100svh; display: grid; place-content: center; justify-items: center; gap: 16px; padding: 24px; width: min(100%, 24rem); margin: 0 auto; text-align: center; color: var(--ds-text); box-sizing: border-box; }
 .st-page form { display: grid; gap: 16px; width: 100%; justify-items: stretch; }
 .st-mark { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; }
 .st-sub { margin: 0; color: var(--ds-text-2); font-size: 1.0625rem; line-height: 1.45; }

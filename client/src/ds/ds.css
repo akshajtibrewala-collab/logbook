@@ -2,7 +2,7 @@
    Content is solid. Glass is confined to the navigation/control layer (see glass.css). Rem units throughout so text
    scaling (browser text size / 200%) reflows instead of clipping. */
 
-.ds-root { background: var(--ds-bg); color: var(--ds-text); font: 400 var(--ds-fs-body)/1.3 var(--ds-font); min-height: 100dvh; -webkit-text-size-adjust: 100%; overflow-wrap: break-word; }
+.ds-root { background: var(--ds-bg); color: var(--ds-text); font: 400 var(--ds-fs-body)/1.3 var(--ds-font); min-height: 100svh; /* svh, not dvh: the page is never made taller just because Safari's toolbar slid away, so the scroll extent does not change under the finger */ -webkit-text-size-adjust: 100%; overflow-wrap: break-word; }
 .ds-root *, .ds-root *::before, .ds-root *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 .ds-root button, .ds-root a, .ds-root select, .ds-root input, .ds-root summary { touch-action: manipulation; }
 :where(.ds-root) button { font: inherit; color: inherit; } /* :where keeps this at zero specificity so component colours win */
@@ -80,7 +80,7 @@ select.ds-input { padding-right: 2.25rem; background-image: linear-gradient(45de
 /* The wordmark stands in for the empty bar at scroll-top on tab roots (no back button), and hands over to the page title as the large title collapses. */
 .ds-topbar .mark { padding-left: 0.875rem; font-size: 0.9375rem; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-text); white-space: nowrap; opacity: calc(1 - var(--p, 0)); transition: opacity 120ms linear; }
 .ds-topbar .grp { border-radius: 999px; padding: 0 2px; }
-.ds-tabbar { position: fixed; z-index: 30; left: 14px; right: 14px; bottom: calc(var(--ds-bottom) + 12px); --ds-g-r: var(--ds-r-tabbar); transform-origin: 50% 100%; transition: transform var(--ds-dur-3) var(--ds-ease-spring); }
+.ds-tabbar { position: fixed; z-index: 30; left: max(14px, var(--ds-side)); right: max(14px, var(--ds-side)); bottom: calc(var(--ds-bottom) + 12px); --ds-g-r: var(--ds-r-tabbar); transform-origin: 50% 100%; transition: transform var(--ds-dur-3) var(--ds-ease-spring); }
 .ds-tabbar.is-collapsed { transform: translateY(8px) scale(0.86, 0.82); }
 .ds-tabbar.is-collapsed .tab span { opacity: 0; }
 .ds-tabs { position: relative; display: flex; padding: 6px; min-height: var(--ds-tabbar-h); }
@@ -92,8 +92,8 @@ select.ds-input { padding-right: 2.25rem; background-image: linear-gradient(45de
 .ds-tabs .tab.pax[aria-current="page"] svg, .ds-tabs .tab.pax[aria-selected="true"] svg { color: var(--ds-pax); }
 .ds-tabs[data-compact] .tab span { display: none; }
 .ds-ind { position: absolute; top: 6px; bottom: 6px; left: 0; width: 0; border-radius: 999px; z-index: 1; will-change: transform; }
-.ds-fab { position: fixed; z-index: 31; right: 18px; bottom: calc(var(--ds-bottom) + 12px + var(--ds-tabbar-h) + 14px); width: 3.5rem; height: 3.5rem; cursor: pointer; }
-.ds-menu { position: fixed; z-index: 32; right: 18px; bottom: calc(var(--ds-bottom) + 12px + var(--ds-tabbar-h) + 14px + 3.5rem + 10px); width: 16rem; max-width: calc(100% - 36px); --ds-g-r: var(--ds-r-menu); transform-origin: 100% 100%; visibility: hidden; opacity: 0; transform: scale(0.3); transition: transform var(--ds-dur-3) var(--ds-ease-pop), opacity var(--ds-dur-1), visibility 0s linear var(--ds-dur-3); }
+.ds-fab { position: fixed; z-index: 31; right: max(18px, var(--ds-side)); bottom: calc(var(--ds-bottom) + 12px + var(--ds-tabbar-h) + 14px); width: 3.5rem; height: 3.5rem; cursor: pointer; }
+.ds-menu { position: fixed; z-index: 32; right: max(18px, var(--ds-side)); bottom: calc(var(--ds-bottom) + 12px + var(--ds-tabbar-h) + 14px + 3.5rem + 10px); width: 16rem; max-width: calc(100% - 36px); --ds-g-r: var(--ds-r-menu); transform-origin: 100% 100%; visibility: hidden; opacity: 0; transform: scale(0.3); transition: transform var(--ds-dur-3) var(--ds-ease-pop), opacity var(--ds-dur-1), visibility 0s linear var(--ds-dur-3); }
 .ds-menu.is-open { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
 .ds-menu > .g-in { padding: 6px; }
 .ds-menu .mi { display: flex; align-items: center; gap: var(--ds-s-3); width: 100%; min-height: 3.25rem; padding: 0 0.875rem; border: 0; border-radius: 16px; background: transparent; color: var(--ds-text); text-align: left; font-weight: 600; cursor: pointer; text-decoration: none; transition: transform var(--ds-dur-2) var(--ds-ease-pop), background-color var(--ds-dur-1); }
@@ -101,7 +101,7 @@ select.ds-input { padding-right: 2.25rem; background-image: linear-gradient(45de
 .ds-menu .dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; flex: none; }
 html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 .ds-scrim-dim { position: fixed; inset: 0; z-index: 40; background: var(--ds-scrim); opacity: 0; pointer-events: none; transition: opacity var(--ds-dur-2); } .ds-scrim-dim.is-on { opacity: 1; pointer-events: auto; }
-.ds-sheet { position: fixed; z-index: 41; left: 8px; right: 8px; bottom: 0; height: 92dvh; --ds-g-r: var(--ds-r-sheet); will-change: transform; transform: translateY(110%); transition: transform var(--ds-dur-3) var(--ds-ease-out), visibility 0s linear var(--ds-dur-3); touch-action: none;
+.ds-sheet { position: fixed; z-index: 41; left: max(8px, var(--ds-side)); right: max(8px, var(--ds-side)); bottom: 0; height: 92svh; /* svh: the sheet keeps one height while Safari's toolbar slides in and out under it */ --ds-g-r: var(--ds-r-sheet); will-change: transform; transform: translateY(110%); transition: transform var(--ds-dur-3) var(--ds-ease-out), visibility 0s linear var(--ds-dur-3); touch-action: none;
   visibility: hidden; pointer-events: none; /* closed: out of the tab order and never able to intercept a tap */ }
 .ds-sheet.is-open { visibility: visible; pointer-events: auto; transition-delay: 0s; }
 .ds-sheet.is-drag { transition: none; }
@@ -109,11 +109,11 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 .ds-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--ds-text-2); opacity: 0.55; margin: 4px auto 14px; flex: none; }
 .ds-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-3); margin-bottom: var(--ds-s-3); flex: none; }
 .ds-sheet-body { overflow-y: auto; flex: 1; padding-bottom: calc(var(--ds-bottom) + 6rem); overscroll-behavior: contain; touch-action: pan-y; }
-@media (max-width: 480px) { .ds-sheet { left: 4px; right: 4px; } }
+@media (max-width: 480px) { .ds-sheet { left: max(4px, var(--ds-side)); right: max(4px, var(--ds-side)); } }
 @media (min-width: 768px) { .ds-sheet { left: 50%; right: auto; width: 34rem; margin-left: -17rem; } }
 
 /* ---------- app shell layout (only inside .ds-app; the /design device frames keep the phone layout at any width) ---------- */
-.ds-app { min-height: 100dvh; --bottom-nav-h: calc(var(--ds-tabbar-h) + 12px + var(--ds-bottom)); } /* keeps the old pages' sticky save bars above the floating tab bar */
+.ds-app { min-height: 100svh; --bottom-nav-h: calc(var(--ds-tabbar-h) + 12px + var(--ds-bottom)); } /* keeps the old pages' sticky save bars above the floating tab bar */
 .ds-mt { margin-top: var(--ds-s-4); }
 .ds-app .sticky.top-0 { top: calc(var(--ds-top) + var(--ds-bar-h) + 16px); } /* interim: pre-redesign sticky headers (Stats tabs) sit below the glass top bar */
 .ds-link { display: inline-flex; align-items: center; min-height: var(--ds-tap); font-weight: 600; text-decoration: none; }
@@ -239,3 +239,6 @@ html[data-kb] .save-bar { position: static; }
 /* A page that keeps its tab bar (Aircraft edit) is already at the blur budget: this bar is a solid floor there, no blur layers. */
 .ds-app:not([data-focus]) .ds-savebar { --ds-g-base: var(--ds-g-solid); --ds-g-border: var(--ds-g-solid-edge); }
 .ds-app:not([data-focus]) .ds-savebar > .g-core, .ds-app:not([data-focus]) .ds-savebar > .g-lens, .ds-app:not([data-focus]) .ds-savebar > .g-scrim { display: none; }
+
+/* iPhone Safari zooms the whole page when a field under 16px gets focus: on a touch screen every field is at least 16px, whatever its own class says. */
+@media (pointer: coarse) { input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: max(16px, 1em) !important; } }

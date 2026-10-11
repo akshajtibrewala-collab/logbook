@@ -61,10 +61,10 @@
   --ds-shadow-pop: 0 18px 40px -12px rgb(0 0 0 / 0.7);
 
   /* Liquid glass (navigation/control layer only). Nearly clear: very low tint, small blur, boosted saturation. */
-  --ds-g-tint-lo: rgb(24 24 28 / 0.1);
-  --ds-g-tint-pop: rgb(12 12 16 / 0.35);       /* floor for menus/sheets; the scrim below applies only where the backdrop is bright */
+  --ds-g-tint-lo: rgb(12 12 16 / 0.5);          /* was 0.10 (nearly clear): page text scrolling under a bar ghosted through its title; the bars now keep their own text legible with or without blur */
+  --ds-g-tint-pop: rgb(12 12 16 / 0.92);       /* floor for menus/sheets; the scrim below applies only where the backdrop is bright */
   --ds-g-tint-hi: rgb(12 12 16 / 0.7);        /* adaptive scrim, faded in over bright content */
-  --ds-g-blur: 6px;
+  --ds-g-blur: 10px;
   --ds-g-sat: 1.9;
   --ds-g-bri: 1.06;
   /* Busy or colourful backdrops (a map): neutral, heavier tint, a heavier blur to wash out detail, and NO saturation boost. */
@@ -93,7 +93,7 @@
   --ds-g-solid-edge: var(--ds-hair-strong);
 
   /* Type: system stack first (SF Pro on Apple), Inter elsewhere. rem, so browser/text-size scaling works. */
-  --ds-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, system-ui, "Segoe UI", sans-serif;
+  --ds-font: Inter, "Inter Fallback", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", sans-serif; /* Inter, self-hosted, on every device: one set of glyph widths (it used to be the system font on iPhone and Inter elsewhere) */
   --ds-fs-num: 4rem;        /* hero numeral */
   --ds-fs-display: 2.75rem; /* large title */
   --ds-fs-title: 1.375rem;
@@ -104,7 +104,8 @@
 
   /* Space, radii */
   --ds-s-1: 0.25rem; --ds-s-2: 0.5rem; --ds-s-3: 0.75rem; --ds-s-4: 1rem; --ds-s-5: 1.5rem; --ds-s-6: 2.5rem;
-  --ds-gutter: 16px;       /* px, not rem: side margins shouldn't eat the screen at large text sizes */
+  --ds-side: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)); /* landscape notch / rounded corners: 0 in portrait and on every desktop */
+  --ds-gutter: max(16px, var(--ds-side));       /* px, not rem: side margins shouldn't eat the screen at large text sizes; never under the notch */
   --ds-r-card: 10px;
   --ds-r-ctl: 8px;
   --ds-r-bar: 27px;

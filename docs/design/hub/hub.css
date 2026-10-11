@@ -1,0 +1,23 @@
+/* Hub Home mockup styles (tokens only). Tiles are solid surfaces; the hero line is the one bright thing. */
+.hub-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.d .hub-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.hub-t { display: grid; align-content: space-between; gap: 6px; min-height: 104px; padding: 14px 16px; border-radius: var(--mn-r); background: var(--ds-surface); color: inherit; min-width: 0; }
+.hub-t:hover { background: var(--ds-surface-2); }
+.d .hub-t { min-height: 128px; padding: 18px 20px; }
+.hub-t .top { display: flex; align-items: center; justify-content: space-between; }
+.hub-t .ic, .hub-m .ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--ds-surface-2); color: var(--ds-text-2); }
+.hub-t .ic svg, .hub-m .ic svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hub-t .nm { font-weight: 600; } .hub-t .v { color: var(--ds-text-2); font-size: var(--fs-s); overflow-wrap: break-word; }
+.hub-mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.hub-m { position: relative; display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border-radius: var(--mn-rr); background: var(--ds-surface); min-width: 0; text-align: center; min-height: 84px; }
+.hub-m .nm { font-size: 0.8125rem; font-weight: 600; max-width: 100%; overflow-wrap: break-word; } .hub-m .bc-dot { position: absolute; top: 8px; right: 8px; }
+.hub-h { margin: 0 0 4px; padding: 0 8px; color: var(--ds-text-2); font-size: var(--fs-s); font-weight: 600; }
+.hub-cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.hub-cols.b { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+.hub-l { display: grid; gap: 24px; align-content: start; min-width: 0; } .hub-r { position: sticky; top: 96px; }
+.bc-map.tall { height: 16rem; } .d .bc-map.tall { height: 36rem; }
+.hub-mapcard { position: relative; border-radius: var(--mn-r); overflow: hidden; background: var(--ds-map-sea); }
+.hub-mapcard .bc-map { border-radius: 0; height: 21rem; } .hub-mapcard.big .bc-map { height: 40rem; }
+.hub-mapcard .over { position: absolute; left: 0; right: 0; top: 0; padding: 18px 18px 40px; display: grid; gap: 10px; background: linear-gradient(to bottom, rgb(0 0 0 / .82), rgb(0 0 0 / .55) 60%, transparent); }
+.hub-mapcard .over .bc-greet { margin: 0; } .hub-mapcard .bc-hero { padding: 0; }
+.hub-chips { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 8px; } .hub-chips span { padding: 6px 12px; border-radius: 999px; background: rgb(0 0 0 / .62); color: var(--ds-text); font-size: 0.8125rem; font-weight: 600; }

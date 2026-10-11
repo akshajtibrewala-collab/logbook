@@ -63,7 +63,7 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .bc-row .t > .r { color: var(--ds-text-2); font-size: var(--fs-s); width: 100%; }
 .bc-row .v { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ds-text); }
 .bc-row.full { grid-template-columns: 5.5rem minmax(0, 1fr) auto; } .bc-row.full .day { font-size: var(--fs-s); text-align: left; }
-.bc-row.md { grid-template-columns: 3.25rem minmax(0, 1fr) auto; gap: 12px; } .bc-row.md .day { font-size: var(--fs-s); text-align: left; } .bc-row.md .t > b { white-space: nowrap; }
+.bc-row.md { grid-template-columns: 2.75rem minmax(0, 1fr) auto; gap: 8px; } .bc-row.md .day { font-size: var(--fs-s); text-align: left; } .bc-row.md .t > b { white-space: nowrap; }
 .bc-row.ground .v { color: var(--ds-text-2); }
 .bc-ground { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 0 8px 0 64px; border-radius: var(--mn-rr); cursor: pointer; color: var(--ds-text-2); font-size: var(--fs-s); width: 100%; }
 .bc-ground:hover { background: var(--ds-surface); } .bc-ground:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
@@ -81,7 +81,7 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 /* ground sheet rows: two fixed columns, the title (instructor muted) left; the date and hours right, never wrapped */
 .bc-grow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--mn-rr); color: var(--ds-text); }
 .bc-grow:hover { background: var(--ds-surface-2); } .bc-grow:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
-.bc-grow .a { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; } .bc-grow .a .mut { font-size: var(--fs-s); }
+.bc-grow .a { display: grid; gap: 2px; min-width: 0; overflow-wrap: break-word; } .bc-grow .a .mut { font-size: var(--fs-s); }
 .bc-grow .b { display: grid; gap: 2px; justify-items: end; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; } .bc-grow .b .mut { font-size: var(--fs-s); }
 .bc-field { display: grid; gap: 8px; } .bc-field > .l { font-size: var(--fs-s); font-weight: 600; color: var(--ds-text-2); }
 .bc-chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -118,14 +118,16 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 @media (prefers-reduced-motion: reduce) { .ds-fab { transition: none; } }
 
 /* on a phone the Add button floats at the bottom right: keep the trailing numbers (hours, chevrons, the Ledger's last column) clear of it */
+:root { --fab-clear: calc(3.5rem + max(18px, var(--ds-side)) + 2px - var(--ds-gutter)); } /* the Add button's width and edge gap, less the page gutter: 60px at 100% text, growing with it so a larger text size never puts the button over a trailing number */
 @media (max-width: 1023px) {
-  .bc-row, .bc-mh, .bc-ground, .bc-item, .bc-status { padding-right: 72px; }
+  .bc-row, .bc-mh, .bc-ground, .bc-item, .bc-status { padding-right: var(--fab-clear); } /* the trailing numbers end 2px before the button (a row on a year surface starts 8px further in, so it needs 8px less) */
+  .bc-month.surface .bc-row, .bc-month.surface .bc-mh { padding-right: calc(var(--fab-clear) - 8px); }
   .bc-ground { padding-left: 64px; }
-  .bc .mn-led-wrap { padding-inline-end: 72px; }
+  .bc .mn-led-wrap { padding-inline-end: calc(var(--fab-clear) + 12px); }
 }
 /* On a phone the Ledger scrolls sideways: end padding only clears the Add button once scrolled to the end, so the scroller itself stops short of it
    (the last column is then clipped at the scroller's edge, never under the button). */
-@media (max-width: 719px) { .bc .mn-led-wrap { padding-inline-end: 0; margin-inline-end: 72px; } }
+@media (max-width: 719px) { .bc .mn-led-wrap { padding-inline-end: 0; margin-inline-end: calc(var(--fab-clear) + 12px); } }
 .bc .mn-led tr.mo td b, .bc .mn-led td.t { color: var(--ds-text); }
 /* One weight for every control label on a calm screen (the calm limit is three weights: 400, 600, 700). */
 .bc .gl-seg > .gl, .bc .gl-chip, .bc .gl { font-weight: 600; }
@@ -151,7 +153,30 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .bc-month { grid-template-columns: minmax(0, 1fr); }
 .bc-row.md .t > b { white-space: normal; }
 .bc-item { flex-wrap: wrap; row-gap: 4px; } .bc-item .l { flex: 1 1 8rem; min-width: 0; flex-wrap: wrap; }
-.bc-item .l .mut { white-space: normal; overflow-wrap: anywhere; }
+.bc-item .l .mut { white-space: normal; overflow-wrap: break-word; }
 
 .bc-ctl.start { justify-content: flex-start; }
 .bc-items.flush .bc-item { padding-left: 0; }
+
+/* the FAA minimum as a tick on the goal line */
+.bc-line { position: relative; overflow: visible; } .bc-line i { border-radius: 2px; }
+.bc-line .tick { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ds-text-2); }
+
+/* short labels balance their lines (no one-word last line) where the browser supports it; older ones simply wrap */
+.bc-item .l, .bc-mh > span:first-child, .mn-st .pri, .mn-prog .l, .mn-fold > span:first-child, .bc-grow .a { text-wrap: balance; }
+
+/* menu pages (More): grouped solid surfaces, rows with an icon tile, a title and one short line; the chevron sits at the row's own edge */
+.bc-grp { display: grid; gap: 8px; min-width: 0; }
+.bc-grp > h2 { margin: 0; padding: 0 8px; font-size: var(--fs-s); font-weight: 600; color: var(--ds-text-2); }
+.bc-grp .box { display: grid; background: var(--ds-surface); border-radius: var(--mn-r); overflow: hidden; min-width: 0; }
+.bc-mrow { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; align-items: center; min-height: 68px; padding: 10px 16px 10px 14px; color: inherit; }
+.bc-mrow + .bc-mrow::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--ds-hair); }
+.bc-mrow:hover { background: var(--ds-surface-2); } .bc-mrow:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
+.bc-mrow .ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ds-surface-2); color: var(--ds-text-2); }
+.bc-mrow .ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bc-mrow .tx { display: grid; gap: 2px; min-width: 0; } .bc-mrow .tx b { font-weight: 600; } .bc-mrow .tx .mut { overflow-wrap: break-word; }
+.bc-mrow > svg { width: 16px; height: 16px; fill: none; stroke: var(--ds-text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* rows with a trailing value or chevron keep clear of the Add button on a phone, like the Logbook rows do */
+@media (max-width: 1023px) { .cl .mn-card > .mn-st { padding-inline-end: calc(var(--fab-clear) - 8px); } .cl .mn-ctl { padding-inline-end: var(--fab-clear); } } /* a status row's trailing value and a section's "Add" chip clear the floating Add button too (an expense row's delete icon does not: the amount and its name need the width) */
+@media (max-width: 1023px) { .cl .mn-prog, .cl button.mn-fold, .cl a.mn-fold, .cl .bc-sec button.hd { padding-inline-end: calc(var(--fab-clear) - 8px); } }

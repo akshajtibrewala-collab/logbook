@@ -108,7 +108,7 @@ The database holds real flight records, not sample data. This overrides convenie
 
 ```bash
 npm run dev     # both workspaces; server on :3001, client on :5173 (proxies /api)
-npm test         # server tests, then client tests (currently 216 server + 379 client, all passing)
+npm test         # server tests, then client tests (currently 216 server + 391 client, all passing)
 ```
 
 There is no DOM/component testing: put logic in pure `client/src/lib/*.js` functions and test those. UI changes
@@ -191,6 +191,8 @@ locally at `docs/design/_private/PLAN.md` (gitignored, private). Read it at the 
 All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details in `docs/ROADMAP.md`.
 
 **Recent features**
+- **Home is a hub:** greeting, the hero, one status line, a short map band, then one tile per module that exists (each a link with one live value). Hub rules and scope dots in `docs/design/DESIGN_LANGUAGE.md` ("Home hub").
+- **Scroll and viewport rules:** scroll-linked state is pure and clamped (`lib/scrollstate.js`), the glass tint re-samples when scrolling settles, `svh` not `dvh`, side safe areas; `?debug=1` on any URL shows a diagnostics panel (no data, no network). `client/scripts/check-scroll.mjs` (round trip, both engines, three widths) and `check-fonts.mjs` (no external font or stylesheet request) are part of every verification, as is `check-phone.mjs` with `--profile se` and `--text 130`.
 - **Logging:** Quick log (`/logbook/quick`), copy last flight, airport autocomplete with remembered airports, draft
   autosave, and an offline retry queue (`lib/outbox.js`) so a failed save never loses an entry.
 - **Stats:** hours by month / aircraft type or tail / category, and a cumulative-hours line toward a goal you set.

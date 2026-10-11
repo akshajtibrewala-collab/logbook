@@ -147,7 +147,11 @@ export function initGlass() {
   if (started || typeof document === 'undefined') return;
   started = true;
   document.documentElement.dataset.glass = snapshot.effective;
-  addEventListener('scroll', () => { noteActivity(250); scheduleSample(); }, { capture: true, passive: true });
+  // Scrolling re-samples as it goes, and once more when it stops: the tab bar is still mid-collapse (scaled and shifted) at the last scroll event, so a sample taken
+  // then looks under the wrong patch of page and would stay wrong. The transitionend listener below covers the bar finishing its own spring.
+  let settle = 0;
+  addEventListener('scroll', () => { noteActivity(250); scheduleSample(); clearTimeout(settle); settle = setTimeout(scheduleSample, 220); }, { capture: true, passive: true });
+  document.addEventListener('transitionend', (e) => { if (e.target?.classList?.contains('ds-glass')) scheduleSample(); }, true);
   addEventListener('resize', scheduleSample);
   addEventListener('pointerup', scheduleSample, { passive: true }); // a map pan or zoom ends with a pointer release
   addEventListener('wheel', scheduleSample, { passive: true });

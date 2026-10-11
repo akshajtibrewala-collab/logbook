@@ -111,7 +111,7 @@ export default function FlightDetail() {
 
         {trio.length > 0 && (
           <div className="mn-trio">
-            {trio.map(([k, v]) => <div key={k} className="stat"><span className="mn-num">{v}</span><span className="mn-mut">{k}</span></div>)}
+            {trio.map(([k, v]) => <div key={k} className="stat"><span className={`mn-num${String(v).length > 5 ? ' long' : ''}`}>{v}</span><span className="mn-mut">{k}</span></div>)}
           </div>
         )}
 

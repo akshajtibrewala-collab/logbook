@@ -9,7 +9,7 @@
 // places they touch;  nm = the distance of ALL flights (Home's own total, pilot and passenger routes together). The passenger-only distance is a separate figure.
 //
 // Two layers:  (1) a MODEL built in Node from the API with the app's own lib functions (the same ones useHomeData uses), compared to the expected figures;
-//              (2) the SCREENS: Home (greeting with the name, the pilot hero, the passenger item, the status line), Travel (hero, totals sheet, year headers sum),
+//              (2) the SCREENS: Home (greeting with the name, the pilot hero, the Logbook / Travel / Map tiles, the status line), Travel (hero, totals sheet, year headers sum),
 //                  Stats > Travel and Map (All and Passenger), each compared to the model and to each other.
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -49,7 +49,7 @@ const hours = (list) => r2(list.reduce((s, f) => s + (Number(f.total_time) || 0)
 const paxMap = buildMapData(pax, airports), counts = visitedCounts(paxMap.stops);
 const model = {
   pilot: hours(pilot), passenger: hours(pax), flights: pax.length, airports: counts.airports, countries: counts.countries,
-  nm: Math.round(placeableMapData(buildMapData(flights, airports)).totalDistanceNm), paxNm: Math.round(placeableMapData(paxMap).totalDistanceNm),
+  allAirports: visitedCounts(buildMapData(flights, airports).stops).airports, nm: Math.round(placeableMapData(buildMapData(flights, airports)).totalDistanceNm), paxNm: Math.round(placeableMapData(paxMap).totalDistanceNm),
 };
 console.log(`API ${API}: ${flights.length} flights (${pilot.length} pilot, ${pax.length} passenger). Model: ${JSON.stringify(model)}`);
 if (EXPECT) for (const k of Object.keys(EXPECT)) compare(`model ${k}`, model[k], EXPECT[k], k === 'nm' ? 0.5 : 0.0051);
@@ -67,8 +67,13 @@ await load('/');
 const greeting = (await p.locator('.bc-greet').first().innerText()).trim();
 truthy('Home greeting names the pilot', new RegExp(`^Good (morning|afternoon|evening), ${NAME}$`).test(greeting), greeting);
 compare('Home pilot hero (h)', num(await p.locator('.bc-hero .n [data-final]').first().getAttribute('data-final')), model.pilot);
-const paxItem = await p.locator('.bc-item', { hasText: 'Passenger' }).first().innerText();
-compare('Home passenger item (h)', num(paxItem.replace('Passenger', '')), model.passenger);
+// the hub tiles (each is a link with a name and one live value; the figure is the same one its own page shows)
+const tile = async (name) => (await p.locator('.hub-t', { hasText: name }).first().innerText()).replace(name, '').trim();
+compare('Home Logbook tile (pilot flights)', num(await tile('Logbook')), pilot.length);
+const travelTile = await tile('Travel');
+compare('Home Travel tile (passenger hours)', num((travelTile.match(/([\d,.]+)\s*h(?![a-z])/) || [])[1]), model.passenger);
+compare('Home Travel tile (passenger flights)', num((travelTile.match(/(\d+)\s*flights/) || [])[1]), model.flights);
+compare('Home Map tile (airports, all flights)', num(await tile('Map')), model.allAirports);
 const status = (await p.locator('.bc-status').first().innerText()).trim();
 truthy('Home status line reads "All clear" or "N need(s) attention"', /^(All clear|\d+ needs? attention)$/.test(status), status);
 rows.push({ check: 'Home status line (reported)', found: status, expected: '-', result: 'info' });

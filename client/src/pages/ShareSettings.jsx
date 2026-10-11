@@ -70,7 +70,7 @@ export default function ShareSettings() {
             <>
               <label className="mt-3 block text-xs text-slate-400">Your link
                 <input readOnly value={url} onFocus={(e) => e.target.select()}
-                  className="gl-field mt-1 h-12 w-full px-3 text-sm" />
+                  className="gl-field mt-1 h-12 w-full px-3 text-base" />
               </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <Button size="md" variant="secondary" icon={Copy} iconSize={16} onClick={copy}>{copied ? 'Copied' : 'Copy link'}</Button>

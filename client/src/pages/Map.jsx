@@ -15,6 +15,14 @@ import { formatDate as fmtDate } from '../lib/calendar.js';
 import { pilotFlights, roleOf } from '../lib/flightRoles.js';
 import Toggle from '../components/Toggle.jsx';
 
+// Leaving the Map while a zoom animation is still running removes the map first; Leaflet's own transition-end timer then fires on a map with no
+// panes ("Cannot read properties of undefined (reading '_leaflet_pos')"). A removed map has nothing left to finish, so that one call is skipped.
+if (!L.Map.prototype.__zoomEndGuarded) {
+  const zoomEnd = L.Map.prototype._onZoomTransitionEnd;
+  L.Map.prototype._onZoomTransitionEnd = function guardedZoomEnd(...args) { return this._mapPane ? zoomEnd.apply(this, args) : undefined; };
+  L.Map.prototype.__zoomEndGuarded = true;
+}
+
 // Each role filter's active-state tint: sky blue for Pilot, violet for Passenger (same tokens as the
 // route lines and FlightRoleTabs), neutral navy for All so it doesn't read as either role.
 const ROLE_FILTERS = [

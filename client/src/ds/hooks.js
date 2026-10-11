@@ -2,6 +2,7 @@
 // re-rendering, so scrolling never triggers React work.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlass, subscribeGlass, trackGlass, initGlass } from './glass.js';
+import { clampScroll, nextCollapse, titleProgress, keyboardInset } from '../lib/scrollstate.js';
 
 export const useGlass = () => { initGlass(); return useSyncExternalStore(subscribeGlass, getGlass, getGlass); };
 
@@ -12,17 +13,19 @@ export function useGlassTint(ref) {
 
 const scrollerOf = (ref) => ref?.current || window;
 const scrollTopOf = (s) => (s === window ? window.scrollY : s.scrollTop);
+/** Furthest the scroller can go: iOS reports positions outside [0, max] while it rubber-bands, so every reader clamps against this. */
+export const maxScrollOf = (s) => (s === window ? document.documentElement.scrollHeight - window.innerHeight : s.scrollHeight - s.clientHeight);
 
 /** True while the user has scrolled down (past `minY`), false as soon as they scroll up. Drives the collapsing tab bar. */
 export function useCollapseOnScroll(scrollRef, { threshold = 10, minY = 80 } = {}) {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    const s = scrollerOf(scrollRef); let last = scrollTopOf(s);
+    const s = scrollerOf(scrollRef);
+    let st = { collapsed: false, last: clampScroll(scrollTopOf(s), maxScrollOf(s)) };
     const on = () => {
-      const y = scrollTopOf(s), dy = y - last;
-      if (Math.abs(dy) < threshold) return;
-      last = y;
-      setCollapsed((c) => { const n = dy > 0 && y > minY; return n === c ? c : n; });
+      const n = nextCollapse(st, scrollTopOf(s), maxScrollOf(s), { threshold, minY });
+      if (n === st) return;
+      st = n; setCollapsed((c) => (c === n.collapsed ? c : n.collapsed));
     };
     s.addEventListener('scroll', on, { passive: true });
     return () => s.removeEventListener('scroll', on);
@@ -41,7 +44,7 @@ export function useCollapsingTitle(scrollRef, barRef, titleRef, routeKey) {
       const bar = barRef.current, title = titleRef.current; if (!bar) return;
       if (!title) { bar.style.setProperty('--p', '1'); return; } // a page without a large title: the bar always shows its title
       const gap = title.getBoundingClientRect().bottom - bar.getBoundingClientRect().bottom; // >0: title still below the bar
-      bar.style.setProperty('--p', String(Math.max(0, Math.min(1, 1 - (gap - 4) / 40))));
+      bar.style.setProperty('--p', String(titleProgress(gap)));
     };
     update();
     s.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update);
@@ -54,9 +57,12 @@ export function useKeyboardInset() {
   const [inset, setInset] = useState(0);
   useEffect(() => {
     const vv = window.visualViewport; if (!vv) return undefined;
-    const on = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    const textFocused = () => { const a = document.activeElement; return Boolean(a && a.matches?.('input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="file"], [type="range"]), textarea, select, [contenteditable="true"]')); };
+    // Only a focused text field, an unzoomed page and a keyboard-sized gap count (lib/scrollstate.js): pinch-zoom and the iOS rubber-band must never read as a keyboard.
+    const on = () => setInset(keyboardInset({ innerHeight: window.innerHeight, vvHeight: vv.height, vvOffsetTop: vv.offsetTop, vvScale: vv.scale, textFocused: textFocused() }));
     on(); vv.addEventListener('resize', on); vv.addEventListener('scroll', on);
-    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); };
+    document.addEventListener('focusin', on); document.addEventListener('focusout', on);
+    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); document.removeEventListener('focusin', on); document.removeEventListener('focusout', on); };
   }, []);
   return inset;
 }

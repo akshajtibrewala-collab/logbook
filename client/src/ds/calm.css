@@ -14,7 +14,7 @@
 .cl-card.tight { padding-block: 4px; }
 .cl-card.hero { position: relative; }
 .cl-cap { font-size: var(--fs-m); color: var(--ds-text-2); }
-.cl-num { font-size: var(--fs-n); font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cl-num { font-size: var(--fs-n); font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: break-word; }
 .cl-num.pilot { color: var(--ds-pilot); } .cl-num.pax { color: var(--ds-pax); }
 .cl-num .ds-unit { font-size: 1.25rem; }
 .cl-sup { font-size: var(--fs-b); color: var(--ds-text-2); }
@@ -25,7 +25,7 @@
 .cl-bar.pax i { background: var(--ds-pax); }
 .cl-bar-ends { display: flex; justify-content: space-between; gap: var(--gap-in); font-size: var(--fs-m); color: var(--ds-text-3); font-variant-numeric: tabular-nums; }
 .cl-sup-link { color: inherit; text-decoration: underline; text-decoration-color: var(--ds-hair); text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; }
-.cl-title { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; overflow-wrap: anywhere; }
+.cl-title { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; overflow-wrap: break-word; }
 
 /* rows: at most three pieces of information (primary, secondary, one trailing value) */
 .cl-rows { display: grid; }
@@ -68,11 +68,11 @@
 
 /* detail: label / value rows, link cards, quotes */
 .cl-dl { display: grid; }
-.cl-dl > div { display: flex; justify-content: space-between; align-items: center; gap: var(--gap-in); min-height: 56px; border-top: 1px solid var(--ds-hair); }
+.cl-dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--gap-in); min-height: 56px; border-top: 1px solid var(--ds-hair); }
 .cl-dl > div:first-child { border-top: 0; }
-.cl-dl .k { font-size: var(--fs-b); color: var(--ds-text-2); } .cl-dl .v { font-size: var(--fs-b); font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cl-dl .k { font-size: var(--fs-b); color: var(--ds-text-2); } .cl-dl .v { font-size: var(--fs-b); font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: break-word; }
 .cl-dl button.cl-dlrow { all: unset; box-sizing: border-box; display: flex; width: 100%; justify-content: space-between; align-items: center; min-height: 56px; cursor: pointer; font-size: var(--fs-b); color: var(--ds-text-2); border-top: 1px solid var(--ds-hair); }
-.cl-quote { margin: 0; font-size: var(--fs-b); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cl-quote { margin: 0; font-size: var(--fs-b); line-height: 1.55; white-space: pre-wrap; overflow-wrap: break-word; }
 .cl-quote + .cl-quote { margin-top: var(--gap-in); }
 .cl-quote .k { display: block; font-size: var(--fs-m); color: var(--ds-text-2); margin-bottom: 4px; }
 .cl-actions { display: grid; gap: var(--u); }
@@ -121,3 +121,6 @@
 .cl-open h3 { margin: 0; font-size: var(--fs-m); font-weight: 650; color: var(--ds-text-2); }
 .cl-note { font-size: var(--fs-m); color: var(--ds-text-2); margin: 0; }
 .cl-error { margin: 0; padding: var(--gap-in); border-radius: var(--ds-r-card); background: var(--ds-bad-soft); color: var(--ds-bad); font-size: var(--fs-m); }
+
+/* a label and its value share a row only while they fit; at large text the value drops under the label instead of leaving the screen */
+.cl-dl .k, .cl-dl .v { min-width: 0; overflow-wrap: break-word; }

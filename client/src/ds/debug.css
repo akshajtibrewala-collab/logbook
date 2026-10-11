@@ -1,0 +1,10 @@
+/* Diagnostics panel (?debug=1 only). Solid, small, top-left under the status bar; taps pass through everywhere except its own two buttons. */
+.dbg { position: fixed; z-index: 2147483000; top: calc(var(--ds-top, 0px) + 4px); left: 4px; max-width: min(19rem, calc(100vw - 8px)); font: 500 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ds-text); background: var(--ds-surface-2); border: 1px solid var(--ds-hair-strong); border-radius: 10px; padding: 4px 6px; pointer-events: none; -webkit-text-size-adjust: 100%; }
+.dbg-h { display: flex; gap: 6px; pointer-events: auto; }
+.dbg-h button { font: inherit; color: var(--ds-text); background: var(--ds-surface-3); border: 1px solid var(--ds-hair-strong); border-radius: 8px; padding: 6px 10px; min-height: 32px; }
+.dbg-l { margin: 4px 0 0; overflow-wrap: anywhere; }
+.dbg dl { margin: 4px 0 0; }
+.dbg dl > div { display: flex; justify-content: space-between; gap: 10px; }
+.dbg dt { color: var(--ds-text-2); white-space: nowrap; }
+.dbg dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+@media print { .dbg { display: none !important; } }

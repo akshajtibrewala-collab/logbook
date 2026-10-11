@@ -7,7 +7,7 @@ export default function SummaryStrip({ tint = 'pilot', scope, primary, items }) 
     <div className="bc-hero static" role="group" aria-label={`${scope}: ${primary.value}${(primary.unit ?? "h") ? " hours" : ""}. ${(items || []).map((i) => `${i.label} ${i.value}`).join(', ')}`}>
       <span className="lab"><span className={`bc-dot ${tint}`} aria-hidden="true" />{scope}</span>
       <span className="nrow"><span className="n">{primary.value}{(primary.unit ?? "h") && <small>{primary.unit ?? "h"}</small>}</span></span>
-      {items?.length > 0 && <span className="of">{items.map((i) => `${i.label} ${i.value}`).join(' · ')}</span>}
+      {items?.length > 0 && <span className="of">{items.map((i, k) => <span key={i.label}>{k > 0 && ' · '}<span className="nowrap">{i.label} {i.value}</span></span>)}</span>}
     </div>
   );
 }

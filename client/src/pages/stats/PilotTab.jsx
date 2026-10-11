@@ -1,3 +1,4 @@
+import { goalHours } from '../../lib/goal.js';
 import { useMemo } from 'react';
 import { Plane } from 'lucide-react';
 import { fmtHours } from '../../lib/hours.js';
@@ -16,7 +17,7 @@ export default function PilotTab({ pilotFlights, settings, onSaveTarget }) {
     const today = localToday();
     const months = hoursByMonth(pilotFlights, { months: 12, now: today });
     const categories = hoursByCategory(pilotFlights);
-    const goal = cumulativeHours(pilotFlights, { target: settings?.hours_target, now: today });
+    const goal = cumulativeHours(pilotFlights, { target: goalHours(settings), now: today });
     return {
       months,
       categories,
@@ -34,7 +35,6 @@ export default function PilotTab({ pilotFlights, settings, onSaveTarget }) {
       <SummaryStrip scope="Pilot" tint="pilot" primary={{ label: 'Total hours', value: fmtHours(data.totalHours) }} items={[
         { label: 'Last 12 months', value: fmtHours(data.hours12mo) },
         { label: 'PIC', value: fmtHours(data.picHours) },
-        ...(data.goalPercent === null ? [] : [{ label: 'Goal', value: `${data.goalPercent}%` }]),
       ]} />
       <MonthlyChart flights={pilotFlights} />
       <CumulativeChart flights={pilotFlights} settings={settings} onSaveTarget={onSaveTarget} defaultOpen={false} />

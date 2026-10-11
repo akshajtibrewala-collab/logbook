@@ -33,8 +33,8 @@ test('tab roots have no back button, detail pages do', () => {
 });
 
 test('the Add button hides on forms and leaf settings pages only', () => {
-  for (const u of ['/', '/logbook', '/travel', '/map', '/stats', '/more', '/aircraft', '/currency', '/milestones', '/weather', '/costs', '/logbook/5', '/travel/181']) assert.equal(showAdd(u), true, u);
-  for (const u of ['/logbook/new', '/logbook/quick', '/logbook/5/edit', '/logbook/ground/new', '/aircraft/new', '/aircraft/15', '/currency/new', '/weather/settings', '/costs/settings', '/logbook/print', '/settings']) assert.equal(showAdd(u), false, u);
+  for (const u of ['/', '/logbook', '/travel', '/map', '/stats', '/aircraft', '/currency', '/milestones', '/weather', '/costs', '/logbook/5', '/travel/181']) assert.equal(showAdd(u), true, u);
+  for (const u of ['/more', '/logbook/new', '/logbook/quick', '/logbook/5/edit', '/logbook/ground/new', '/aircraft/new', '/aircraft/15', '/currency/new', '/weather/settings', '/costs/settings', '/costs/expenses', '/logbook/print', '/settings']) assert.equal(showAdd(u), false, u);
 });
 
 test('forms are focused screens (no tab bar); lists, details and tab roots are not', () => {

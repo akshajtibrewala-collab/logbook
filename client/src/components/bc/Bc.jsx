@@ -13,7 +13,7 @@ import '../../ds/bcalm.css';
  * The hero: the label (one word of scope, with a role dot), one big white numeral, a muted "of 40 h" beside it, and a thin line that stands for total time
  * toward that minimum. A button (opens the details sheet) or, with `to`, a link. `of` is the minimum text, e.g. "of 40 h".
  */
-export function BcHero({ label, dot, number, of, percent, barLabel, ariaLabel, onClick, to, unit = 'h' }) {
+export function BcHero({ label, dot, number, of, percent, tick, barLabel, ariaLabel, onClick, to, unit = 'h' }) {
   const body = (
     <>
       <span className="lab">{dot && <span className={`bc-dot ${dot}`} aria-hidden="true" />}{label}</span>
@@ -21,7 +21,7 @@ export function BcHero({ label, dot, number, of, percent, barLabel, ariaLabel, o
         <span className="n"><CountUp value={number} />{unit && <small>{unit}</small>}</span>
         {of && <span className="of">{of}</span>}
       </span>
-      {percent != null && <span className="bc-line" role="img" aria-label={barLabel}><i style={{ width: `${percent}%` }} /></span>}
+      {percent != null && <span className="bc-line" role="img" aria-label={barLabel}><i style={{ width: `${percent}%` }} />{tick != null && <b className="tick" style={{ left: `${tick}%` }} aria-hidden="true" />}</span>}
     </>
   );
   return to
@@ -80,6 +80,27 @@ export function BcItem({ to, dot, icon: Icon, title, value, bold }) {
     <Link to={to} className="bc-item" data-row aria-label={value ? `${title}, ${bold ? bold : ''} ${value}`.replace(/\s+/g, ' ').trim() : title}>
       <span className="l">{dot && <span className={`bc-dot ${dot}`} aria-hidden="true" />}{Icon && <Icon aria-hidden="true" />}{title}</span>
       <span className="r">{bold && <b>{bold}</b>}{value}<ChevronRight aria-hidden="true" /></span>
+    </Link>
+  );
+}
+
+/** A group on a menu page: a muted one-word label above one solid surface that holds its rows. */
+export function BcGroup({ label, children }) {
+  return (
+    <section className="bc-grp" aria-label={label}>
+      <h2>{label}</h2>
+      <div className="box">{children}</div>
+    </section>
+  );
+}
+
+/** A menu row: an icon tile, the title, one short muted line, a chevron at the row's own edge. Every row leads somewhere. */
+export function BcMenuRow({ to, icon: Icon, title, note }) {
+  return (
+    <Link to={to} className="bc-mrow" data-row aria-label={note ? `${title}, ${note}` : title}>
+      <span className="ic" aria-hidden="true">{Icon && <Icon />}</span>
+      <span className="tx"><b>{title}</b>{note && <span className="mut">{note}</span>}</span>
+      <ChevronRight aria-hidden="true" />
     </Link>
   );
 }

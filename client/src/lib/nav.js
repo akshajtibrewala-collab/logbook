@@ -74,8 +74,8 @@ export const isRoot = (pathname) => {
   return ['/', '/logbook', '/travel', '/map', '/more', '/flying'].includes(p);
 };
 
-/** Forms, the print view and Settings-style leaf pages don't show the Add button (it would sit over the Save bar). */
-const NO_ADD = [/^\/logbook\/(new|quick|print|data|share)$/, /^\/logbook\/\d+\/edit$/, /^\/logbook\/ground\/(new|\d+\/edit)$/, /^\/aircraft\/(new|\d+)$/, /^\/currency\/(new|\d+)$/, /^\/(weather|costs)\/settings$/, /^\/settings$/];
+/** Forms, the print view and Settings-style leaf pages don't show the Add button (it would sit over the Save bar). Expenses too: every row ends in a Delete icon the floating button would rest over at large text sizes (the page has its own Add expense button). */
+const NO_ADD = [/^\/logbook\/(new|quick|print|data|share)$/, /^\/logbook\/\d+\/edit$/, /^\/logbook\/ground\/(new|\d+\/edit)$/, /^\/aircraft\/(new|\d+)$/, /^\/currency\/(new|\d+)$/, /^\/(weather|costs)\/settings$/, /^\/costs\/expenses$/, /^\/settings$/, /^\/more$/];
 export const showAdd = (pathname) => !NO_ADD.some((re) => re.test(clean(pathname)));
 
 /** Focused screens: forms (and the settings forms) hide the floating tab bar so nothing sits over the Save bar or the keyboard. */

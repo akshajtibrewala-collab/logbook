@@ -1,3 +1,4 @@
+import { goalHours } from '../../lib/goal.js';
 import { useMemo, useState } from 'react';
 import { Target } from 'lucide-react';
 import { LineChart, Line, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -12,7 +13,7 @@ const localToday = () => new Date().toLocaleDateString('en-CA');
 
 export default function CumulativeChart({ flights, settings, onSaveTarget, note, defaultOpen = true }) {
   const today = localToday();
-  const series = useMemo(() => cumulativeHours(flights, { target: settings?.hours_target, now: today }), [flights, settings, today]);
+  const series = useMemo(() => cumulativeHours(flights, { target: goalHours(settings), now: today }), [flights, settings, today]);
   const [editing, setEditing] = useState(false);
   const [hours, setHours] = useState('');
   const [label, setLabel] = useState('');
@@ -59,8 +60,8 @@ export default function CumulativeChart({ flights, settings, onSaveTarget, note,
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Private certificate" maxLength={40}
               className="gl-field mt-1 h-12 w-full px-3 text-base" />
           </label>
-          <label className="block text-xs text-slate-400">Target total hours (leave blank for none)
-            <input value={hours} onChange={(e) => setHours(e.target.value)} inputMode="decimal" placeholder="40"
+          <label className="block text-xs text-slate-400">Target total hours (leave blank for the default, 50)
+            <input value={hours} onChange={(e) => setHours(e.target.value)} inputMode="decimal" placeholder="50"
               className="gl-field mt-1 h-12 w-full px-3 text-base" />
           </label>
           {err && <p role="alert" className="text-sm text-bad">{err}</p>}

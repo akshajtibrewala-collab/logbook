@@ -113,17 +113,18 @@
 .mn-detail .head .num-row { display: flex; align-items: baseline; gap: 4px; }
 .mn-detail .head .mn-num { font-size: var(--n-big); }
 .mn-detail .head .mn-num.accent { color: var(--ds-pilot); } .mn.pax .mn-detail .head .mn-num.accent { color: var(--ds-pax); }
-.mn-detail h1 { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; overflow-wrap: anywhere; }
+.mn-detail h1 { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; overflow-wrap: break-word; }
 @media (min-width: 1024px) { .mn-detail h1 { font-size: 2.25rem; } }
 .mn-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.mn-trio .stat { display: grid; gap: 4px; min-width: 0; } .mn-trio .stat .mn-num { font-size: var(--n-mid); overflow-wrap: anywhere; }
+.mn-trio .stat { display: grid; gap: 4px; min-width: 0; } .mn-trio .stat .mn-num { font-size: var(--n-mid); overflow-wrap: break-word; }
 .mn-card { display: grid; gap: 8px; padding: 8px; border-radius: var(--mn-r); background: var(--ds-surface); }
 .mn-fold { all: unset; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; min-height: 56px; padding: 0 16px; border-radius: var(--mn-rr); cursor: pointer; font-size: var(--fs-p); font-weight: 650; color: var(--ds-text); }
 .mn-fold:hover { background: var(--ds-surface-2); } .mn-fold:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
 .mn-fold .r { display: inline-flex; align-items: center; gap: 8px; color: var(--ds-text-2); font-weight: 500; }
+.mn-fold { flex-wrap: wrap; row-gap: 2px; padding-block: 8px; } .mn-fold .r { margin-inline-start: auto; } /* label and value give way (the value drops under the label) before a word is ever broken */
 .mn-fold svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; transition: transform var(--ds-dur-2) var(--ds-ease-out); } .mn-fold[aria-expanded="true"] svg { transform: rotate(90deg); }
 .mn-open { display: grid; gap: 8px; padding: 0 16px 16px; font-size: var(--fs-p); }
-.mn-open p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.mn-open p { margin: 0; white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.5; }
 .mn-open .k { display: block; font-size: var(--fs-s); color: var(--ds-text-2); margin-bottom: 4px; }
 .mn-note { font-size: var(--fs-s); color: var(--ds-text-2); margin: 0; }
 .mn-actions { display: grid; gap: 8px; }
@@ -137,12 +138,12 @@
 /* large text and narrow screens: nothing may leave the screen sideways */
 .mn-hero .top { flex-wrap: wrap; } .mn-hero .acts { flex-wrap: wrap; }
 .mn-trio { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); }
-.mn-mut, .mn-detail .head .mn-mut { overflow-wrap: anywhere; }
+.mn-mut, .mn-detail .head .mn-mut { overflow-wrap: break-word; }
 .mn-detail, .mn-detail .head, .mn-card { min-width: 0; }
 .mn-led tr.mo td { white-space: normal; }
 .mn-detail .head .num-row { flex-wrap: wrap; }
 .mn-hero .big .mn-num { font-size: min(var(--n-hero), 16vw); }
-.mn-hero .top > .mn-lab { min-width: 0; overflow-wrap: anywhere; flex: 1 1 auto; }
+.mn-hero .top > .mn-lab { min-width: 0; overflow-wrap: break-word; flex: 1 1 auto; }
 .mn-hero .acts { max-width: 100%; }
 .mn-grp { grid-template-columns: minmax(0, 1fr); } .mn-gh { flex-wrap: wrap; } .mn-gh .tot { font-size: min(var(--n-mid), 9vw); }
 .mn-ctl > .gl-seg, .mn-ctl > .ic { max-width: 100%; } .mn-ctl .ic { flex-wrap: wrap; }
@@ -182,8 +183,8 @@
 .mn-stat { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .mn-stat .n { font-size: var(--n-mid); } .mn-stat.big .n { font-size: var(--n-hero); } .mn-stat.hero .n { font-size: var(--n-big); }
 .mn-stat .n.ok { color: var(--ds-ok); } .mn-stat .n.warn { color: var(--ds-warn); } .mn-stat .n.bad { color: var(--ds-bad); } .mn-stat .n.pilot { color: var(--ds-pilot); }
-.mn-stat .n { overflow-wrap: anywhere; }
-.mn-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 24px 32px; align-items: end; }
+.mn-stat .n { overflow-wrap: break-word; }
+.mn-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 24px 32px; align-items: end; } /* two big figures share a row only when each has 12rem; on a phone they stack */
 .mn-sum { display: grid; gap: 24px; } @media (min-width: 1024px) { .mn-sum { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 48px; align-items: start; } }
 .mn-bars { display: grid; gap: 12px; padding: 24px; border-radius: var(--mn-r); background: var(--ds-surface); }
 .mn-bars .b { display: grid; grid-template-columns: 3.25rem minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 32px; }
@@ -193,12 +194,13 @@
 .mn-bar.thin { height: 6px; border-radius: 3px; } .mn-bar.thin i { border-radius: 3px; } .mn-bar i.ok { background: var(--ds-ok); }
 .mn-prog { all: unset; box-sizing: border-box; display: grid; gap: 8px; min-height: 64px; padding: 12px 16px; border-radius: var(--mn-rr); align-content: center; width: 100%; }
 button.mn-prog { cursor: pointer; } button.mn-prog:hover { background: var(--ds-surface-2); } button.mn-prog:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
-.mn-prog .top { display: flex; justify-content: space-between; gap: 16px; font-size: var(--fs-p); } .mn-prog .l { font-weight: 650; min-width: 0; overflow-wrap: anywhere; } .mn-prog .v { color: var(--ds-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mn-prog { grid-template-columns: minmax(0, 1fr); } /* the one column is exactly the button's content box, so a long label and value can never push the row past its padding (and under the Add button) */
+.mn-prog .top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: var(--fs-p); min-width: 0; } .mn-prog .l { font-weight: 650; min-width: 0; flex: 1 1 8rem; overflow-wrap: break-word; } .mn-prog .v { color: var(--ds-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; margin-inline-start: auto; }
 .mn-prog .v:empty { display: none; }
 .mn-st { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 72px; padding: 8px 16px; border-radius: var(--mn-rr); width: 100%; color: inherit; }
 button.mn-st, a.mn-st { all: unset; box-sizing: border-box; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 72px; padding: 8px 16px; border-radius: var(--mn-rr); width: 100%; cursor: pointer; color: var(--ds-text); }
 button.mn-st:hover, a.mn-st:hover { background: var(--ds-surface-2); } button.mn-st:focus-visible, a.mn-st:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
-.mn-st .t { display: grid; gap: 2px; min-width: 0; } .mn-st .pri { font-size: var(--fs-p); font-weight: 650; overflow-wrap: anywhere; } .mn-st .v { font-size: var(--n-mid); font-weight: 800; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mn-st .t { display: grid; gap: 2px; min-width: 0; } .mn-st .pri { font-size: var(--fs-p); font-weight: 650; overflow-wrap: break-word; } .mn-st .v { font-size: var(--n-mid); font-weight: 800; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mn-st .v small { font-size: var(--fs-s); font-weight: 600; color: var(--ds-text-2); letter-spacing: 0; margin-left: 4px; }
 .mn-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 8px; background: var(--ds-surface-3); font-size: var(--fs-s); color: var(--ds-text-2); white-space: nowrap; }
 .mn-sub { margin: 0; font-size: var(--fs-p); font-weight: 650; color: var(--ds-text-2); }
@@ -227,3 +229,17 @@ button.mn-st:hover, a.mn-st:hover { background: var(--ds-surface-2); } button.mn
 @media (min-width: 1024px) { .mn-empty.compact { padding: 4px 16px; } } /* the wider section gap already separates it from the row above */ .mn-empty.compact .ill { width: 56px; height: 56px; padding: 14px; }
 .mn-tight { display: grid; gap: 8px; min-width: 0; } /* a figure and its note stay together instead of one section gap apart */
 .mn-tight.lg { gap: 16px; }
+
+/* A figure that is a word or a long value (a cabin class, a name) is set in the body size, never in the big numeral size, so it can never be wider than its column. */
+.mn-num.long { font-size: var(--fs-p) !important; font-weight: 700; letter-spacing: 0; overflow-wrap: break-word; }
+
+/* an amount on a phone-width row shrinks a little with the screen so the label beside it keeps room (never wider than the label needs) */
+.mn-st .v { font-size: min(var(--n-mid), 6.4vw); }
+@media (max-width: 480px) { .mn-st, button.mn-st, a.mn-st { gap: 8px; padding-inline: 12px; } } /* phone: tighter gaps so the label keeps the room */
+
+/* label and value rows and fold rows give way at large text: either side may shrink and break at a space (or, for a long word, at its end), never push past the screen */
+.mn-kv .k, .mn-kv .v, .mn-fold > span, .mn-fold .r { min-width: 0; overflow-wrap: break-word; }
+.mn-kv .v, .mn-kv .k { max-width: 100%; }
+.mn-fold .r { flex-wrap: wrap; justify-content: flex-end; }
+/* a card is one column exactly as wide as the card: its content wraps inside it instead of widening the column (the cause of rows leaving the screen at large text) */
+.mn-card, .mn-open, .mn-detail .head { grid-template-columns: minmax(0, 1fr); }

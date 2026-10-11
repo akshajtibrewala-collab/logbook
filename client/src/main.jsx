@@ -7,16 +7,23 @@ import AuthGate from './components/AuthGate.jsx';
 import PublicShare from './pages/PublicShare.jsx';
 import ChunkBoundary from './components/ChunkBoundary.jsx';
 import { applyTheme, currentTheme } from './lib/theme.js';
+import { debugEnabled } from './lib/debugFlag.js';
 
 const DesignPage = lazy(() => import('./ds/DesignPage.jsx'));
 const ButtonsPage = lazy(() => import('./ds/ButtonsPage.jsx'));
 
 applyTheme(currentTheme());
 
+// Hidden diagnostics: only a URL with ?debug=1 (remembered for the session) loads the panel; otherwise nothing of it is even fetched.
+const DebugPanel = lazy(() => import('./ds/DebugPanel.jsx'));
+let showDebug = false;
+try { showDebug = debugEnabled(window.location.search, window.sessionStorage); } catch { showDebug = debugEnabled(window.location.search, null); }
+
 // The shared read-only summary lives outside the passcode gate (it authenticates with its own link token
 // and only ever calls the public API); everything else is the app behind AuthGate.
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
+    {showDebug && <Suspense fallback={null}><DebugPanel /></Suspense>}
     <Routes>
       <Route path="/share/:token" element={<PublicShare />} />
       {/* Hidden design-system specimen sheet: not linked from anywhere, behind the passcode gate like the app. */}

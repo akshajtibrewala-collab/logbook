@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { flushSync } from 'react-dom';
 import { Plus } from 'lucide-react';
 import Glass from './Glass.jsx';
-import { morph, prefersReducedMotion, useCollapseOnScroll, useCollapsingTitle } from './hooks.js';
+import { morph, prefersReducedMotion, useCollapseOnScroll, useCollapsingTitle, maxScrollOf } from './hooks.js';
+import { clampScroll, nextFab } from '../lib/scrollstate.js';
 import { noteActivity, scheduleSample } from './glass.js';
 import { claimOverlay, swallowNextClick } from './overlayRegistry.js';
 
@@ -109,12 +110,11 @@ export function AddMenu({ items, LinkComponent, defaultOpen = false, label = 'Ad
 
   // The button hides while the page scrolls down and returns on scroll up, at the top, or once the page is idle: it never sits over what you are reading while you move.
   useEffect(() => {
-    let lastY = window.scrollY, idle = 0;
+    let st = { hidden: false, last: clampScroll(window.scrollY, maxScrollOf(window)) }, idle = 0;
     const onScroll = () => {
-      const y = window.scrollY, d = y - lastY;
-      if (y < 80 || d < -8) setHidden(false); else if (d > 8) setHidden(true);
-      if (Math.abs(d) > 8) lastY = y;
-      clearTimeout(idle); idle = setTimeout(() => setHidden(false), 900);
+      st = nextFab(st, window.scrollY, maxScrollOf(window));
+      setHidden(st.hidden);
+      clearTimeout(idle); idle = setTimeout(() => { st = { ...st, hidden: false }; setHidden(false); }, 900);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); clearTimeout(idle); };
