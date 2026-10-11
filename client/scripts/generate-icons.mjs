@@ -13,6 +13,7 @@ const pub = path.join(here, '..', 'public');
 mkdirSync(path.join(pub, 'icons'), { recursive: true });
 
 const BLACK = '#000000'; // matches manifest.json background_color/theme_color and index.html
+const NAVY = '#0b1220'; // the home-screen touch icon's tile: a dark navy reads as an icon on iOS's dark wallpapers, where a pure black tile can read as a blank gap
 const WHITE = '#f5f5f7';
 const SKY = '#5bb9ff'; // --ds-pilot
 const VIOLET = '#b7a0ff'; // --ds-pax
@@ -25,16 +26,16 @@ const ARC = 'M300,705 Q512,545 724,705';
 const art = () => `<path d="${A}" fill="${WHITE}"/><path d="${ARC}" fill="none" stroke="${SKY}" stroke-width="72" stroke-linecap="round"/><circle cx="724" cy="705" r="46" fill="${VIOLET}"/>`;
 
 // corner 'rounded' = a tile with rounded corners (favicon, "any" PWA icons); 'square' = edge to edge (maskable, apple-touch: opaque).
-const tile = ({ corner, edge = false }) => {
+const tile = ({ corner, edge = false, bg = BLACK }) => {
   const rx = corner === 'rounded' ? 224 : 0;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <rect width="1024" height="1024" rx="${rx}" fill="${BLACK}"/>
+  <rect width="1024" height="1024" rx="${rx}" fill="${bg}"/>
   ${art()}
   ${edge ? `<rect x="3" y="3" width="1018" height="1018" rx="${Math.max(0, rx - 3)}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>` : ''}
 </svg>`;
 };
 
-const variants = { master: tile({ corner: 'square' }), rounded: tile({ corner: 'rounded', edge: true }), square: tile({ corner: 'square' }) };
+const variants = { master: tile({ corner: 'square' }), rounded: tile({ corner: 'rounded', edge: true }), square: tile({ corner: 'square' }), touch: tile({ corner: 'square', bg: NAVY }) };
 
 const png = async (svg, size, { crisp = false } = {}) => {
   let img = sharp(Buffer.from(svg), { density: 384 }).resize(size, size);
@@ -63,7 +64,10 @@ write('icon-master.svg', variants.master); // 1024, full-bleed black square: the
 write('favicon.svg', variants.rounded);
 write('favicon.ico', ico(await Promise.all([16, 32, 48].map(async (size) => ({ size, data: await png(variants.rounded, size, { crisp: size <= 32 }) })))));
 write('favicon-32.png', await png(variants.rounded, 32, { crisp: true }));
-write('apple-touch-icon.png', await png(variants.square, 180)); // 180x180, opaque black; iOS rounds the corners itself
+write('apple-touch-icon.png', await png(variants.square, 180)); // 180x180, opaque black; iOS rounds the corners itself (kept: iOS requests this path by default)
+// The same artwork on dark navy, under a NEW file name so no cache keyed on the old path can serve the old picture. The mark's own margin is 15% at the top
+// and 25% at the sides (the A spans x 264-760 and y 150-800 of 1024), so nothing sits near the edge iOS rounds.
+write('apple-touch-icon-v2.png', await sharp(await png(variants.touch, 180)).removeAlpha().png({ compressionLevel: 9 }).toBuffer()); // no alpha channel at all: plain RGB
 for (const size of [192, 512]) write(`icons/icon-${size}.png`, await png(variants.rounded, size));
 for (const size of [192, 512]) write(`icons/icon-maskable-${size}.png`, await png(variants.square, size));
 console.log('Icons written to client/public');
