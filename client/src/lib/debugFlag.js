@@ -11,3 +11,10 @@ export function debugEnabled(search = '', storage = null) {
   if (q === '0') { write(false); return false; }
   return read();
 }
+
+/** The installed app has no address bar, so ?debug=1 cannot be typed: five taps on the build line in Settings flip the same flag (remembered for the session, off by default). */
+export function toggleDebug(storage) {
+  const on = (() => { try { return storage?.getItem(KEY) === '1'; } catch { return false; } })();
+  try { on ? storage?.removeItem(KEY) : storage?.setItem(KEY, '1'); } catch { /* private mode */ }
+  return !on;
+}

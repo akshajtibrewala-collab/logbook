@@ -23,6 +23,21 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
+// Only a real, readable image is kept: status 200 (not 206 or an error page), not opaque, an image type, and not one of the provider's placeholders.
+// How long the check and write took goes to the open pages (the ?debug=1 panel shows it).
+async function keep(cache, href, res) {
+  const t0 = Date.now();
+  try {
+    if (res.status === 200 && res.type !== 'opaque' && (res.headers.get('content-type') || '').startsWith('image/')) {
+      const size = (await res.clone().blob()).size;
+      if (!PLACEHOLDER_SIZES.has(size)) { await cache.put(href, res); await trim(cache); }
+    }
+  } catch { /* the tile was already shown; a failed cache write costs nothing else */ }
+  const msg = { type: 'aero-tile-cache', ms: Date.now() - t0 };
+  const cs = await self.clients.matchAll({ type: 'window' });
+  cs.forEach((c) => c.postMessage(msg));
+}
+
 async function trim(cache) {
   const keys = await cache.keys();
   if (keys.length <= MAX_TILES) return;
@@ -41,14 +56,8 @@ self.addEventListener('fetch', (event) => {
     if (hit) return hit;
     try {
       const res = await fetch(url.href, { mode: 'cors' });
-      // Only a real, readable image is kept: status 200 (not 206 or an error page), not opaque, an image type, and not one of the provider's placeholders.
-      if (res.status === 200 && res.type !== 'opaque' && (res.headers.get('content-type') || '').startsWith('image/')) {
-        const size = (await res.clone().blob()).size;
-        if (!PLACEHOLDER_SIZES.has(size)) {
-          await cache.put(url.href, res.clone());
-          event.waitUntil(trim(cache));
-        }
-      }
+      // The page gets the response at once; checking and keeping it happens in the background (a tile is never held back for its own cache write).
+      event.waitUntil(keep(cache, url.href, res.clone()));
       return res;
     } catch {
       return fetch(req); // CORS not allowed (or offline): fall back to a plain request, uncached

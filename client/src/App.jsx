@@ -86,7 +86,7 @@ export default function App() {
           <Route path="/costs/phases" element={<CostsPhases />} />
           <Route path="/costs/expenses" element={<CostsExpenses />} />
           <Route path="/costs/projection" element={<CostsProjection />} />
-          <Route path="/map" element={<MapPage />} />
+          <Route path="/map" element={<Suspense fallback={<div className="ds-map-boot" aria-busy="true" />}><MapPage /></Suspense>} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/more" element={<More />} />
           <Route path="/settings" element={<Settings />} />

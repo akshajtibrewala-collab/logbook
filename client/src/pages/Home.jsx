@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plane } from 'lucide-react';
 import useHomeData from '../hooks/useHomeData.js';
@@ -24,6 +24,13 @@ const MapBackdrop = lazy(() => import('../ds/MapBackdrop.jsx'));
  */
 export default function Home() {
   const h = useHomeData();
+  // The Map tab's code and Leaflet's stylesheet are fetched while Home sits idle, so opening the Map does not start with a download.
+  useEffect(() => {
+    const run = () => { import('./Map.jsx').catch(() => {}); };
+    const idle = typeof requestIdleCallback === 'function';
+    const id = idle ? requestIdleCallback(run, { timeout: 4000 }) : setTimeout(run, 2000);
+    return () => (idle ? cancelIdleCallback(id) : clearTimeout(id));
+  }, []);
   const { flights, data, error, load, status, pilotOnly, passengerOnly, passengerHours, allCounts, closest, map, homeAirport, milestonesConfig, aircraft, milestoneCompletions, goal } = h;
   const hasFlights = Boolean(flights && flights.length > 0);
   const greeting = useMemo(() => calmGreeting(new Date(), PILOT_NAME), []);

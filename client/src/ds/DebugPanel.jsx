@@ -15,6 +15,17 @@ function insets() {
 }
 
 /** On the Map page only: what the map thinks (zoom, the layers' limits, tile counters, the service worker). */
+function apiTimes() {
+  const e = performance.getEntriesByType('resource').filter((r) => r.name.includes('/api/'));
+  const one = (s) => { const r = [...e].reverse().find((x) => x.name.includes(s)); return r ? Math.round(r.responseEnd - r.startTime) : 'n/a'; };
+  return `${one('/api/flights')} / ${one('/api/airports')}`;
+}
+function tileCounts() {
+  const e = performance.getEntriesByType('resource').filter((r) => r.name.includes('arcgisonline'));
+  const hits = e.filter((r) => r.transferSize === 0 && r.decodedBodySize > 0).length;
+  return `${e.length} / ${hits}`;
+}
+
 function mapRows() {
   const m = window.__aeroMap, onMap = location.pathname === '/map' && m;
   if (!onMap) return [];
@@ -22,7 +33,11 @@ function mapRows() {
   return [
     ['map zoom', m.zoom == null ? 'n/a' : px(m.zoom)], ['map maxZoom / maxNativeZoom', `${m.maxZoom} / ${m.maxNativeZoom}`],
     ['tiles loaded / blank / failed', `${m.loaded} / ${m.placeholders} / ${m.errors}`], ['tile retries', String(m.retries)],
-    ['tile note', m.note || 'none'], ['service worker', sw ? (sw.controller ? `controlling (${sw.controller.state})` : 'not controlling this page') : 'unsupported'],
+    ['tile note', m.note || 'none'],
+    ['map code ready (ms since app start)', String(m.chunkAt)], ['first tile / all tiles (ms after map mount)', `${m.firstTileMs ?? '...'} / ${m.allTilesMs ?? '...'}`],
+    ['api flights / airports (ms)', apiTimes()], ['tile requests / cache hits', tileCounts()],
+    ['placeholder check', `${m.phCount} checked (${Math.round(m.phMs)} ms), ${m.phSkipped} skipped below zoom 13`],
+    ['service worker keep per tile', m.swTiles ? `${Math.round(m.swMs / m.swTiles)} ms avg over ${m.swTiles} (background)` : 'n/a'], ['service worker', sw ? (sw.controller ? `controlling (${sw.controller.state})` : 'not controlling this page') : 'unsupported'],
   ];
 }
 

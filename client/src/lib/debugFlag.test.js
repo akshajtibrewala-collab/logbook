@@ -24,3 +24,14 @@ test('a throwing storage never throws', () => {
   assert.equal(debugEnabled('?debug=1', bad), true);
   assert.equal(debugEnabled('', bad), false);
 });
+
+test('toggleDebug flips the stored flag and reports the new state', async () => {
+  const { toggleDebug } = await import('./debugFlag.js');
+  const s = store();
+  assert.equal(toggleDebug(s), true);
+  assert.equal(debugEnabled('', s), true);
+  assert.equal(toggleDebug(s), false);
+  assert.equal(debugEnabled('', s), false);
+  const bad = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); }, removeItem() { throw new Error('x'); } };
+  assert.equal(typeof toggleDebug(bad), 'boolean');
+});

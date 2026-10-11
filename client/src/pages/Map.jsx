@@ -30,14 +30,28 @@ if (!L.Map.prototype.__zoomEndGuarded) {
 // the view says so calmly. A tile that fails is retried once (without CORS, so a server that refuses it still shows its picture) and counted if it fails again.
 // `window.__aeroMap` is what the ?debug=1 panel reads on this page.
 const TILE_MAX_ZOOM = 16; // the provider's real last level for both canvases (checked against the service, 2026-10): higher is "not yet available" everywhere
-const mapHealth = { zoom: null, maxZoom: TILE_MAX_ZOOM, maxNativeZoom: TILE_MAX_ZOOM, loaded: 0, errors: 0, placeholders: 0, retries: 0, note: '' };
+// The provider has been seen to answer "no data" only from zoom 13 (open ocean) and 17 (everywhere): below that the pixel check is skipped, it can never find one.
+const PLACEHOLDER_MIN_ZOOM = 13;
+// Off-screen tiles kept around: 4 rings on a pointer device, 2 on a touch screen (fewer images alive, same view; a pan reloads from the cache).
+const KEEP_BUFFER = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 2 : 4;
+const mapHealth = {
+  zoom: null, maxZoom: TILE_MAX_ZOOM, maxNativeZoom: TILE_MAX_ZOOM, loaded: 0, errors: 0, placeholders: 0, retries: 0, note: '',
+  // load timings for the ?debug=1 panel (milliseconds since the app started, or since the Map mounted)
+  chunkAt: typeof performance !== 'undefined' ? Math.round(performance.now()) : null, mountAt: null, firstTileMs: null, allTilesMs: null,
+  phCount: 0, phMs: 0, phSkipped: 0, swTiles: 0, swMs: 0,
+};
+if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data?.type === 'aero-tile-cache') { mapHealth.swTiles += 1; mapHealth.swMs += e.data.ms; } });
+}
 if (typeof window !== 'undefined') window.__aeroMap = mapHealth;
 function looksLikePlaceholder(img) {
+  const t0 = performance.now();
   try {
     const c = document.createElement('canvas'); c.width = 8; c.height = 8;
     const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, 8, 8);
     return isPlaceholderMean(meanLuminance(g.getImageData(0, 0, 8, 8).data));
   } catch { return false; } // a tile the page may not read (no CORS) is shown as it is
+  finally { mapHealth.phCount += 1; mapHealth.phMs += performance.now() - t0; }
 }
 
 // Each role filter's active-state tint: sky blue for Pilot, violet for Passenger (same tokens as the
@@ -268,20 +282,25 @@ export default function MapPage() {
   const tileSet = theme === 'light' ? 'World_Light_Gray' : 'World_Dark_Gray'; // both are keyless Esri canvases
 
   const [tileMsg, setTileMsg] = useState(null);
+  // The routes are drawn at once; their draw-in and flow animation wait for the first tile (or 3 s), so the animation never competes with tiles for the main thread.
+  const [tilesReady, setTilesReady] = useState(false);
+  useEffect(() => { mapHealth.mountAt = performance.now(); mapHealth.firstTileMs = null; mapHealth.allTilesMs = null; const t = setTimeout(() => setTilesReady(true), 3000); return () => clearTimeout(t); }, []);
   const baseHandlers = useMemo(() => {
     const reset = () => { mapHealth.loaded = 0; mapHealth.errors = 0; mapHealth.placeholders = 0; };
     return {
       loading: reset,
       tileload: (e) => {
         const img = e.tile;
+        if (mapHealth.firstTileMs == null && mapHealth.mountAt != null) { mapHealth.firstTileMs = Math.round(performance.now() - mapHealth.mountAt); setTilesReady(true); }
         if (img.dataset.hollow) return;
+        if (e.coords && e.coords.z < PLACEHOLDER_MIN_ZOOM) { mapHealth.phSkipped += 1; mapHealth.loaded += 1; return; }
         if (looksLikePlaceholder(img)) { img.dataset.hollow = '1'; img.src = L.Util.emptyImageUrl; mapHealth.placeholders += 1; } else mapHealth.loaded += 1;
       },
       tileerror: (e) => {
         const img = e.tile;
         if (!img.dataset.retried) { img.dataset.retried = '1'; mapHealth.retries += 1; const src = img.src; setTimeout(() => { img.crossOrigin = null; img.src = retryUrl(src); }, 500); } else mapHealth.errors += 1;
       },
-      load: () => { const n = tileNote({ ...mapHealth, online: typeof navigator === 'undefined' || navigator.onLine !== false }); mapHealth.note = n || ''; setTileMsg(n); },
+      load: () => { if (mapHealth.allTilesMs == null && mapHealth.mountAt != null) mapHealth.allTilesMs = Math.round(performance.now() - mapHealth.mountAt); const n = tileNote({ ...mapHealth, online: typeof navigator === 'undefined' || navigator.onLine !== false }); mapHealth.note = n || ''; setTileMsg(n); },
     };
   }, []);
   const refHandlers = useMemo(() => ({
@@ -346,7 +365,7 @@ export default function MapPage() {
   // Only pilot routes ever animate (passenger routes are always a plain static dashed line, much cheaper
   // to render), so the affordability cap only needs to weigh the pilot line count.
   const affordable = shouldAnimateRoutes(visiblePilotLines.length, true);
-  const animMode = affordable ? (animate ? 'loop' : playOnce ? 'once' : null) : null;
+  const animMode = affordable && tilesReady ? (animate ? 'loop' : playOnce ? 'once' : null) : null;
   const manyRoutes = (visiblePilotLines.length + visiblePassengerLines.length) > HIT_LINE_LIMIT;
 
   const toggleAnimate = (on) => { setAnimate(on); setPlayOnce(false); saveAnimatePref(on); if (on) setPlays((n) => n + 1); };
@@ -360,11 +379,11 @@ export default function MapPage() {
   return (
     <div className="relative isolate h-dvh">
       <MapContainer center={[39, -98]} zoom={4} zoomControl={false} attributionControl={false} zoomSnap={0.5} zoomDelta={0.5} minZoom={2} worldCopyJump className="h-full w-full bg-navy-950">
-        <TileLayer key={`${tileSet}-base`} keepBuffer={4} updateWhenIdle crossOrigin="anonymous" eventHandlers={baseHandlers}
+        <TileLayer key={`${tileSet}-base`} keepBuffer={KEEP_BUFFER} updateWhenIdle crossOrigin="anonymous" eventHandlers={baseHandlers}
           url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${tileSet}_Base/MapServer/tile/{z}/{y}/{x}`}
           maxZoom={TILE_MAX_ZOOM} maxNativeZoom={TILE_MAX_ZOOM}
         />
-        <TileLayer key={`${tileSet}-ref`} keepBuffer={4} updateWhenIdle eventHandlers={refHandlers}
+        <TileLayer key={`${tileSet}-ref`} keepBuffer={KEEP_BUFFER} updateWhenIdle eventHandlers={refHandlers}
           url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${tileSet}_Reference/MapServer/tile/{z}/{y}/{x}`}
           maxZoom={TILE_MAX_ZOOM} maxNativeZoom={TILE_MAX_ZOOM}
         />
