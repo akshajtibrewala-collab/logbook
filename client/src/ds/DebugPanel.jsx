@@ -14,6 +14,18 @@ function insets() {
   return `T${v[0]} R${v[1]} B${v[2]} L${v[3]}`;
 }
 
+/** On the Map page only: what the map thinks (zoom, the layers' limits, tile counters, the service worker). */
+function mapRows() {
+  const m = window.__aeroMap, onMap = location.pathname === '/map' && m;
+  if (!onMap) return [];
+  const sw = navigator.serviceWorker;
+  return [
+    ['map zoom', m.zoom == null ? 'n/a' : px(m.zoom)], ['map maxZoom / maxNativeZoom', `${m.maxZoom} / ${m.maxNativeZoom}`],
+    ['tiles loaded / blank / failed', `${m.loaded} / ${m.placeholders} / ${m.errors}`], ['tile retries', String(m.retries)],
+    ['tile note', m.note || 'none'], ['service worker', sw ? (sw.controller ? `controlling (${sw.controller.state})` : 'not controlling this page') : 'unsupported'],
+  ];
+}
+
 function read() {
   const d = document.documentElement, vv = window.visualViewport, bar = document.querySelector('.ds-topbar'), tab = document.querySelector('.ds-tabbar'), fab = document.querySelector('.ds-fab');
   const max = d.scrollHeight - window.innerHeight, y = window.scrollY;
@@ -34,6 +46,7 @@ function read() {
     ['tab bar', tab ? (tab.classList.contains('is-collapsed') ? 'collapsed' : 'expanded') : 'none on this page'],
     ['month header stuck', stuck ? 'yes' : 'no'],
     ['keyboard flag', d.hasAttribute('data-kb') ? 'on' : 'off'],
+    ...mapRows(),
     ['build', typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'n/a'],
   ];
 }

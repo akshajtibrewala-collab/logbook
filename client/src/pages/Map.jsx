@@ -11,6 +11,7 @@ import { buildMapData } from '../lib/mapdata.js';
 import { airportSummary, routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
 import { PhotoImage } from '../components/PhotoGrid.jsx';
+import { isPlaceholderMean, meanLuminance, tileNote, retryUrl } from '../lib/mapTiles.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 import { pilotFlights, roleOf } from '../lib/flightRoles.js';
 import Toggle from '../components/Toggle.jsx';
@@ -21,6 +22,22 @@ if (!L.Map.prototype.__zoomEndGuarded) {
   const zoomEnd = L.Map.prototype._onZoomTransitionEnd;
   L.Map.prototype._onZoomTransitionEnd = function guardedZoomEnd(...args) { return this._mapPane ? zoomEnd.apply(this, args) : undefined; };
   L.Map.prototype.__zoomEndGuarded = true;
+}
+
+// ---- tile health -------------------------------------------------------------------------------------------------------------------------------
+// The Esri canvas answers 200 with a light-gray "Map data not yet available" picture where it has no detail at a zoom (open ocean from zoom 13, everywhere from 17); on
+// this dark map that reads as a white screen. A loaded base tile that is that picture is swapped for Leaflet's empty tile (the dark surface shows through), counted, and
+// the view says so calmly. A tile that fails is retried once (without CORS, so a server that refuses it still shows its picture) and counted if it fails again.
+// `window.__aeroMap` is what the ?debug=1 panel reads on this page.
+const TILE_MAX_ZOOM = 16; // the provider's real last level for both canvases (checked against the service, 2026-10): higher is "not yet available" everywhere
+const mapHealth = { zoom: null, maxZoom: TILE_MAX_ZOOM, maxNativeZoom: TILE_MAX_ZOOM, loaded: 0, errors: 0, placeholders: 0, retries: 0, note: '' };
+if (typeof window !== 'undefined') window.__aeroMap = mapHealth;
+function looksLikePlaceholder(img) {
+  try {
+    const c = document.createElement('canvas'); c.width = 8; c.height = 8;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, 8, 8);
+    return isPlaceholderMean(meanLuminance(g.getImageData(0, 0, 8, 8).data));
+  } catch { return false; } // a tile the page may not read (no CORS) is shown as it is
 }
 
 // Each role filter's active-state tint: sky blue for Pilot, violet for Passenger (same tokens as the
@@ -99,7 +116,7 @@ function ZoomTracker() {
   const map = useMap();
   useEffect(() => {
     const container = map.getContainer();
-    const set = (z) => container.style.setProperty('--z', z);
+    const set = (z) => { container.style.setProperty('--z', z); mapHealth.zoom = map.getZoom(); mapHealth.maxZoom = map.getMaxZoom(); };
     const onZoomAnim = (e) => set(e.zoom);
     const onSettled = () => set(map.getZoom());
     map.on('zoomanim', onZoomAnim);
@@ -250,6 +267,27 @@ export default function MapPage() {
   const theme = useTheme();
   const tileSet = theme === 'light' ? 'World_Light_Gray' : 'World_Dark_Gray'; // both are keyless Esri canvases
 
+  const [tileMsg, setTileMsg] = useState(null);
+  const baseHandlers = useMemo(() => {
+    const reset = () => { mapHealth.loaded = 0; mapHealth.errors = 0; mapHealth.placeholders = 0; };
+    return {
+      loading: reset,
+      tileload: (e) => {
+        const img = e.tile;
+        if (img.dataset.hollow) return;
+        if (looksLikePlaceholder(img)) { img.dataset.hollow = '1'; img.src = L.Util.emptyImageUrl; mapHealth.placeholders += 1; } else mapHealth.loaded += 1;
+      },
+      tileerror: (e) => {
+        const img = e.tile;
+        if (!img.dataset.retried) { img.dataset.retried = '1'; mapHealth.retries += 1; const src = img.src; setTimeout(() => { img.crossOrigin = null; img.src = retryUrl(src); }, 500); } else mapHealth.errors += 1;
+      },
+      load: () => { const n = tileNote({ ...mapHealth, online: typeof navigator === 'undefined' || navigator.onLine !== false }); mapHealth.note = n || ''; setTileMsg(n); },
+    };
+  }, []);
+  const refHandlers = useMemo(() => ({
+    tileerror: (e) => { const img = e.tile; if (!img.dataset.retried) { img.dataset.retried = '1'; const src = img.src; setTimeout(() => { img.crossOrigin = null; img.src = retryUrl(src); }, 500); } },
+  }), []);
+  useEffect(() => { mapHealth.zoom = null; return () => { mapHealth.zoom = null; }; }, []);
   useEffect(() => {
     (async () => {
       const list = await api.listFlights();
@@ -322,13 +360,13 @@ export default function MapPage() {
   return (
     <div className="relative isolate h-dvh">
       <MapContainer center={[39, -98]} zoom={4} zoomControl={false} attributionControl={false} zoomSnap={0.5} zoomDelta={0.5} minZoom={2} worldCopyJump className="h-full w-full bg-navy-950">
-        <TileLayer key={`${tileSet}-base`} keepBuffer={4} updateWhenIdle
+        <TileLayer key={`${tileSet}-base`} keepBuffer={4} updateWhenIdle crossOrigin="anonymous" eventHandlers={baseHandlers}
           url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${tileSet}_Base/MapServer/tile/{z}/{y}/{x}`}
-          maxZoom={16}
+          maxZoom={TILE_MAX_ZOOM} maxNativeZoom={TILE_MAX_ZOOM}
         />
-        <TileLayer key={`${tileSet}-ref`} keepBuffer={4} updateWhenIdle
+        <TileLayer key={`${tileSet}-ref`} keepBuffer={4} updateWhenIdle eventHandlers={refHandlers}
           url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${tileSet}_Reference/MapServer/tile/{z}/{y}/{x}`}
-          maxZoom={16}
+          maxZoom={TILE_MAX_ZOOM} maxNativeZoom={TILE_MAX_ZOOM}
         />
         <ZoomTracker />
         <EscapePopupCloser />
@@ -394,6 +432,8 @@ export default function MapPage() {
           </Marker>
         ))}
       </MapContainer>
+
+      {tileMsg && <p role="status" className="ds-map-note">{tileMsg}</p>}
 
       {flights && flights.length > 0 && (
         <div className="ds-map-ov flex flex-col items-start">

@@ -6,9 +6,11 @@
 // count against storage quota at a large fixed padding; if a tile server doesn't allow CORS, the tile is
 // simply passed through uncached.
 // Intentionally kept as "aerotrail-" (the app's old name) despite the AeroHub rename — this is a cache
-// name, not user-visible text, and renaming it would just make the activate handler below treat every
-// visitor's existing tile cache as stale and delete it for no reason.
-const CACHE = 'aerotrail-tiles-v1';
+// name, not user-visible text. v2 (2026-10): v1 could hold the provider's light-gray "Map data not yet available" tiles as if they were good; the activate handler
+// below deletes every other aerotrail-tiles-* cache, so each install starts clean and refreshes its tiles.
+const CACHE = 'aerotrail-tiles-v2';
+// The provider's placeholder pictures (same bytes everywhere): a 2521-byte JPEG for the base canvases and an 875-byte PNG for the reference layers. Never cached.
+const PLACEHOLDER_SIZES = new Set([2521, 875]);
 const TILE_HOST = 'server.arcgisonline.com';
 const MAX_TILES = 600;
 
@@ -39,9 +41,13 @@ self.addEventListener('fetch', (event) => {
     if (hit) return hit;
     try {
       const res = await fetch(url.href, { mode: 'cors' });
-      if (res.ok) {
-        await cache.put(url.href, res.clone());
-        event.waitUntil(trim(cache));
+      // Only a real, readable image is kept: status 200 (not 206 or an error page), not opaque, an image type, and not one of the provider's placeholders.
+      if (res.status === 200 && res.type !== 'opaque' && (res.headers.get('content-type') || '').startsWith('image/')) {
+        const size = (await res.clone().blob()).size;
+        if (!PLACEHOLDER_SIZES.has(size)) {
+          await cache.put(url.href, res.clone());
+          event.waitUntil(trim(cache));
+        }
       }
       return res;
     } catch {
