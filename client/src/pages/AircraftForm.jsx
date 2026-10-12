@@ -7,6 +7,7 @@ import Select from '../components/Select.jsx';
 import Toggle from '../components/Toggle.jsx';
 import Button from '../components/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import AircraftPhoto from '../components/AircraftPhoto.jsx';
 import { AIRCRAFT_CATEGORIES, AIRCRAFT_CLASSES, SIMULATOR_DEVICE_TYPES } from '../lib/aviationEnums.js';
 
 const blank = () => ({
@@ -34,6 +35,8 @@ export default function AircraftForm() {
   const [message, setMessage] = useState('');
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  // The registration the photo is looked up by is the saved one, not what is being typed in the form.
+  const [saved, setSaved] = useState(null);
 
   useEffect(() => {
     if (!id) return;
@@ -47,6 +50,7 @@ export default function AircraftForm() {
           s[k] = typeof s[k] === 'boolean' ? Boolean(a[k]) : a[k];
         }
         setForm(s);
+        setSaved({ tail: s.tail_number, designator: s.type_designator, cls: s.class, category: s.category, sim: s.is_simulator });
       })
       .catch((e) => setMessage(e.message))
       .finally(() => setLoading(false));
@@ -85,6 +89,7 @@ export default function AircraftForm() {
 
   return (
     <form onSubmit={submit} className="space-y-4 md:mx-auto md:max-w-xl">
+      {id && saved && <AircraftPhoto className="ap-card" registration={saved.tail} designator={saved.designator} aircraftClass={saved.cls} category={saved.category} simulator={saved.sim} />}
       <Section title="Identity">
         <Toggle label="This is a simulator or training device" checked={form.is_simulator} onChange={set('is_simulator')} />
         {form.is_simulator ? (

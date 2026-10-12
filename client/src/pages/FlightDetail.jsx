@@ -7,6 +7,8 @@ import { computeFlightCost, fmtMoney } from '../lib/cost.js';
 import Button from '../components/Button.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import PhotoGallery from '../components/PhotoGallery.jsx';
+import AircraftPhoto from '../components/AircraftPhoto.jsx';
+import { designatorFromType } from '../lib/aircraftPhoto.js';
 import { MnFold, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
 import { formatDate as fmtDate, parseISO } from '../lib/calendar.js';
 import { isPilotFlight } from '../lib/flightRoles.js';
@@ -114,6 +116,8 @@ export default function FlightDetail() {
             {trio.map(([k, v]) => <div key={k} className="stat"><span className={`mn-num${String(v).length > 5 ? ' long' : ''}`}>{v}</span><span className="mn-mut">{k}</span></div>)}
           </div>
         )}
+
+        <AircraftPhoto registration={flight.tail_number} designator={designatorFromType(flight.aircraft_type)} />
 
         <div className="mn-card">
           {pilot && <MnKv k="Instructor" v={flight.instructor} />}

@@ -45,3 +45,8 @@ test('blur budget: tab bar + top bar + one open overlay is 3; a fourth glass com
   assert.equal(blurLayerReport([item('tabbar'), item('topbar'), item('sheet')]).ok, true);
   assert.equal(blurLayerReport([item('tabbar'), item('topbar'), item('sheet'), item('menu')]).ok, false);
 });
+
+test('the aircraft photo link is an allowed control; a bare link is not', () => {
+  assert.deepEqual(classifyControl(d({ area: 'page', tag: 'a', cls: 'ap-link is-ready' })), { status: 'allowed', rule: 'aircraft-photo-link' });
+  assert.equal(classifyControl(d({ area: 'page', tag: 'a', cls: 'something-else' })).status, 'fail');
+});

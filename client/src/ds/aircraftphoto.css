@@ -1,0 +1,16 @@
+/* Aircraft photo (docs/design/DESIGN_LANGUAGE.md "Aircraft photos"). One framed picture of the aircraft, by registration. The frame reserves a fixed 3:2
+   box from the first paint, so the page never moves whether a photo, the type drawing or nothing but the drawing arrives. Corners follow the card
+   radius; the credit sits on a thin scrim so it reads on any photo. Tokens only. Never printed. */
+.ap { margin: 0; width: 100%; max-width: 26rem; min-width: 0; }
+.ap-frame { position: relative; aspect-ratio: 3 / 2; overflow: hidden; border-radius: var(--mn-r, var(--ds-r-card)); background: var(--ds-surface-2); color: var(--ds-text-3); }
+.ap-art { position: absolute; inset: 0; display: grid; place-items: center; }
+.ap-art svg { height: 64%; width: auto; max-width: 80%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+/* on a page that still uses the older Tailwind card (the aircraft form), follow that card's 1.25rem corner */
+.ap-card { --mn-r: 1.25rem; }
+.ap-link { position: absolute; inset: 0; display: block; opacity: 0; pointer-events: none; color: var(--ds-text); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.ap-link.is-ready { opacity: 1; pointer-events: auto; }
+.ap-link img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ap-link .ap-credit { color: var(--ds-text); position: absolute; inset: auto 0 0 0; padding: 24px 16px 8px; font-size: var(--fs-s, 0.875rem); line-height: 1.3; overflow-wrap: anywhere; background: linear-gradient(to top, rgb(var(--ds-black-rgb) / .72), rgb(var(--ds-black-rgb) / 0)); }
+.ap-link:focus-visible { outline: 2px solid var(--ds-focus, var(--ds-text)); outline-offset: -2px; }
+@media (prefers-reduced-motion: no-preference) { .ap-link { transition: opacity var(--ds-dur-2, 280ms) var(--ds-ease-out, ease-out); } }
+@media print { .ap { display: none !important; } }
