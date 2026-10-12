@@ -180,6 +180,16 @@ settings; both now save via `saveSettingsMerged`.
   still only style `active:` (touch), not `hover:`/`focus-visible:`, so trackpad users get little visual
   feedback pointing at a control before clicking it.
 
+## Automatic registration (migration 024)
+
+A daily cron fills a blank registration on passenger flights (number and date recorded) from AeroDataBox, one lookup a day
+by default, stopping on the provider's units header, a 429, or a missing header. Provenance is additive (`flights.reg_source`,
+`reg_filled_at`, `reg_cleared_at`, `reg_checked_at`, `reg_check_count`; `aircraft.auto_created_at`). The flight detail
+shows a small "auto" marker that opens a sheet with the source and a Clear action; a cleared value is never refilled.
+Free-plan reach is 365 days back, so older flights stay manual. Open: the provider's storage clause (5.8, "user records")
+was never put to the provider and the risk was accepted by the owner; the key should be regenerated when it is set in Vercel.
+Design record: `docs/design/_private/AUTO_REGISTRATION_DESIGN.md` (private).
+
 ## Ideas (remaining)
 
 - **Oral exam study mode** with spaced repetition, tied to certificate/rating progress.

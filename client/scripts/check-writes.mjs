@@ -111,6 +111,31 @@ await p.waitForTimeout(900);
 const pax = (await api('/flights')).find((f) => f.airline === 'Write Test Air');
 ok(Boolean(pax) && pax.role === 'passenger', 'a passenger flight was saved through the shared form');
 
+// ---- automatic registration marker (scratch only; the provenance columns can't be set through the app, so the
+// script marks the row it just created directly in the scratch database file named by SCRATCH_DB_FILE)
+const scratchFile = process.env.SCRATCH_DB_FILE;
+if (!scratchFile || /(^|[\\/])logbook\.db$/i.test(scratchFile)) {
+  console.log('skip automatic registration checks: set SCRATCH_DB_FILE to the scratch database file (never server/logbook.db)');
+} else if (pax) {
+  const { DatabaseSync } = await import('node:sqlite');
+  await fetch(`${BASE}/api/flights/${pax.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tail_number: 'N0TEST' }) });
+  console.log(`BACKEND for the marker setup: scratch database file ${path.basename(scratchFile)} (one UPDATE on the flight just created)`);
+  const sdb = new DatabaseSync(scratchFile);
+  sdb.prepare("UPDATE flights SET reg_source = 'aerodatabox', reg_filled_at = '2026-06-15T06:00:00.000Z' WHERE id = ?").run(pax.id);
+  sdb.close();
+  await go(`/travel/${pax.id}`);
+  const chip = p.getByRole('button', { name: /filled automatically/i });
+  ok(await chip.count() === 1, 'the auto marker shows on an automatically filled registration');
+  await chip.click(); await p.waitForTimeout(500);
+  ok(await p.getByRole('link', { name: 'AeroDataBox' }).count() === 1, 'the sheet credits the source with a link');
+  await press('Clear registration');
+  ok((await api(`/flights/${pax.id}`)).tail_number === 'N0TEST', 'clearing asks first: nothing is cleared before the confirmation');
+  await p.locator('[role="dialog"]').getByRole('button', { name: 'Clear', exact: true }).click(); await p.waitForTimeout(900);
+  const cleared = await api(`/flights/${pax.id}`);
+  ok(cleared.tail_number === null && Boolean(cleared.reg_cleared_at), 'confirming cleared the registration and marked it never to be refilled');
+  ok(await p.getByRole('button', { name: /filled automatically/i }).count() === 0, 'the marker is gone after clearing');
+}
+
 // ---- cost settings
 await go('/costs/settings');
 await p.getByLabel(/Default ground briefing time/).fill('1.2'); await press('Save');

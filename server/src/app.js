@@ -12,6 +12,8 @@ import settings from './routes/settings.js';
 import weather from './routes/weather.js';
 import costs from './routes/costs.js';
 import { cronRouter, backupJobRouter } from './routes/backup-job.js';
+import { makeRegistrationCronRouter } from './routes/registration-job.js';
+import { runRegistrationJob, budgetFromEnv } from './lib/registration-job.js';
 import photos from './routes/photos.js';
 import { shareAdminRouter, publicRouter } from './routes/share.js';
 
@@ -26,6 +28,7 @@ app.get('/api/session', (req, res) => res.json({ required: passcodeRequired(), o
 
 // The scheduled backup authenticates with its own CRON_SECRET (Vercel Cron sends it), not the app passcode.
 app.use('/api/cron', cronRouter);
+app.use('/api/cron', makeRegistrationCronRouter({ runJob: runRegistrationJob, budget: budgetFromEnv }));
 
 // The read-only public summary authenticates with its own unguessable share token, not the app passcode.
 app.use('/api/public', publicRouter);

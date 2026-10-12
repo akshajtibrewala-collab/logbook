@@ -171,6 +171,32 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
 - Only commit when asked. Run the full test suite once before each commit; otherwise run just the tests
   for what changed.
 
+## Automatic registration (migration 024)
+
+A daily Vercel Cron (`/api/cron/registrations`, `vercel.json`, protected by `CRON_SECRET`) fills a blank `tail_number` on
+**passenger** flights that have a flight number and date, from AeroDataBox via RapidAPI. The registration then feeds the existing
+Planespotters photo. Code: `server/src/lib/flight-data.js` (parsing and the match guard), `registration-job.js` (selection, cap,
+guarded write), `server/src/routes/registration-job.js`, migration `024_auto_registration`.
+
+- **Inert until configured:** nothing happens without `FLIGHT_DATA_API_KEY` and `CRON_SECRET` (both Vercel, Production only).
+  The key is read from the environment only, sent only in a header, never logged. Regenerate the key when it is set in Vercel.
+- **Budget:** one lookup per run, one run a day (`FLIGHT_DATA_MAX_PER_RUN`, default 1); stops when
+  `x-ratelimit-api-units-remaining` is below `FLIGHT_DATA_UNITS_RESERVE` (default 40), on any 429/401/403, and when the units
+  header is missing (it logs "units header missing" and stops). The units header is the only budget signal; no per-call cost is assumed.
+  Does nothing, at no cost, when no flight is eligible. One log line per run, counts only.
+- **Safety:** only `role = 'passenger'`, blank tail, no aircraft link, never cleared, flight 1 to 364 days old, at most 4 checks.
+  A match needs both recorded airports to match and exactly one valid registration. The write is one guarded UPDATE that never
+  overwrites a value, never touches pilot flights and never deletes. Passenger flights get no cost rates from it.
+- **Provenance:** `reg_source` (NULL = the pilot's own), `reg_filled_at`, `reg_cleared_at` (never refill), `reg_checked_at`,
+  `reg_check_count`; `aircraft.auto_created_at` marks an aircraft row the job made. Changing the tail makes it the pilot's own;
+  blanking it marks it cleared. The flight detail shows an "auto" marker (sheet: source link, Clear). `POST /api/flights/:id/clear-registration`
+  removes the tail and link and deletes only an unreferenced aircraft the job created.
+- **Licensing, accepted risk:** AeroDataBox's terms forbid "permanent copies" (5.2(g)) and keep "user records" for as long as the owner
+  keeps them (5.8). The question of whether one registration on the pilot's own record is a user record was **not asked** of the
+  provider and the risk was **accepted by the owner**. The free plan also requires attribution: the sheet's "Source" link carries it.
+- **Reach:** the free plan covers 365 days back and registration only appears where the provider has ADS-B or live data, so older
+  flights stay manual. `server/scripts/registrations-dry-run.js` (scratch only, counts only) shows what a run could touch.
+
 ## Conventions worth knowing
 
 - **Dates display as MM/DD/YYYY** everywhere, via the one string-based `formatDate` in
@@ -270,3 +296,7 @@ logbook list shows only a camera icon, not photo thumbnails; photos and the shar
 weekly backups (size, and so a restore can't revive a revoked link); older photos saved without a size are measured
 on load. Also open: no on-screen-keyboard-covers-Save handling and no broader hover/focus audit; study mode and the
 document vault (with auth hardening) are next.
+
+**Known flakes:** `client/scripts/check-scroll.mjs` on `/logbook/quick`, WebKit, 390px showed 2.33% of pixels changed after the
+round trip in one full run (limit 0.3%). Not reproduced: 191 of 192 runs were clean and 5 isolated re-runs were clean. The route was
+not touched by the diff under test. Accepted as a flake on 2026-10-12; if it recurs on that route, investigate rather than re-run.

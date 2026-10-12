@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
+import { Sheet } from '../ds/Overlays.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { registrationMarker } from '../lib/regSource.js';
 import { api, fetchAllRates } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import { computeFlightCost, fmtMoney } from '../lib/cost.js';
@@ -44,6 +47,10 @@ export default function FlightDetail() {
   const [tz, setTz] = useState({});
   const [open, setOpen] = useState({});
   const [showCode, setShowCode] = useState(false);
+  const [regSheet, setRegSheet] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState('');
   const photoCount = usePhotoCount(Number(id));
   const fold = (k) => ({ open: Boolean(open[k]), onToggle: () => setOpen((o) => ({ ...o, [k]: !o[k] })) });
 
@@ -94,6 +101,19 @@ export default function FlightDetail() {
   if (error) return <div className="cl mn"><ErrorNote message={error} onRetry={load} /></div>;
   if (!flight) return <div className={`cl mn ${pilot ? '' : 'pax'}`}><MnSkeleton rows={3} /></div>;
 
+  const marker = registrationMarker(flight);
+  const clearRegistration = async () => {
+    setClearing(true);
+    setClearError('');
+    try {
+      setFlight(await api.clearRegistration(flight.id));
+      setConfirmClear(false);
+      setRegSheet(false);
+    } catch (e) {
+      setClearError(e.message || 'Could not clear it');
+      setConfirmClear(false);
+    } finally { setClearing(false); }
+  };
   const utc = utcLine();
   const landings = flight.day_landings + flight.night_landings;
   const title = local ? `Local ${flight.departure_airport.trim().toUpperCase()}` : routeTitle;
@@ -122,7 +142,15 @@ export default function FlightDetail() {
         <div className="mn-card">
           {pilot && <MnKv k="Instructor" v={flight.instructor} />}
           <MnKv k="Aircraft" v={flight.aircraft_type} />
-          {flight.tail_number && flight.aircraft_type && <MnKv k="Tail" v={flight.tail_number} />}
+          {marker ? (
+            <div className="mn-kv">
+              <span className="k">Tail</span>
+              <span className="v">
+                {flight.tail_number}{' '}
+                <button type="button" className="gl link sm pax" aria-label="Registration filled automatically, tap to review" onClick={() => setRegSheet(true)}>auto</button>
+              </span>
+            </div>
+          ) : flight.tail_number && flight.aircraft_type && <MnKv k="Tail" v={flight.tail_number} />}
 
           {pilot && moreTimes.length > 0 && (
             <MnFold label="All times" value={`${moreTimes.length + 3}`} {...fold('times')}>
@@ -177,6 +205,22 @@ export default function FlightDetail() {
             </MnFold>
           )}
         </div>
+
+        {marker && (
+          <Sheet open={regSheet} onClose={() => setRegSheet(false)} title="Filled automatically" detent="medium">
+            <div className="cl mn mn-sheet">
+              <MnKv k="Tail" v={flight.tail_number} />
+              <MnKv k="Filled" v={marker.filledOn ? fmtDate(marker.filledOn) : null} />
+              <div className="mn-kv"><span className="k">Source</span><span className="v"><a href={marker.url} target="_blank" rel="noopener noreferrer">{marker.provider}</a></span></div>
+              {clearError && <p className="mn-note" style={{ color: 'var(--ds-bad)' }}>{clearError}</p>}
+              <div className="mn-actions">
+                <Button type="button" variant="danger" size="lg" onClick={() => setConfirmClear(true)}>Clear registration</Button>
+              </div>
+            </div>
+          </Sheet>
+        )}
+        <ConfirmDialog open={confirmClear} title="Clear this registration?" description="It won't be filled in again."
+          confirmLabel="Clear" busy={clearing} onConfirm={clearRegistration} onClose={() => setConfirmClear(false)} />
 
         <div className="mn-actions">
           <Button as={Link} to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} variant={pilot ? 'primary' : 'pax'} size="lg" icon={Pencil}>Edit flight</Button>

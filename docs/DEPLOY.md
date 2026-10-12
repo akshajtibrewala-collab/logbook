@@ -131,6 +131,24 @@ have no local variant.
    `*.vercel.app` address, enter your passcode, and check your flights are there.
 6. On your phone, open the address and use **Add to Home Screen** for an app-style icon.
 
+### 5. Automatic registration (optional, inert until the key is set)
+
+A daily Vercel Cron (`/api/cron/registrations`, 06:00 UTC, `vercel.json`) fills a blank aircraft registration on
+passenger flights that have a flight number and date, from AeroDataBox (via RapidAPI). It does nothing at all until
+**both** of these are set in Vercel (Production only), so merging it is safe before then:
+
+| Name | Value |
+| --- | --- |
+| `FLIGHT_DATA_API_KEY` | your RapidAPI key for AeroDataBox. Never paste it in chat, code, logs or a tracked file; regenerate it when you set it in Vercel |
+| `CRON_SECRET` | already set for the weekly backup; the same secret protects this route |
+
+Optional overrides (defaults are what you want): `FLIGHT_DATA_MAX_PER_RUN` (default 1 lookup per run, one run a day) and
+`FLIGHT_DATA_UNITS_RESERVE` (default 40: stop when `x-ratelimit-api-units-remaining` is below it). The units header is the only
+budget signal; if it is missing the run stops after one response and logs "units header missing". A 429, 401 or 403 also
+stops the run. Each run logs one line of counts only (`registrations: due= checked= filled= ...`). Only passenger flights
+with a blank registration are ever touched; a value you clear or type is never overwritten (migration 024 holds the provenance).
+Scratch dry run: `DB_FILE=server/scratch-<name>.db node server/scripts/registrations-dry-run.js` (counts only, no provider call).
+
 ## Deploying after that
 
 - **Git push (recommended):** `git push` to `main` and Vercel builds and publishes it. Other branches get preview URLs.

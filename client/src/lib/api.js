@@ -42,6 +42,7 @@ export const api = {
   createFlight: (f) => request('POST', '/flights', f),
   updateFlight: (id, f) => request('PUT', `/flights/${id}`, f),
   deleteFlight: (id) => request('DELETE', `/flights/${id}`),
+  clearRegistration: (id) => request('POST', `/flights/${id}/clear-registration`),
   bulkCreateFlights: (flights) => request('POST', '/flights/bulk', { flights }),
   listReviews: () => request('GET', '/reviews'),
   addReview: (date) => request('POST', '/reviews', { date }),

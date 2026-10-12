@@ -299,6 +299,20 @@ router.post('/bulk', async (req, res) => {
   res.status(201).json({ inserted: ready.length, failed });
 });
 
+/**
+ * Provenance for the automatic registration job. A registration the pilot changes is theirs from then on
+ * (reg_source goes back to NULL); one they blank is marked cleared so the job never refills it. Unchanged
+ * values keep their marker, so saving the form without touching the tail leaves an automatic fill automatic.
+ * reg_* columns are not in FLIGHT_FIELDS: a client can never set them through the normal write path.
+ */
+async function recordRegistrationProvenance(stored, value, id) {
+  const before = normTail(stored.tail_number) || null;
+  const after = normTail(value.tail_number) || null;
+  if (before === after) return;
+  if (after) await run('UPDATE flights SET reg_source = NULL WHERE id = ?', [id]);
+  else await run("UPDATE flights SET reg_cleared_at = datetime('now') WHERE id = ?", [id]);
+}
+
 // Fields whose change invalidates a stored arrival-day offset (it is derived from them), so an update that
 // moves one of them without sending a new offset has the server work the offset out again.
 const OFFSET_INPUTS = ['date', 'dep_time', 'arr_time', 'departure_airport', 'arrival_airport'];
@@ -325,6 +339,7 @@ async function updateFlight(req, res) {
   const { changes } = await run(`UPDATE flights SET ${set}, updated_at = datetime('now') WHERE id = :id`, { ...value, id: req.params.id });
   if (!changes) return res.status(404).json({ error: 'Flight not found' });
   await ensureAircraftRate(value.aircraft_id, value.date);
+  await recordRegistrationProvenance(stored, value, req.params.id);
   if (stops) await saveStops(req.params.id, stops);
   if (approachTypes) await saveApproaches(req.params.id, approachTypes);
   const updated = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
@@ -332,6 +347,31 @@ async function updateFlight(req, res) {
   updated.approach_types = await all(APPROACHES_SELECT, [req.params.id]);
   res.json(updated);
 }
+// The "auto" marker's Clear action: removes an automatically filled registration (and its aircraft link), and
+// marks the flight so the job never refills it. Removes the aircraft row only when the job created it and
+// nothing else (another flight, a cost rate) refers to it; an aircraft the pilot made is never removed.
+router.post('/:id/clear-registration', async (req, res) => {
+  const stored = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
+  if (!stored) return res.status(404).json({ error: 'Flight not found' });
+  if (!stored.reg_source) return res.status(400).json({ error: 'This registration was not filled automatically' });
+  await run(
+    'UPDATE flights SET tail_number = NULL, aircraft_id = NULL, reg_cleared_at = :now WHERE id = :id AND reg_source IS NOT NULL',
+    { now: new Date().toISOString(), id: req.params.id },
+  );
+  if (stored.aircraft_id) {
+    await run(
+      `DELETE FROM aircraft WHERE id = :aid AND auto_created_at IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM flights WHERE aircraft_id = :aid)
+         AND NOT EXISTS (SELECT 1 FROM aircraft_rates WHERE aircraft_id = :aid)`,
+      { aid: stored.aircraft_id },
+    );
+  }
+  const updated = await get('SELECT * FROM flights WHERE id = ?', [req.params.id]);
+  updated.stops = await all(STOPS_SELECT, [req.params.id]);
+  updated.approach_types = await all(APPROACHES_SELECT, [req.params.id]);
+  res.json(updated);
+});
+
 router.put('/:id', updateFlight);
 router.patch('/:id', updateFlight);
 
