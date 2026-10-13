@@ -2,7 +2,8 @@
 // re-rendering, so scrolling never triggers React work.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlass, subscribeGlass, trackGlass, initGlass } from './glass.js';
-import { clampScroll, nextCollapse, titleProgress, keyboardInset } from '../lib/scrollstate.js';
+import { clampScroll, nextCollapse, titleProgress, keyboardInset, needsViewportSettle } from '../lib/scrollstate.js';
+import { isNarrowForRem } from '../lib/layoutmode.js';
 
 export const useGlass = () => { initGlass(); return useSyncExternalStore(subscribeGlass, getGlass, getGlass); };
 
@@ -65,6 +66,57 @@ export function useKeyboardInset() {
     return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); document.removeEventListener('focusin', on); document.removeEventListener('focusout', on); };
   }, []);
   return inset;
+}
+
+/**
+ * Puts the visual viewport back when it is stuck (see needsViewportSettle): after a text field loses focus, when the visual viewport
+ * resizes or scrolls, and on a route change, it waits for the page to settle and then, only if the viewport is still off with no field
+ * focused and no zoom, scrolls to the position it is already at (a no-op for the page; it makes Safari recompute the fixed bars' anchor).
+ * Counts its corrections on window.__aeroSettles for the ?debug=1 panel.
+ */
+export function useViewportSettle(routeKey) {
+  useEffect(() => {
+    const vv = window.visualViewport; if (!vv) return undefined;
+    let timer = 0;
+    const textFocused = () => { const a = document.activeElement; return Boolean(a && a.matches?.('input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="file"], [type="range"]), textarea, select, [contenteditable="true"]')); };
+    const check = () => {
+      if (!needsViewportSettle({ innerHeight: window.innerHeight, vvHeight: vv.height, vvOffsetTop: vv.offsetTop, vvScale: vv.scale, textFocused: textFocused() })) return;
+      window.scrollTo(window.scrollX, window.scrollY);
+      window.__aeroSettles = (window.__aeroSettles || 0) + 1;
+    };
+    const later = () => { clearTimeout(timer); timer = setTimeout(check, 260); };
+    vv.addEventListener('resize', later); vv.addEventListener('scroll', later); document.addEventListener('focusout', later);
+    later();
+    return () => { clearTimeout(timer); vv.removeEventListener('resize', later); vv.removeEventListener('scroll', later); document.removeEventListener('focusout', later); };
+  }, [routeKey]);
+}
+
+/**
+ * Sets data-narrow-text on <html> while the layout width, measured in the current root font size, is below the wide layout's width (see
+ * lib/layoutmode.js). CSS then keeps pages in one column even where a media query says "wide". Re-evaluated on resize, orientation,
+ * focus and visibility changes (a text-size setting changes outside the page, so a periodic check covers the rest).
+ */
+export function useTextScaleLayout() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const apply = () => {
+      const px = parseFloat(getComputedStyle(root).fontSize);
+      const narrow = isNarrowForRem(window.innerWidth, px);
+      if (narrow !== root.hasAttribute('data-narrow-text')) root.toggleAttribute('data-narrow-text', narrow);
+    };
+    apply();
+    // A 1rem-wide probe: its width changes the moment the root font size does (a text-size setting, page zoom), which fires no resize event.
+    const probe = document.createElement('i');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1rem;height:1px;visibility:hidden;pointer-events:none';
+    document.body.appendChild(probe);
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(apply) : null;
+    ro?.observe(probe);
+    window.addEventListener('resize', apply); window.addEventListener('orientationchange', apply);
+    window.addEventListener('focus', apply); document.addEventListener('visibilitychange', apply);
+    const iv = setInterval(apply, 3000);
+    return () => { clearInterval(iv); ro?.disconnect(); probe.remove(); window.removeEventListener('resize', apply); window.removeEventListener('orientationchange', apply); window.removeEventListener('focus', apply); document.removeEventListener('visibilitychange', apply); root.removeAttribute('data-narrow-text'); };
+  }, []);
 }
 
 export const prefersReducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;

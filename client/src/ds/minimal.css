@@ -213,6 +213,16 @@ button.mn-st:hover, a.mn-st:hover { background: var(--ds-surface-2); } button.mn
 .mn-wx .mn-open { padding: 0 8px 8px; }
 .mn-group { display: grid; gap: 4px; padding: 8px 0; } .mn-group > .mn-sub { padding: 8px 16px 0; }
 .mn-card .mn-fold { text-decoration: none; }
+/* One inset for every row in a card. A key/value row, a disclosure row and an opened block all sit 8px in from the card's own padding, so their
+   labels share one left edge and their values and chevrons share one right edge. Before this a disclosure row was inset 16px (and, on a phone,
+   a further Add-button clearance on its right), so "All times", "Landings and approaches", "Cost" and "Local times" read narrower than the rows
+   above them. The Add button's clearance stays on the list rows, ledger and status rows that need it (bcalm.css); a row in a card clears it by the
+   page's bottom padding and by the button hiding while the page scrolls. */
+.cl .mn-card button.mn-fold, .cl .mn-card a.mn-fold { padding-inline: 8px; }
+.mn-card:not(.mn-wx) .mn-open { padding: 0 8px 16px; }
+.mn-card .mn-open .mn-kv { padding-inline: 0; }
+.mn-open .gl.link { padding-inline: 0; } /* a text action inside an opened block starts at the block's left edge, like the lines around it */
+.mn-kv .v { margin-inline-start: auto; } /* a value that wraps under its label (large text) stays on the right edge, like a disclosure row's value */
 .mn-form .mn-card { padding: 20px; }
 
 /* older form cards inside a minimalist form (Quick log, ground session, weather legs): one surface, no outline, quiet headings */

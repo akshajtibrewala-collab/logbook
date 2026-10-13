@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clampScroll, nextCollapse, nextFab, titleProgress, keyboardInset } from './scrollstate.js';
+import { clampScroll, nextCollapse, nextFab, titleProgress, keyboardInset, needsViewportSettle } from './scrollstate.js';
 
 const WEIRD = [-500, -1, -0.0001, 0, NaN, Infinity, -Infinity, 1e12, undefined, null];
 
@@ -73,4 +73,16 @@ test('keyboardInset: only a focused text field with a keyboard-sized gap on an u
   assert.equal(keyboardInset({ ...base, vvHeight: 760 }), 0); // a toolbar-sized change
   assert.equal(keyboardInset({ ...base, vvOffsetTop: 120 }), 180);
   for (const v of WEIRD) assert.ok(Number.isFinite(keyboardInset({ ...base, vvHeight: v, vvOffsetTop: v, innerHeight: v })));
+});
+
+test('needsViewportSettle: a stuck offset or inset with no field focused and no zoom is settled; everything else is left alone', () => {
+  const base = { innerHeight: 800, vvHeight: 800, vvOffsetTop: 0, vvScale: 1, textFocused: false };
+  assert.equal(needsViewportSettle(base), false);
+  assert.equal(needsViewportSettle({ ...base, vvOffsetTop: 38 }), true);
+  assert.equal(needsViewportSettle({ ...base, vvHeight: 500 }), true);
+  assert.equal(needsViewportSettle({ ...base, vvHeight: 500, textFocused: true }), false); // a real keyboard
+  assert.equal(needsViewportSettle({ ...base, vvOffsetTop: 38, vvScale: 2 }), false); // pinch-zoomed on purpose
+  assert.equal(needsViewportSettle({ ...base, vvHeight: 770 }), false); // a toolbar-sized difference is not an inset
+  assert.equal(needsViewportSettle({ ...base, vvOffsetTop: 0.4 }), false); // sub-pixel rounding
+  for (const bad of [NaN, Infinity, undefined, '12']) assert.equal(needsViewportSettle({ ...base, vvOffsetTop: bad }), false);
 });

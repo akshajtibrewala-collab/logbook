@@ -133,7 +133,7 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 .ds-app > .ds-topbar { left: var(--ds-bar-l); right: var(--ds-bar-r); }
 /* Map overlays sit just under the bar, on its left edge, clear of the rail. */
 .ds-map-ov { position: absolute; z-index: 1000; left: var(--ds-bar-l); top: calc(var(--ds-bar-bottom) + 12px); max-width: calc(100% - var(--ds-bar-l) - var(--ds-bar-r)); }
-.ds-map-ov-bl { position: absolute; z-index: 1000; left: var(--ds-bar-l); right: calc(var(--ds-bar-r) + 3.5rem); bottom: var(--ds-ov-bottom); }
+.ds-map-ov-bl { position: absolute; z-index: 1000; left: var(--ds-bar-l); right: calc(var(--ds-bar-r) + 4.75rem + var(--ds-tap) + 8px); bottom: var(--ds-ov-bottom); } /* ends 8px before the credits button (which sits 4.75rem in, clearing the Add button), never under it */
 .ds-map-ov-br { position: absolute; z-index: 1000; right: calc(var(--ds-bar-r) + 4.75rem); /* phones/tablets: clear the Add button above the tab bar */ bottom: var(--ds-ov-bottom); }
 .ds-legend { position: absolute; left: var(--ds-gutter); bottom: 14px; z-index: 2; display: flex; gap: 0.875rem; padding: 0.4375rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; color: var(--ds-g-text); }
 .ds-legend span { display: inline-flex; align-items: center; gap: 0.375rem; }
@@ -160,6 +160,7 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
   /* Content column = main (max 80rem, centred) minus its 7.5rem rail gap and 5.5rem right gap: its centre is 50% + 1rem. */
   .ds-app { --ds-col-l: max(7.5rem, calc(50% + 1rem - 33.5rem)); --ds-col-r: max(5.5rem, calc(50% - 1rem - 33.5rem)); --ds-bar-l: var(--ds-col-l); --ds-bar-r: var(--ds-col-r); --ds-ov-bottom: 12px; }
   .ds-map-ov-br { right: var(--ds-bar-r); }
+  .ds-map-ov-bl { right: calc(var(--ds-bar-r) + var(--ds-tap) + 8px); }
   .ds-app > .ds-topbar.has-add .side:last-child { padding-right: 3.5rem; } /* room for the Add button, which sits inside the bar's right end */
   .ds-app .ds-main { padding-left: 7.5rem; padding-right: 5.5rem; max-width: 80rem; }
   .ds-app .ds-main.wide { max-width: 80rem; }

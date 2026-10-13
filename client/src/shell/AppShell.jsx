@@ -10,7 +10,7 @@ import { Shell } from '../ds/Nav.jsx';
 import { IconButton } from '../ds/Controls.jsx';
 import { initGlass, noteRouteChange } from '../ds/glass.js';
 import { TABS, addItemsFor, isFocusedForm, isRoot, sectionOf, showAdd, titleOf } from '../lib/nav.js';
-import { useKeyboardInset } from '../ds/hooks.js';
+import { useKeyboardInset, useViewportSettle, useTextScaleLayout } from '../ds/hooks.js';
 import OutboxBanner from '../components/OutboxBanner.jsx';
 import FlyingMenu from './FlyingMenu.jsx';
 import FlyingSwitcher from './FlyingSwitcher.jsx';
@@ -45,6 +45,8 @@ export default function AppShell({ children }) {
   const section = sectionOf(pathname);
 
   useEffect(() => { initGlass(); }, []);
+  useViewportSettle(pathname);
+  useTextScaleLayout();
   useEffect(() => { noteRouteChange(); if (navType !== 'POP') window.scrollTo(0, 0); }, [pathname, navType]);
 
   const back = () => {

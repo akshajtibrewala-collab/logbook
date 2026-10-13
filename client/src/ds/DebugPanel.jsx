@@ -59,7 +59,11 @@ function read() {
     ['bar tint', bar ? `${bar.getAttribute('data-bk') || 'lo'}${bar.hasAttribute('data-busy') ? ' busy' : ''}` : 'n/a'],
     ['add button', fab ? (fab.getAttribute('data-hidden') === 'true' ? 'hidden' : 'visible') : 'none on this page'],
     ['tab bar', tab ? (tab.classList.contains('is-collapsed') ? 'collapsed' : 'expanded') : 'none on this page'],
+    ['tab bar bottom offset (css / visual gap)', tab ? `${px(parseFloat(getComputedStyle(tab).bottom))} / ${px(window.innerHeight - tab.getBoundingClientRect().bottom)}` : 'none on this page'],
+    ['keyboard inset (innerHeight - vv.height - vv.offsetTop)', vv ? px(window.innerHeight - vv.height - vv.offsetTop) : 'n/a'],
+    ['open overlays (scrims on / sheets open)', `${document.querySelectorAll('.ds-scrim-dim.is-on').length} / ${document.querySelectorAll('.ds-sheet.is-open').length}`],
     ['month header stuck', stuck ? 'yes' : 'no'],
+    ['viewport settles (stuck offset corrected)', String(window.__aeroSettles || 0)],
     ['keyboard flag', d.hasAttribute('data-kb') ? 'on' : 'off'],
     ...mapRows(),
     ['build', typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'n/a'],
@@ -80,7 +84,7 @@ export default function DebugPanel() {
   const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n');
   const v = Object.fromEntries(rows);
   // One line that fits under the status bar and over nothing important: enough to read in a screenshot of the broken moment; tap "debug +" for every value.
-  const line = `y ${v.scrollY}/${v['max scroll']} · vv ${v['vv offsetTop']}@${v['vv scale']} · p ${String(v['title shown in bar (--p)']).split(' ')[0]} · bar ${v['bar tint']} · add ${v['add button']} · tab ${v['tab bar']} · kb ${v['keyboard flag']} · ${v['display mode']}`;
+  const line = `y ${v.scrollY}/${v['max scroll']} · vv ${v['vv offsetTop']}@${v['vv scale']} · p ${String(v['title shown in bar (--p)']).split(' ')[0]} · bar ${v['bar tint']} · add ${v['add button']} · tab ${v['tab bar']} ${String(v['tab bar bottom offset (css / visual gap)']).replace(' / ', '/')} · kbd ${v['keyboard inset (innerHeight - vv.height - vv.offsetTop)']} · ovl ${v['open overlays (scrims on / sheets open)'].replace(' / ', '/')} · kb ${v['keyboard flag']} · ${v['display mode']}`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); }
     catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch { /* nothing more to try */ } t.remove(); }

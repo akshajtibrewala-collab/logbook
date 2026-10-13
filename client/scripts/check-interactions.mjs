@@ -75,6 +75,9 @@ for (const w of WIDTHS) {
   const ctx = await browser.newContext({ viewport: { width: w, height: w < 600 ? 844 : 900 }, reducedMotion: 'reduce' });
   await ctx.route(/arcgisonline|basemaps\.cartocdn|tile\.openstreetmap/, (r) => r.abort());
   const p = await ctx.newPage();
+  // A link that opens a new tab (the aircraft photo credit, target=_blank) takes focus from the audited page; a backgrounded page never finishes its
+  // sheet transitions, so a sheet opened next would not be seen as open and would be left covering everything after it. Close any popup at once.
+  ctx.on('page', (np) => { if (np !== p) np.close().catch(() => {}); });
   await p.addInitScript(`window.__ov = ${OVERLAY.toString()}`);
   let errs = [];
   p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message.slice(0, 120)));
@@ -106,6 +109,7 @@ for (const w of WIDTHS) {
       try { await p.mouse.click(g.cx, g.cy); } catch (e) { add(route, w, label, 'click failed: ' + e.message.slice(0, 60)); continue; }
       await p.waitForTimeout(350);
       const after = await p.evaluate(STATE);
+      if (process.env.IA_DEBUG) console.log(`  tap ${route} @${w} "${label.slice(0, 40)}" url ${before.url === after.url ? 'same' : after.url} overlays ${before.ov}->${after.ov} scrimsOn ${await p.evaluate(() => document.querySelectorAll('.ds-scrim-dim.is-on').length)}`);
       flush(route, label);
       const changed = before.url !== after.url || before.h !== after.h || before.text !== after.text || before.ov !== after.ov || before.ae !== after.ae || before.scroll !== after.scroll || before.pressed !== after.pressed || before.val !== after.val;
       if (!changed) { add(route, w, label, 'no effect when tapped', 'dead control, handler missing, or covered'); continue; }

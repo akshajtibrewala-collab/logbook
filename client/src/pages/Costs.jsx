@@ -36,7 +36,7 @@ export default function Costs() {
           {computed.missingRateFlights.length > 0 && (
             <p className="mn-err" role="alert">
               <AlertTriangle size={16} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-3px', marginRight: 8 }} />
-              {computed.missingRateFlights.length} flight{computed.missingRateFlights.length === 1 ? '' : 's'} use a rate that isn't set yet, shown as $0. <Link to="/costs/settings" className="underline">Set rates</Link>
+              {computed.missingRateFlights.length} flight{computed.missingRateFlights.length === 1 ? '' : 's'} use a rate that isn't set yet, shown as $0. <Link to="/costs/settings" className="gl link sm" style={{ display: 'flex', alignItems: 'center', paddingInline: 0, width: 'fit-content' }}>Set rates</Link>
             </p>
           )}
 

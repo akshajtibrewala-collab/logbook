@@ -186,3 +186,23 @@ A real photo of the aircraft, by registration, where the app shows one aircraft:
 - **The drawing.** One calm line drawing per type class (single-engine piston, twin piston, jet airliner, generic), chosen by the aircraft's class and ICAO designator (`chooseIllustration`); unknown means generic, never a guess.
 - **Words.** The only words added are the credit: two fixed words ("Photo:", "Planespotters.net") plus the photographer's name, shown only when a photo is. Nothing else, no error text and no label.
 - **Checks.** `check-aircraft-photos.mjs` (mocked answers: photo, none, error, 500, malformed, bad JSON, image 404, slow, offline, Save-Data; WebKit and Chromium at 390 and 1440). `check-fonts.mjs` lists the photo hosts explicitly as the only third-party hosts besides map tiles. `client/scripts/lib/playwright-photo-stub` is a drop-in `PLAYWRIGHT_CORE` that answers the photo hosts with a stub, so no verification run ever contacts the real service.
+
+## Rows inside a card, and the device matrix (2026-10-13)
+
+- **One inset for every row in a card** (`.mn-card`): a key/value row, a disclosure row (`.mn-fold`, which includes "All times", "Landings and approaches",
+  "Cost", "Local times") and an opened block all sit 8px in from the card's padding, so labels share one left edge and values and chevrons share one right
+  edge, and every row equals the card's inner width. Before this a disclosure was inset 16px and, on phones and iPads below 1024px, a further Add-button
+  clearance on its right, so it read narrower than the card. The Add button's clearance stays on list rows, ledger and status rows (`bcalm.css`); a row in
+  a card clears it by the page's bottom padding and because the button hides while the page scrolls. A value that wraps under its label keeps the right edge.
+- **Layout modes by width:** below 1024px the floating bottom tab bar (phones, iPad mini and iPad portrait up to 1023px; the content column is the top bar's
+  own width, at most 72rem at 768 to 1023px); from 1024px the side rail (iPad Pro portrait, iPad landscape, desktop). The map is full-bleed under the rail
+  by design. There is no intermediate layout.
+- **Viewport settle:** if the visual viewport is left offset or inset with no text field focused and no pinch zoom (iOS can do this after a keyboard closes),
+  the shell scrolls to the position it is already at after the page settles, which re-anchors the fixed bars. `?debug=1` shows the tab bar's bottom offset
+  (CSS and visual), the keyboard inset, the open overlay count and how many corrections were made.
+- **Checks added:** `check-card-width.mjs` (rows equal the card's inner width and share their label and value edges), `check-tabbar.mjs` (the tab bar's
+  layout offset never changes across navigation, tab, form, keyboard, sheet and Back sequences; a stuck viewport is corrected, a pinch zoom is left alone),
+  `check-matrix.mjs` (every device in `lib/devices.mjs` by route category: no horizontal overflow, the right layout mode, nothing under the bar or Add
+  button, no phone column floating in a tablet, touch targets of 44px). The interaction audit now closes any popup tab at once: a link that opens a new tab
+  (the aircraft photo credit) takes focus from the audited page, and a backgrounded page never finishes opening a sheet, which left the next sheet covering
+  every control after it.

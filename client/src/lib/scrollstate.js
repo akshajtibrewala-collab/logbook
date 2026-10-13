@@ -56,3 +56,19 @@ export function keyboardInset({ innerHeight, vvHeight, vvOffsetTop = 0, vvScale 
   const inset = Math.round(innerHeight - vvHeight - Math.max(0, vvOffsetTop));
   return inset >= min ? inset : 0;
 }
+
+/**
+ * Whether the visual viewport is stuck away from the layout viewport with nothing to explain it: no focused text field (so no keyboard),
+ * no pinch zoom (the user may be zoomed on purpose). iOS Safari can leave the visual viewport offset, or an inset behind, after the
+ * keyboard closes or a sheet blurs a field; `position: fixed` bars (the tab bar, the Add button) then sit higher than they should until
+ * the page is nudged. The remedy is a no-op scroll to the current position (see useViewportSettle). Pure so it is tested with awkward values.
+ */
+export function needsViewportSettle({ innerHeight, vvHeight, vvOffsetTop = 0, vvScale = 1, textFocused = false, tolerance = 1 }) {
+  if (textFocused) return false;
+  const vals = [innerHeight, vvHeight, vvOffsetTop, vvScale];
+  if (vals.some((v) => typeof v !== 'number' || !Number.isFinite(v))) return false;
+  if (Math.abs(vvScale - 1) > 0.01) return false;
+  const offset = Math.abs(vvOffsetTop) > tolerance;
+  const inset = innerHeight - vvHeight - Math.max(0, vvOffsetTop) > 50; // a keyboard-sized gap with no field focused
+  return offset || inset;
+}

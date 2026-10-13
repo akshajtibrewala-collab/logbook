@@ -180,3 +180,17 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 /* rows with a trailing value or chevron keep clear of the Add button on a phone, like the Logbook rows do */
 @media (max-width: 1023px) { .cl .mn-card > .mn-st { padding-inline-end: calc(var(--fab-clear) - 8px); } .cl .mn-ctl { padding-inline-end: var(--fab-clear); } } /* a status row's trailing value and a section's "Add" chip clear the floating Add button too (an expense row's delete icon does not: the amount and its name need the width) */
 @media (max-width: 1023px) { .cl .mn-prog, .cl button.mn-fold, .cl a.mn-fold, .cl .bc-sec button.hd { padding-inline-end: calc(var(--fab-clear) - 8px); } }
+
+/* Large text on the wide layout: the two-column arrangements (list beside summary or detail, Home's map beside its column) need their minimum widths in rem,
+   which a media query cannot see. While the layout width is under 64 root-font-size units (useTextScaleLayout sets data-narrow-text), pages stay in one
+   column, exactly as on a phone; the rail, the top bar and everything else of the wide layout are unchanged. */
+@media (min-width: 1024px) {
+  html[data-narrow-text] .bc-cols, html[data-narrow-text] .mn-cols { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; gap: 24px; }
+  html[data-narrow-text] .bc-list, html[data-narrow-text] .bc-side, html[data-narrow-text] .mn-list, html[data-narrow-text] .mn-side { grid-area: auto; position: static; }
+  html[data-narrow-text] .bc-cols.has-sel > .bc-list, html[data-narrow-text] .mn-cols.has-sel > .mn-list { display: none; }
+  html[data-narrow-text] .bc-home-cols { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; row-gap: 24px; }
+  html[data-narrow-text] .g-greet, html[data-narrow-text] .g-hero, html[data-narrow-text] .g-status, html[data-narrow-text] .g-items, html[data-narrow-text] .g-map { grid-area: auto; position: static; }
+  html[data-narrow-text] .lb-panes { display: block; }
+  html[data-narrow-text] .lb-panes > .lb-list { width: auto; }
+  html[data-narrow-text] .lb-panes > .lb-detail { border-left: 0; padding-left: 0; min-height: 0; }
+}
