@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { getGlass, subscribeGlass, trackGlass, initGlass } from './glass.js';
 import { clampScroll, nextCollapse, titleProgress, keyboardInset, needsViewportSettle } from '../lib/scrollstate.js';
 import { isNarrowForRem } from '../lib/layoutmode.js';
+import { isKeyboardOpen } from './kbFlag.js';
 
 export const useGlass = () => { initGlass(); return useSyncExternalStore(subscribeGlass, getGlass, getGlass); };
 
@@ -24,6 +25,7 @@ export function useCollapseOnScroll(scrollRef, { threshold = 10, minY = 80 } = {
     const s = scrollerOf(scrollRef);
     let st = { collapsed: false, last: clampScroll(scrollTopOf(s), maxScrollOf(s)) };
     const on = () => {
+      if (isKeyboardOpen()) return; // paused while the on-screen keyboard is up (ds/keyboard.js)
       const n = nextCollapse(st, scrollTopOf(s), maxScrollOf(s), { threshold, minY });
       if (n === st) return;
       st = n; setCollapsed((c) => (c === n.collapsed ? c : n.collapsed));
@@ -42,7 +44,7 @@ export function useCollapsingTitle(scrollRef, barRef, titleRef, routeKey) {
   useEffect(() => {
     const s = scrollerOf(scrollRef);
     const update = () => {
-      const bar = barRef.current, title = titleRef.current; if (!bar) return;
+      const bar = barRef.current, title = titleRef.current; if (!bar || isKeyboardOpen()) return; // paused while the keyboard is up
       if (!title) { bar.style.setProperty('--p', '1'); return; } // a page without a large title: the bar always shows its title
       const gap = title.getBoundingClientRect().bottom - bar.getBoundingClientRect().bottom; // >0: title still below the bar
       bar.style.setProperty('--p', String(titleProgress(gap)));
@@ -80,7 +82,7 @@ export function useViewportSettle(routeKey) {
     let timer = 0;
     const textFocused = () => { const a = document.activeElement; return Boolean(a && a.matches?.('input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="file"], [type="range"]), textarea, select, [contenteditable="true"]')); };
     const check = () => {
-      if (!needsViewportSettle({ innerHeight: window.innerHeight, vvHeight: vv.height, vvOffsetTop: vv.offsetTop, vvScale: vv.scale, textFocused: textFocused() })) return;
+      if (isKeyboardOpen() || !needsViewportSettle({ innerHeight: window.innerHeight, vvHeight: vv.height, vvOffsetTop: vv.offsetTop, vvScale: vv.scale, textFocused: textFocused() })) return;
       window.scrollTo(window.scrollX, window.scrollY);
       window.__aeroSettles = (window.__aeroSettles || 0) + 1;
     };

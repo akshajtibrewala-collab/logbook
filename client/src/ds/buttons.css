@@ -116,6 +116,28 @@
 .gl-field.is-bad { background: linear-gradient(var(--ds-surface-2), var(--ds-surface-2)) padding-box, linear-gradient(var(--ds-bad), var(--ds-bad)) border-box; }
 .gl-field::placeholder { color: var(--ds-text-3); }
 .gl-field:disabled { opacity: .45; }
+/* Native date/time inputs (iOS Safari draws its own centred, intrinsically sized chip): one recipe so they behave like every other field in a grid or
+   a flex row: block, as wide as the cell and no wider (min-width: 0), a fixed control height, left-aligned value, 16px so iOS never zooms. */
+.gl-field[type="time"], .gl-field[type="date"], .gl-field[type="datetime-local"] {
+  -webkit-appearance: none; appearance: none; display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; margin: 0;
+  min-height: 48px; padding: 0 12px; line-height: 1.2; text-align: left; font-family: inherit; font-size: max(16px, 1em); font-variant-numeric: tabular-nums;
+}
+.gl-field[type="time"]::-webkit-date-and-time-value, .gl-field[type="date"]::-webkit-date-and-time-value, .gl-field[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
+.gl-field[type="time"]::-webkit-datetime-edit, .gl-field[type="date"]::-webkit-datetime-edit { padding: 0; }
+
+/* Passenger flight: local departure and arrival times (components/PassengerTimeFields.jsx). */
+.pt-wrap { display: grid; gap: 12px; min-width: 0; justify-items: start; } .pt-wrap > * { justify-self: stretch; } .pt-wrap > button { justify-self: start; }
+.pt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 12px; min-width: 0; align-items: start; }
+.pt-cell { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.pt-lab { font-size: 0.875rem; font-weight: 600; color: var(--ds-text-2); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-hint { font-size: 0.8125rem; line-height: 1.35; color: var(--ds-text-2); overflow-wrap: anywhere; min-width: 0; }
+.pt-calc { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 16px; background: var(--ds-surface); min-width: 0; }
+.pt-calc-t { flex: 1 1 8rem; min-width: 0; display: grid; gap: 2px; font-size: 0.9375rem; }
+.pt-dur { font-weight: 650; }
+.pt-sub { color: var(--ds-text-2); font-size: 0.875rem; line-height: 1.35; margin: 0; }
+.pt-warn { color: var(--ds-warn); font-size: 0.8125rem; margin: 0; } .pt-bad { color: var(--ds-bad); font-size: 0.875rem; margin: 0; }
+.pt-step { flex: none; display: flex; align-items: center; gap: 4px; }
+.pt-off { min-width: 3.25rem; text-align: center; font-size: 0.875rem; color: var(--ds-text-2); font-variant-numeric: tabular-nums; }
 /* stepper: a field frame holding two glass round buttons */
 .gl-step { display: flex; align-items: center; gap: 2px; padding: 3px; min-height: 3.25rem; }
 .gl-step > input, .gl-step > span.v { flex: 1 1 auto; min-width: 0; background: transparent; border: 0; color: inherit; text-align: center; font: inherit; font-size: max(var(--ds-fs-input), 16px); outline: none; }

@@ -101,10 +101,11 @@ select.ds-input { padding-right: 2.25rem; background-image: linear-gradient(45de
 .ds-menu .dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; flex: none; }
 html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 .ds-scrim-dim { position: fixed; inset: 0; z-index: 40; background: var(--ds-scrim); opacity: 0; pointer-events: none; transition: opacity var(--ds-dur-2); } .ds-scrim-dim.is-on { opacity: 1; pointer-events: auto; }
-.ds-sheet { position: fixed; z-index: 41; left: max(8px, var(--ds-side)); right: max(8px, var(--ds-side)); bottom: 0; height: 92svh; /* svh: the sheet keeps one height while Safari's toolbar slides in and out under it */ --ds-g-r: var(--ds-r-sheet); will-change: transform; transform: translateY(110%); transition: transform var(--ds-dur-3) var(--ds-ease-out), visibility 0s linear var(--ds-dur-3); touch-action: none;
+.ds-sheet { position: fixed; z-index: 41; left: max(8px, var(--ds-side)); right: max(8px, var(--ds-side)); bottom: 0; height: 92svh; /* svh: the sheet keeps one height while Safari's toolbar slides in and out under it */ --ds-g-r: var(--ds-r-sheet); transform: translateY(110%); transition: transform var(--ds-dur-3) var(--ds-ease-out), visibility 0s linear var(--ds-dur-3); touch-action: none;
   visibility: hidden; pointer-events: none; /* closed: out of the tab order and never able to intercept a tap */ }
 .ds-sheet.is-open { visibility: visible; pointer-events: auto; transition-delay: 0s; }
 .ds-sheet.is-drag { transition: none; }
+.ds-sheet.is-open, .ds-sheet.is-drag { will-change: transform; } /* only while it can move: a closed sheet should not hold a promoted, blurred, full-height layer */
 .ds-sheet > .g-in { display: flex; flex-direction: column; padding: 8px var(--ds-s-4) 0; overflow: hidden; }
 .ds-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--ds-text-2); opacity: 0.55; margin: 4px auto 14px; flex: none; }
 .ds-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-3); margin-bottom: var(--ds-s-3); flex: none; }
@@ -232,7 +233,6 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 .ds-app[data-focus] { --bottom-nav-h: var(--ds-bottom); }
 .ds-app[data-focus] .ds-main { padding-bottom: calc(var(--ds-bottom) + 8rem); }
 .ds-app input, .ds-app select, .ds-app textarea { scroll-margin-block: 6.5rem 9rem; }
-html[data-kb] .save-bar { position: static; }
 
 /* ---------- form Save bar: glass in the tab bar's slot ---------- */
 .ds-savebar { position: sticky; bottom: calc(var(--bottom-nav-h) + 12px); z-index: 30; margin-top: var(--ds-s-4); --ds-g-r: 28px; }

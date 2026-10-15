@@ -40,12 +40,13 @@ export default function LedgerView({ model }) {
 function MonthRows({ m, go }) {
   return (
     <>
-      <tr className="mo"><td colSpan={11}>{m.label} · <b>{fmtHours(m.subtotal.total)} h</b> · {m.flights} flight{m.flights === 1 ? '' : 's'}{m.grounds ? ` · ground ${fmtHours(m.groundHours)} h` : ''}</td></tr>
+      <tr className="mo"><td colSpan={11}>{m.label}<span className="mn-mofig"> · <b>{fmtHours(m.subtotal.total)} h</b> · {m.flights} flight{m.flights === 1 ? '' : 's'}{m.grounds ? ` · ground ${fmtHours(m.groundHours)} h` : ''}</span></td></tr>
       {m.lines.map((l) => (l.kind === 'ground' ? (
         <tr key={`g${l.id}`} className="g go" onClick={() => go(`/logbook/ground/${l.id}`)}>
           <td><Link className="mn-dl" to={`/logbook/ground/${l.id}`} aria-label={`${formatDate(l.date)}, ground session${l.topics ? `, ${l.topics}` : ''}, ${fmtHours(l.hours)} hours`}>{formatDate(l.date)}</Link></td>
           <td className="l wide" colSpan={3}>Ground session{l.topics ? ` · ${l.topics}` : ''}</td>
-          <td>{fmtHours(l.hours)}</td><td className="z">—</td><td className="z">—</td><td className="wide z">—</td><td className="wide z">—</td><td className="wide z">—</td><td className="z">—</td>
+          <td>{fmtHours(l.hours)}</td><td className="wide z">—</td><td className="wide z">—</td><td className="wide z">—</td><td className="wide z">—</td><td className="wide z">—</td><td className="wide z">—</td>
+          <td className="mn-gonly z" colSpan={3}>Ground</td>
         </tr>
       ) : (
         <tr key={`f${l.id}`} className="go" onClick={() => go(`/logbook/${l.id}`)}>

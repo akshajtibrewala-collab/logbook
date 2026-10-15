@@ -206,3 +206,33 @@ A real photo of the aircraft, by registration, where the app shows one aircraft:
   button, no phone column floating in a tablet, touch targets of 44px). The interaction audit now closes any popup tab at once: a link that opens a new tab
   (the aircraft photo credit) takes focus from the audited page, and a backgrounded page never finishes opening a sheet, which left the next sheet covering
   every control after it.
+
+## Keyboard frame (while a text field has focus)
+
+iOS Safari resizes and pans the visual viewport the moment a field is focused and re-rasterises every fixed element that carries a `backdrop-filter`
+each frame, while the glass sampler, the scroll-linked collapse handlers and CSS transitions all fire at once: the whole screen flashes. So the frame
+is **calm and solid while a field is being typed into**, and the glass returns afterwards.
+
+- **State:** `html.kb-open`, set by `ds/keyboard.js` from the pure rules in `lib/keyboardState.js` (focusin/focusout on input, textarea, select,
+  contenteditable; debounced 150 ms so a field-to-field move never flickers). It clears on blur, when the visual viewport is full height again, on a
+  tap away from the field, on a route change, when a sheet closes and on pagehide/hidden; a 1 s reality check clears it if no text field is
+  actually active (hard cap 10 min). It can never stick.
+- **While set (`ds/keyboard.css`):** no `backdrop-filter` on any element (the glass layers go through the Solid tokens and the property is also
+  forced off), no transitions or animations on glass/fixed layers, the tab bar, the Add button, its menu and the bottom edge fade are hidden
+  (`visibility`, so nothing re-measures on return), the glass sampler, the collapse/title/Add-button scroll handlers and the Auto quality frame
+  monitor pause, and the form's Save bar keeps sticking, lifted by `--kb-inset` (visual-viewport measure).
+- **Rule for new UI:** a fixed or sticky element with a blur must be a `.ds-glass` (so the frame can solidify it); never add a bare
+  `backdrop-filter`, a permanent `will-change: transform` on something always on screen, or a transition on a fixed layer outside the frame's list.
+- **Debug:** `?debug=1` shows the frame state, the count of backdrop-filtered elements and the last focus event.
+- **Checks:** `client/scripts/check-keyboard.mjs` (fails on the pre-fix build). It cannot see real iOS: `docs/design/_private/PHONE_TEST.md` is the
+  real-phone list.
+
+## Passenger time fields and the Ledger on a phone
+
+- Departure/arrival times: one-line labels, equal-width boxes (two columns while both fit at the current text size, one column below that), hints
+  under the box; native date/time inputs share one recipe (`.gl-field[type=time|date]`: block, `min-width: 0`, 48px, left-aligned, 16px).
+- The phone Ledger is the B-min five columns (Date, Total, PIC, Dual, Ldg) at 13px figures and 4px cell padding so they fit before the Add
+  button's clearance at 100% text from 360px; the month line carries only the month name (the Flights subtotal row carries the figures); a ground
+  session says Ground in the columns it does not use; the header and the totals row are not sticky (the mockup's are not, and sticky inside a
+  sideways scroller never worked). Larger text scrolls sideways.
+- Checked by `client/scripts/check-phone-forms.mjs`.

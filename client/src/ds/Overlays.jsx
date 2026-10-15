@@ -6,6 +6,7 @@ import { IconButton } from './Controls.jsx';
 import { useKeyboardInset } from './hooks.js';
 import { noteActivity, scheduleSample } from './glass.js';
 import { claimOverlay, swallowNextClick } from './overlayRegistry.js';
+import { keyboardEvent } from './keyboard.js';
 
 /**
  * Bottom sheet with a grabber and medium / large detents; drag the grabber or title to resize or dismiss. It is the one
@@ -42,7 +43,7 @@ export function Sheet({ open, onClose, title, detent = 'medium', onDetentChange,
     if (!demo) el.current?.focus({ preventScroll: true });
     const onKey = (e) => { if (e.key === 'Escape') stableClose(); };
     document.addEventListener('keydown', onKey);
-    return () => { clearTimeout(t); release(); document.removeEventListener('keydown', onKey); restore.current?.focus?.({ preventScroll: true }); };
+    return () => { clearTimeout(t); release(); document.removeEventListener('keydown', onKey); keyboardEvent('sheetClose'); restore.current?.focus?.({ preventScroll: true }); };
   }, [open, stableClose, demo]);
 
   const down = (e) => {

@@ -1,0 +1,30 @@
+/* "Keyboard open" frame (html.kb-open, set by ds/keyboard.js while a text field has focus; rules: lib/keyboardState.js).
+   iOS Safari resizes and pans the visual viewport on focus and re-rasterises every fixed backdrop-filter layer each frame, with the glass sampler,
+   scroll-linked handlers and transitions on top: the whole screen flashes. While a field is being typed into the frame is calm and solid:
+     1. no backdrop-filter anywhere (the glass layers go through the same Solid tokens the Solid quality level uses, and the property is
+        forced off on every element as a second line of defence);
+     2. no transitions or animations on the glass, fixed and floating layers, so nothing animates against the keyboard's own animation;
+     3. the tab bar, the Add button, its menu and the bottom edge fade are hidden (visibility, so nothing re-measures when they return);
+     4. the form's Save bar stays visible, sticking above the keyboard by --kb-inset.
+   The JS side also pauses the glass sampler and the scroll-linked collapse handlers. Nothing here changes data or layout metrics. */
+
+html.kb-open[data-glass], html.kb-open {
+  --ds-gc: none; --ds-gl: none; --ds-gl-pop: none; --ds-gs: none; --gb-m: initial; --gb-fx: none;
+  --ds-g-base: var(--ds-g-solid); --ds-g-base-pop: var(--ds-g-solid); --ds-g-ins: 0px; --ds-g-pop-ins: 0px;
+  --ds-g-border: var(--ds-g-solid-edge); --ds-g-rim-op: 0.5;
+}
+html.kb-open *, html.kb-open *::before, html.kb-open *::after {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+html.kb-open .ds-glass, html.kb-open .ds-glass *, html.kb-open .ds-glass::before,
+html.kb-open .ds-topbar, html.kb-open .ds-tabbar, html.kb-open .ds-fab, html.kb-open .ds-menu, html.kb-open .ds-sheet,
+html.kb-open .ds-scrim-dim, html.kb-open .ds-edge, html.kb-open .ds-savebar, html.kb-open .ds-toasts, html.kb-open .ds-toast {
+  transition: none !important; animation: none !important; will-change: auto !important;
+}
+html.kb-open .ds-tabbar, html.kb-open .ds-fab, html.kb-open .ds-menu, html.kb-open .ds-edge.bot {
+  visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;
+}
+/* The Save bar sticks above the keyboard (the visual viewport, not the layout viewport, is what the keyboard covers). */
+html.kb-open .save-bar, html.kb-open .ds-savebar { position: sticky; bottom: calc(var(--kb-inset, 0px) + 8px); }
+/* A focused field scrolls clear of the top bar and of the Save bar above the keyboard, without a jump. */
+html.kb-open input, html.kb-open select, html.kb-open textarea { scroll-margin-block: 6.5rem 9rem; }

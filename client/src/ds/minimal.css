@@ -93,7 +93,7 @@
 .mn-led { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; font-size: var(--fs-s); }
 .mn-led th, .mn-led td { padding: 0 12px; height: 48px; text-align: right; white-space: nowrap; }
 .mn-led .l, .mn-led th:first-child, .mn-led td:first-child { text-align: left; }
-.mn-led thead th { position: sticky; top: 0; background: var(--ds-bg); z-index: 2; font-weight: 650; color: var(--ds-text-2); height: 56px; }
+.mn-led thead th { font-weight: 650; color: var(--ds-text-2); height: 56px; } /* not sticky: the B-min mockup has a plain header, and a sticky one inside a horizontal scroller never stuck to the page anyway */
 .mn-led tr.mo td { padding: 32px 12px 8px; height: 72px; text-align: left; font-weight: 650; font-size: var(--fs-p); color: var(--ds-text); vertical-align: bottom; }
 .mn-led tr.mo td b { color: var(--ds-pilot); }
 .mn-led tr.g td { color: var(--ds-text-2); }
@@ -103,9 +103,22 @@
 .mn-led tr.go { cursor: pointer; } .mn-led tr.go:hover td { background: var(--ds-surface); }
 .mn-led tr.go:hover td:first-child { border-radius: 12px 0 0 12px; } .mn-led tr.go:hover td:last-child { border-radius: 0 12px 12px 0; }
 .mn-led .mn-dl { display: inline-flex; align-items: center; min-height: 44px; }
-.mn-led tfoot td { height: 64px; font-weight: 800; font-size: var(--fs-p); position: sticky; bottom: 0; background: var(--ds-surface); }
+.mn-led tfoot td { height: 64px; font-weight: 800; background: var(--ds-surface); }
+.mn-led tfoot td:first-child { white-space: normal; line-height: 1.15; } /* "Pilot totals" wraps instead of widening the date column */
 .mn-led tfoot td:first-child { border-radius: 12px 0 0 12px; } .mn-led tfoot td:last-child { border-radius: 0 12px 12px 0; }
-@media (max-width: 719px) { .mn-led .wide { display: none; } .mn-led th, .mn-led td { padding: 0 8px; } }
+/* Phone: the five B-min columns (Date, Total, PIC, Dual, Ldg) must fit between the page gutter and the Add button's clearance at 100% text on a 360px phone and up; they scroll
+   sideways only at larger text sizes. 13px figures and 4px cell padding give ~253px; the old 14px/8px plus a 17px bold totals label gave 348px. */
+.mn-led .mn-gonly { display: none; } .mn-led .mn-mofig { display: inline; }
+@media (max-width: 719px) {
+  .mn-led .wide { display: none; }
+  .mn-led { font-size: 0.8125rem; }
+  .mn-led th, .mn-led td { padding: 0 4px; }
+  .mn-led th:first-child, .mn-led td:first-child { padding-left: 6px; }
+  .mn-led tr.mo td { font-size: var(--fs-p); }
+  .mn-led .mn-mofig { display: none; }
+  .mn-led .mn-gonly { display: table-cell; text-align: right; }
+  .mn-led tfoot td { font-size: 0.8125rem; }
+}
 
 /* detail */
 .mn-detail { display: grid; gap: 24px; align-content: start; min-width: 0; }

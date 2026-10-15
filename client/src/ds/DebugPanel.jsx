@@ -41,6 +41,17 @@ function mapRows() {
   ];
 }
 
+// Elements that currently paint a backdrop-filter (the glass layers). 0 while the keyboard frame is up, a handful otherwise (the layer budget).
+function backdropCount() {
+  let n = 0;
+  for (const el of document.body.querySelectorAll('*')) { const cs = getComputedStyle(el); const f = cs.backdropFilter || cs.webkitBackdropFilter; if (f && f !== 'none') n += 1; }
+  return n;
+}
+function lastFocus() {
+  const k = window.__aeroKb; if (!k || k.lastEvent === 'none') return 'none yet';
+  return `${k.lastEvent} ${k.lastTarget || ''} at ${k.lastAt} ms`.replace('  ', ' ');
+}
+
 function read() {
   const d = document.documentElement, vv = window.visualViewport, bar = document.querySelector('.ds-topbar'), tab = document.querySelector('.ds-tabbar'), fab = document.querySelector('.ds-fab');
   const max = d.scrollHeight - window.innerHeight, y = window.scrollY;
@@ -64,7 +75,10 @@ function read() {
     ['open overlays (scrims on / sheets open)', `${document.querySelectorAll('.ds-scrim-dim.is-on').length} / ${document.querySelectorAll('.ds-sheet.is-open').length}`],
     ['month header stuck', stuck ? 'yes' : 'no'],
     ['viewport settles (stuck offset corrected)', String(window.__aeroSettles || 0)],
-    ['keyboard flag', d.hasAttribute('data-kb') ? 'on' : 'off'],
+    ['keyboard state (html.kb-open)', d.classList.contains('kb-open') ? 'open: glass off, tab bar and Add hidden' : 'closed'],
+    ['backdrop-filtered elements', String(backdropCount())],
+    ['last focus event', lastFocus()],
+    ['keyboard transitions / --kb-inset', `${window.__aeroKb?.transitions || 0} / ${d.style.getPropertyValue('--kb-inset') || '0px'}`],
     ...mapRows(),
     ['build', typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'n/a'],
   ];
@@ -84,7 +98,7 @@ export default function DebugPanel() {
   const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n');
   const v = Object.fromEntries(rows);
   // One line that fits under the status bar and over nothing important: enough to read in a screenshot of the broken moment; tap "debug +" for every value.
-  const line = `y ${v.scrollY}/${v['max scroll']} · vv ${v['vv offsetTop']}@${v['vv scale']} · p ${String(v['title shown in bar (--p)']).split(' ')[0]} · bar ${v['bar tint']} · add ${v['add button']} · tab ${v['tab bar']} ${String(v['tab bar bottom offset (css / visual gap)']).replace(' / ', '/')} · kbd ${v['keyboard inset (innerHeight - vv.height - vv.offsetTop)']} · ovl ${v['open overlays (scrims on / sheets open)'].replace(' / ', '/')} · kb ${v['keyboard flag']} · ${v['display mode']}`;
+  const line = `y ${v.scrollY}/${v['max scroll']} · vv ${v['vv offsetTop']}@${v['vv scale']} · p ${String(v['title shown in bar (--p)']).split(' ')[0]} · bar ${v['bar tint']} · add ${v['add button']} · tab ${v['tab bar']} ${String(v['tab bar bottom offset (css / visual gap)']).replace(' / ', '/')} · kbd ${v['keyboard inset (innerHeight - vv.height - vv.offsetTop)']} · ovl ${v['open overlays (scrims on / sheets open)'].replace(' / ', '/')} · kb ${String(v['keyboard state (html.kb-open)']).split(':')[0]} · bf ${v['backdrop-filtered elements']} · ${v['display mode']}`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); }
     catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch { /* nothing more to try */ } t.remove(); }

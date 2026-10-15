@@ -6,6 +6,7 @@ import { morph, prefersReducedMotion, useCollapseOnScroll, useCollapsingTitle, m
 import { clampScroll, nextFab } from '../lib/scrollstate.js';
 import { noteActivity, scheduleSample } from './glass.js';
 import { claimOverlay, swallowNextClick } from './overlayRegistry.js';
+import { isKeyboardOpen } from './kbFlag.js';
 
 const ShellCtx = createContext(null);
 
@@ -112,6 +113,7 @@ export function AddMenu({ items, LinkComponent, defaultOpen = false, label = 'Ad
   useEffect(() => {
     let st = { hidden: false, last: clampScroll(window.scrollY, maxScrollOf(window)) }, idle = 0;
     const onScroll = () => {
+      if (isKeyboardOpen()) return; // paused while the on-screen keyboard is up (ds/keyboard.js)
       st = nextFab(st, window.scrollY, maxScrollOf(window));
       setHidden(st.hidden);
       clearTimeout(idle); idle = setTimeout(() => { st = { ...st, hidden: false }; setHidden(false); }, 900);

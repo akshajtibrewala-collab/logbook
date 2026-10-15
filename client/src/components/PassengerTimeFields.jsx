@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { api } from '../lib/api.js';
 import { passengerDuration, MAX_ARR_DAY_OFFSET } from '../lib/passengerDuration.js';
 import { zoneSummary } from '../lib/timezone.js';
 import { parseISO } from '../lib/calendar.js';
 import HoursInput from './HoursInput.jsx';
 
-const timeInputCls = 'gl-field h-12 w-full px-3 text-base';
 
 const durationLabel = (hours) => {
   const h = Math.floor(hours);
@@ -22,6 +21,7 @@ const durationLabel = (hours) => {
  */
 export default function PassengerTimeFields({ value, onChange, errors = {} }) {
   const [tz, setTz] = useState({}); // { KSTL: 'America/Chicago', ... }
+  const uid = useId();
   const [manual, setManual] = useState(!value.dep_time && !value.arr_time && Boolean(value.total_time && Number(value.total_time) > 0));
 
   const depCode = value.departure_airport?.trim().toUpperCase();
@@ -76,47 +76,51 @@ export default function PassengerTimeFields({ value, onChange, errors = {} }) {
   const arrSummary = arrCode ? (arrTz === undefined ? 'looking up…' : arrTz ? zoneSummary(arrTz, refDate) : 'zone unknown') : null;
 
   return (
-    <div className="col-span-2 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <span className="mb-1 block text-xs text-slate-400">Departure time{depSummary ? ` (${depCode} local, ${depSummary})` : ''}</span>
-          <input type="time" value={value.dep_time || ''} onChange={(e) => onChange({ dep_time: e.target.value })} className={timeInputCls} />
+    <div className="col-span-2 pt-wrap">
+      {/* Two equal columns while both fit at the current text size, one column below that (minmax in rem, so a larger text size stacks them). One-line labels keep the
+          two inputs on the same line; the airport and zone sit under each input, where a long zone name wrapping cannot push one field lower than the other. */}
+      <div className="pt-grid">
+        <div className="pt-cell">
+          <label className="pt-lab" htmlFor={`${uid}-dep`}>Departure time</label>
+          <input id={`${uid}-dep`} type="time" value={value.dep_time || ''} onChange={(e) => onChange({ dep_time: e.target.value })} className="gl-field pt-time" />
+          {depSummary && <span className="pt-hint">{depCode} local · {depSummary}</span>}
         </div>
-        <div>
-          <span className="mb-1 block text-xs text-slate-400">Arrival time{arrSummary ? ` (${arrCode} local, ${arrSummary})` : ''}</span>
-          <input type="time" value={value.arr_time || ''} onChange={(e) => onChange({ arr_time: e.target.value })} className={timeInputCls} />
+        <div className="pt-cell">
+          <label className="pt-lab" htmlFor={`${uid}-arr`}>Arrival time</label>
+          <input id={`${uid}-arr`} type="time" value={value.arr_time || ''} onChange={(e) => onChange({ arr_time: e.target.value })} className="gl-field pt-time" />
+          {arrSummary && <span className="pt-hint">{arrCode} local · {arrSummary}</span>}
         </div>
       </div>
 
       {value.dep_time && value.arr_time && bothZonesKnown && (
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-navy-800 p-3">
-          <div className="text-sm">
+        <div className="pt-calc">
+          <div className="pt-calc-t">
             {result && result.hours > 0 ? (
               <>
-                <span className="font-medium">Duration: {durationLabel(result.hours)}</span>
-                <span className="ml-1 text-slate-400">
-                  ({result.arrDayOffset === 0 ? 'arrives same day' : `arrives +${result.arrDayOffset} day${result.arrDayOffset === 1 ? '' : 's'}`})
+                <span className="pt-dur">Duration: {durationLabel(result.hours)}</span>
+                <span className="pt-sub">
+                  {result.arrDayOffset === 0 ? 'arrives same day' : `arrives +${result.arrDayOffset} day${result.arrDayOffset === 1 ? '' : 's'}`}
                 </span>
-                {result.warning === 'short' && <p className="mt-0.5 text-xs text-warn">That's under 20 minutes — double-check the times.</p>}
-                {result.warning === 'long' && <p className="mt-0.5 text-xs text-warn">That's over 20 hours — double-check the arrival day.</p>}
+                {result.warning === 'short' && <p className="pt-warn">That's under 20 minutes — double-check the times.</p>}
+                {result.warning === 'long' && <p className="pt-warn">That's over 20 hours — double-check the arrival day.</p>}
               </>
             ) : (
-              <span className="text-bad">Arrival isn't after departure — adjust the arrival day.</span>
+              <span className="pt-bad">Arrival isn't after departure — adjust the arrival day.</span>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="pt-step" role="group" aria-label="Arrival day">
             <button type="button" aria-label="Earlier arrival day" onClick={() => setOffset((offsetOverride ?? result?.arrDayOffset ?? 0) - 1)}
               className="gl clear icon sm">−</button>
-            <span className="w-14 text-center text-xs text-slate-400">+{offsetOverride ?? result?.arrDayOffset ?? 0}d</span>
+            <span className="pt-off">+{offsetOverride ?? result?.arrDayOffset ?? 0}d</span>
             <button type="button" aria-label="Later arrival day" onClick={() => setOffset((offsetOverride ?? result?.arrDayOffset ?? 0) + 1)}
               className="gl clear icon sm">+</button>
           </div>
         </div>
       )}
       {value.dep_time && value.arr_time && !bothZonesKnown && (depTz !== undefined && arrTz !== undefined) && (
-        <p className="text-xs text-slate-500">One of these airports has no known time zone — enter the duration manually below instead.</p>
+        <p className="pt-sub">One of these airports has no known time zone — enter the duration manually below instead.</p>
       )}
-      {errors.arr_day_offset && <p className="text-xs text-bad">{errors.arr_day_offset}</p>}
+      {errors.arr_day_offset && <p className="pt-bad">{errors.arr_day_offset}</p>}
 
       <button type="button" onClick={switchToManual} className="gl link sm">
         Enter duration manually instead

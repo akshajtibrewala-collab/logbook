@@ -2,6 +2,7 @@
 // frame times, and the cheap luminance sampler behind the adaptive scrim. Pure rules live in glassQuality.js and
 // adaptiveTint.js (tested); this file is the browser side. Nothing here touches app data.
 import { LEVELS, PREFS, resolveLevel, stepDown, createFrameMonitor } from './glassQuality.js';
+import { isKeyboardOpen } from './kbFlag.js';
 import { nextTintState, nextBusyState, busyMetrics, parseColor, percentile, relLuminance } from './adaptiveTint.js';
 
 const K_PREF = 'aerohub-glass-level';
@@ -65,7 +66,7 @@ function loop(t) {
   if (lastFrame) {
     const dt = t - lastFrame;
     if (dt < 250) { statAcc += dt; statFrames++; if (dt > statWorst) statWorst = dt; if (statAcc >= 500) { frameStats.fps = Math.round((statFrames * 1000) / statAcc); frameStats.worst = Math.round(statWorst); statAcc = 0; statFrames = 0; statWorst = 0; } }
-    if (state.pref === 'auto') { if (t < holdUntil || document.hidden) monitor.reset(); else if (monitor.push(dt)) autoDrop(); }
+    if (state.pref === 'auto') { if (t < holdUntil || document.hidden || isKeyboardOpen()) monitor.reset(); else if (monitor.push(dt)) autoDrop(); }
   }
   lastFrame = t;
   if (t >= monitorUntil) { monitoring = false; lastFrame = 0; return; }
@@ -78,7 +79,7 @@ function autoDrop() {
 }
 /** Call when something animates (sheet, menu) so frame times are watched for that long. Scrolling calls it itself. */
 export function noteActivity(ms = 300) {
-  if (typeof requestAnimationFrame === 'undefined' || snapshot.effective === 'solid') return;
+  if (typeof requestAnimationFrame === 'undefined' || snapshot.effective === 'solid' || isKeyboardOpen()) return;
   monitorUntil = performance.now() + ms;
   if (!monitoring) { monitoring = true; lastFrame = 0; requestAnimationFrame(loop); }
 }
@@ -129,9 +130,10 @@ function sample(el) {
 }
 
 let pending = false, lastSample = 0;
-function sampleAll() { pending = false; lastSample = performance.now(); if (snapshot.effective !== 'solid') tracked.forEach(sample); }
+// Paused while the on-screen keyboard is up (ds/keyboard.js): the frame is solid then, and sampling would only flip tints mid-resize.
+function sampleAll() { pending = false; lastSample = performance.now(); if (snapshot.effective !== 'solid' && !isKeyboardOpen()) tracked.forEach(sample); }
 export function scheduleSample() {
-  if (pending || typeof requestAnimationFrame === 'undefined') return;
+  if (pending || typeof requestAnimationFrame === 'undefined' || isKeyboardOpen()) return;
   pending = true;
   const wait = Math.max(0, 90 - (performance.now() - lastSample));
   setTimeout(() => requestAnimationFrame(sampleAll), wait);

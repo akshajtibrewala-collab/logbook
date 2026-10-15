@@ -10,11 +10,13 @@ import { Shell } from '../ds/Nav.jsx';
 import { IconButton } from '../ds/Controls.jsx';
 import { initGlass, noteRouteChange } from '../ds/glass.js';
 import { TABS, addItemsFor, isFocusedForm, isRoot, sectionOf, showAdd, titleOf } from '../lib/nav.js';
-import { useKeyboardInset, useViewportSettle, useTextScaleLayout } from '../ds/hooks.js';
+import { useViewportSettle, useTextScaleLayout } from '../ds/hooks.js';
 import OutboxBanner from '../components/OutboxBanner.jsx';
 import FlyingMenu from './FlyingMenu.jsx';
 import FlyingSwitcher from './FlyingSwitcher.jsx';
 import '../ds/bcalm.css';
+import '../ds/keyboard.css';
+import { installKeyboardState, keyboardEvent } from '../ds/keyboard.js';
 
 const TAB_ICONS = { home: Home, flying: Plane, travel: Luggage, map: MapIcon, more: MoreHorizontal };
 const ADD_ICONS = { zap: Zap, copy: Copy, book: BookOpen, plane: Plane };
@@ -44,7 +46,8 @@ export default function AppShell({ children }) {
   const navType = useNavigationType();
   const section = sectionOf(pathname);
 
-  useEffect(() => { initGlass(); }, []);
+  useEffect(() => { initGlass(); installKeyboardState(); }, []);
+  useEffect(() => { keyboardEvent('route'); }, [pathname]); // a route change always ends the keyboard frame
   useViewportSettle(pathname);
   useTextScaleLayout();
   useEffect(() => { noteRouteChange(); if (navType !== 'POP') window.scrollTo(0, 0); }, [pathname, navType]);
@@ -55,9 +58,6 @@ export default function AppShell({ children }) {
   };
   const addItems = showAdd(pathname) ? addItemsFor(pathname).map((i) => ({ ...i, icon: ADD_ICONS[i.icon] })) : null;
   const focused = isFocusedForm(pathname);
-  const kb = useKeyboardInset();
-  // While the on-screen keyboard is up the sticky Save bar stops sticking (it would eat the little room left above the keyboard).
-  useEffect(() => { document.documentElement.toggleAttribute('data-kb', kb > 0); return () => document.documentElement.removeAttribute('data-kb'); }, [kb]);
   const wide = pathname === '/' || pathname === '/stats';
   const bleed = pathname === '/map';
 
