@@ -91,15 +91,17 @@ for (const w of WIDTHS) {
     try {
       await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle', timeout: 30000 }); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(500);
       if (TEXT !== 100) { await page.evaluate((t) => { document.documentElement.style.fontSize = `${t}%`; }, TEXT); await page.waitForTimeout(300); }
-      found.push(...await page.evaluate(probe));
-      for (const [label, y] of [['1px', 1], ['40px', 40]]) { await page.evaluate((v) => window.scrollTo(0, v), y); await page.waitForTimeout(350); for (const d of await page.evaluate(probe, 'top')) if (['covered', 'fabrow', 'stickycollide'].includes(d.type)) found.push({ ...d, text: `[${label}] ${d.text}` }); }
+      // Owner decision 2026-10-15 (full-width List and Ledger): the Add button may rest over a row's trailing figure while the page is idle mid-scroll; only the END of the
+      // page is held to fabrow (below). Every other position still fails on covered and stickycollide.
+      found.push(...(await page.evaluate(probe)).filter((d) => d.type !== 'fabrow'));
+      for (const [label, y] of [['1px', 1], ['40px', 40]]) { await page.evaluate((v) => window.scrollTo(0, v), y); await page.waitForTimeout(350); for (const d of await page.evaluate(probe, 'top')) if (['covered', 'stickycollide'].includes(d.type)) found.push({ ...d, text: `[${label}] ${d.text}` }); }
       await page.evaluate(() => window.scrollTo(0, Math.floor((document.documentElement.scrollHeight - innerHeight) / 2))); await page.waitForTimeout(1200);
-      for (const d of await page.evaluate(probe, 'mid')) if (['fabrow', 'stickycollide'].includes(d.type)) found.push({ ...d, text: `[mid] ${d.text}` });
+      for (const d of await page.evaluate(probe, 'mid')) if (['stickycollide'].includes(d.type)) found.push({ ...d, text: `[mid] ${d.text}` });
       // the end of the page
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight)); await page.waitForTimeout(1300);
       for (const d of await page.evaluate(probe, 'end')) if (['covered', 'fabrow', 'stickycollide'].includes(d.type)) found.push({ ...d, text: `[end] ${d.text}` });
       await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(1300); // the round trip: back at the top, then the top rules again
-      for (const d of await page.evaluate(probe, 'top')) if (['covered', 'fabrow', 'stickycollide'].includes(d.type)) found.push({ ...d, text: `[after round trip] ${d.text}` });
+      for (const d of await page.evaluate(probe, 'top')) if (['covered', 'stickycollide'].includes(d.type)) found.push({ ...d, text: `[after round trip] ${d.text}` });
       // font
       const font = await page.evaluate(() => ({ loaded: document.fonts.check('16px Inter'), faces: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family).join(',') }));
       if (!/Inter/.test(font.faces)) found.push({ type: 'fonts', el: 'document', text: 'the self-hosted Inter did not load' });

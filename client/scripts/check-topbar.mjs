@@ -61,7 +61,7 @@ const measure = () => {
       const r = el.getBoundingClientRect(); if (r.width < 4 || r.height < 2) continue;
       const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
       const leaf = hasText || (el.children.length === 0 && ['svg', 'img', 'input', 'textarea', 'canvas', 'select', 'path', 'i'].includes(el.tagName.toLowerCase()));
-      const gl = el.matches('.gl, .gl-seg, .gl-field, .gl-select, button, input, select, textarea');
+      const gl = el.matches('.gl, .gl-seg, .gl-field, .gl-select, .gl-switch, button, input, select, textarea'); // .gl-switch added 2026-10-16: a switch is a control (it has no text of its own), and a page of switch rows read as a 56px gap once its card background was gone
       const painted = alpha(cs.backgroundColor) > 0.05 || ['svg', 'img', 'canvas'].includes(el.tagName.toLowerCase());
       // what a clipping or scrolling ancestor hides is not content on the page: clamp to it
       let cl = r.left, cr = r.right;

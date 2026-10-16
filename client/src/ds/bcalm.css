@@ -117,17 +117,14 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .ds-fab[data-hidden="true"]:focus-visible { opacity: 1; transform: none; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .ds-fab { transition: none; } }
 
-/* on a phone the Add button floats at the bottom right: keep the trailing numbers (hours, chevrons, the Ledger's last column) clear of it */
+/* The Add button floats at the bottom right. Status rows and list items keep their trailing value clear of it (--fab-clear), but the Log's List and Ledger run the full
+   width of the page (owner report 2026-10-15: they stopped 60-72px short of the right edge): the button hides while the page scrolls and returns when it is idle, and the
+   last rows end above it (bottom padding), so it never needs a permanent strip of the page. */
 :root { --fab-clear: calc(3.5rem + max(18px, var(--ds-side)) + 2px - var(--ds-gutter)); } /* the Add button's width and edge gap, less the page gutter: 60px at 100% text, growing with it so a larger text size never puts the button over a trailing number */
 @media (max-width: 1023px) {
-  .bc-row, .bc-mh, .bc-ground, .bc-item, .bc-status { padding-right: var(--fab-clear); } /* the trailing numbers end 2px before the button (a row on a year surface starts 8px further in, so it needs 8px less) */
-  .bc-month.surface .bc-row, .bc-month.surface .bc-mh { padding-right: calc(var(--fab-clear) - 8px); }
+  .bc-item, .bc-status { padding-right: var(--fab-clear); } /* the trailing numbers end 2px before the button */
   .bc-ground { padding-left: 64px; }
-  .bc .mn-led-wrap { padding-inline-end: calc(var(--fab-clear) + 12px); }
 }
-/* On a phone the Ledger scrolls sideways: end padding only clears the Add button once scrolled to the end, so the scroller itself stops short of it
-   (the last column is then clipped at the scroller's edge, never under the button). */
-@media (max-width: 719px) { .bc .mn-led-wrap { padding-inline-end: 0; margin-inline-end: calc(var(--fab-clear) + 12px); } }
 .bc .mn-led tr.mo td b, .bc .mn-led td.t { color: var(--ds-text); }
 /* One weight for every control label on a calm screen (the calm limit is three weights: 400, 600, 700). */
 .bc .gl-seg > .gl, .bc .gl-chip, .bc .gl { font-weight: 600; }

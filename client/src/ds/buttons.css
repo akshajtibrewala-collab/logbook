@@ -119,11 +119,15 @@
 /* Native date/time inputs (iOS Safari draws its own centred, intrinsically sized chip): one recipe so they behave like every other field in a grid or
    a flex row: block, as wide as the cell and no wider (min-width: 0), a fixed control height, left-aligned value, 16px so iOS never zooms. */
 .gl-field[type="time"], .gl-field[type="date"], .gl-field[type="datetime-local"] {
-  -webkit-appearance: none; appearance: none; display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; margin: 0;
-  min-height: 48px; padding: 0 12px; line-height: 1.2; text-align: left; font-family: inherit; font-size: max(16px, 1em); font-variant-numeric: tabular-nums;
+  -webkit-appearance: none; appearance: none; display: flex; align-items: center; justify-content: flex-start; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; margin: 0;
+  height: 3rem; min-height: 48px; padding: 0 0.75rem; line-height: 1.5rem; text-align: left; vertical-align: middle; font-family: inherit; font-size: max(16px, 1em); font-variant-numeric: tabular-nums;
 }
-.gl-field[type="time"]::-webkit-date-and-time-value, .gl-field[type="date"]::-webkit-date-and-time-value, .gl-field[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
-.gl-field[type="time"]::-webkit-datetime-edit, .gl-field[type="date"]::-webkit-datetime-edit { padding: 0; }
+/* Same box as a text field (48px, 12px side padding, 24px line), and the value sits at its left edge, centred vertically: iOS wraps the value in its own
+   flex container with extra inner padding and a taller line box that pushed it up and in. */
+.gl-field[type="time"]::-webkit-date-and-time-value, .gl-field[type="date"]::-webkit-date-and-time-value, .gl-field[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; min-height: 0; margin: 0; padding: 0; line-height: 1.5rem; }
+.gl-field[type="time"]::-webkit-datetime-edit, .gl-field[type="date"]::-webkit-datetime-edit, .gl-field[type="datetime-local"]::-webkit-datetime-edit { padding: 0; margin: 0; line-height: 1.5rem; display: flex; align-items: center; }
+.gl-field[type="time"]::-webkit-datetime-edit-fields-wrapper, .gl-field[type="date"]::-webkit-datetime-edit-fields-wrapper { padding: 0; margin: 0; }
+.gl-field[type="time"]::-webkit-datetime-edit-hour-field, .gl-field[type="time"]::-webkit-datetime-edit-minute-field, .gl-field[type="time"]::-webkit-datetime-edit-ampm-field { padding: 0; }
 
 /* Passenger flight: local departure and arrival times (components/PassengerTimeFields.jsx). */
 .pt-wrap { display: grid; gap: 12px; min-width: 0; justify-items: start; } .pt-wrap > * { justify-self: stretch; } .pt-wrap > button { justify-self: start; }

@@ -60,7 +60,7 @@ const measureLedger = (text) => {
     const heads = [...t.querySelectorAll('thead th')].filter((h) => h.offsetWidth).map((h) => h.textContent.trim());
     if (heads.join('|') !== 'Date|Total|PIC|Dual|Ldg') out.push({ what: `phone columns are ${heads.join('|')}, expected Date|Total|PIC|Dual|Ldg` });
   }
-  if (fab && phone && wrap.getBoundingClientRect().right > fab.left + 1) out.push({ what: `ledger ends at ${r1(wrap.getBoundingClientRect().right)}, under the Add button (starts ${r1(fab.left)})` });
+  // (the Ledger now runs the full page width by owner decision; what may sit under the Add button is checked at the end of the page by check-ui-sweep.mjs)
   // numeric columns right-aligned on one edge (flight rows only)
   const rows = [...t.querySelectorAll('tbody tr')].filter((r) => !r.classList.contains('mo') && !r.classList.contains('g'));
   const cols = {};

@@ -3,7 +3,7 @@
 //   npm run icons -w client -- --preview   also writes docs/design/icon-preview.png (512 / 192 / 64 / 32 side by side)
 // The artwork lives in this file: a heavy white capital "A" (one filled chevron shape) with a sky-blue flight arc as the
 // crossbar and a violet destination dot — sky = pilot, violet = passenger, the app's only two accent colours.
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -68,6 +68,8 @@ write('apple-touch-icon.png', await png(variants.square, 180)); // 180x180, opaq
 // The same artwork on dark navy, under a NEW file name so no cache keyed on the old path can serve the old picture. The mark's own margin is 15% at the top
 // and 25% at the sides (the A spans x 264-760 and y 150-800 of 1024), so nothing sits near the edge iOS rounds.
 write('apple-touch-icon-v2.png', await sharp(await png(variants.touch, 180)).removeAlpha().png({ compressionLevel: 9 }).toBuffer()); // no alpha channel at all: plain RGB
+// Names iOS and old Safari ask for by themselves when a page link is missing or ignored: the same plain-RGB 180x180 file.
+for (const alias of ['apple-touch-icon-precomposed.png', 'apple-touch-icon-180x180.png']) write(alias, readFileSync(path.join(pub, 'apple-touch-icon-v2.png')));
 for (const size of [192, 512]) write(`icons/icon-${size}.png`, await png(variants.rounded, size));
 for (const size of [192, 512]) write(`icons/icon-maskable-${size}.png`, await png(variants.square, size));
 console.log('Icons written to client/public');

@@ -141,7 +141,10 @@ for (const ledger of [false, true]) {
       }
       return out;
     }, sels);
-    ok(hit.length === 0, `${name} @scroll ${y === 1000000 ? 'end' : y}: Add button covers ${hit.join(', ')}`);
+    // Owner decision 2026-10-15: the Log's List and Ledger run the full page width, so a figure may sit under the idle Add button mid-scroll (the button hides while
+    // scrolling). At the END of the page nothing may be under it. Mid-scroll overlaps are printed, not failed.
+    if (y === 1000000) ok(hit.length === 0, `${name} @scroll end: Add button covers ${hit.join(', ')}`);
+    else { checks += 1; if (hit.length) console.log(`  (allowed mid-scroll) ${name} @scroll ${y}: Add button over ${hit.join(', ')}`); }
   }
   await ctx.close();
 }

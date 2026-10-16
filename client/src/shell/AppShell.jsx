@@ -9,6 +9,7 @@ import { GlassDefs } from '../ds/Glass.jsx';
 import { Shell } from '../ds/Nav.jsx';
 import { IconButton } from '../ds/Controls.jsx';
 import { initGlass, noteRouteChange } from '../ds/glass.js';
+import { isFlatCardPage } from '../lib/flatPages.js';
 import { TABS, addItemsFor, isFocusedForm, isRoot, sectionOf, showAdd, titleOf } from '../lib/nav.js';
 import { useViewportSettle, useTextScaleLayout } from '../ds/hooks.js';
 import OutboxBanner from '../components/OutboxBanner.jsx';
@@ -62,7 +63,7 @@ export default function AppShell({ children }) {
   const bleed = pathname === '/map';
 
   return (
-    <div className="ds-root ds-app" data-ds-theme="dark" data-col={bleed ? 'bleed' : wide ? 'wide' : 'narrow'} data-focus={focused ? '' : undefined}>
+    <div className="ds-root ds-app" data-ds-theme="dark" data-col={bleed ? 'bleed' : wide ? 'wide' : 'narrow'} data-focus={focused ? '' : undefined} data-flat={isFlatCardPage(pathname) ? '' : undefined}>
       <GlassDefs />
       <a href="#main" className="ds-skip gl pilot">Skip to content</a>
       <Shell title={FLYING_ROOTS.includes(pathname) ? <FlyingSwitcher /> : titleOf(pathname)} tabs={tabs} active={section} LinkComponent={TabLink} addItems={addItems} routeKey={pathname} hideTabs={focused}

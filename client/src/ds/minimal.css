@@ -106,19 +106,20 @@
 .mn-led tfoot td { height: 64px; font-weight: 800; background: var(--ds-surface); }
 .mn-led tfoot td:first-child { white-space: normal; line-height: 1.15; } /* "Pilot totals" wraps instead of widening the date column */
 .mn-led tfoot td:first-child { border-radius: 12px 0 0 12px; } .mn-led tfoot td:last-child { border-radius: 0 12px 12px 0; }
-/* Phone: the five B-min columns (Date, Total, PIC, Dual, Ldg) must fit between the page gutter and the Add button's clearance at 100% text on a 360px phone and up; they scroll
-   sideways only at larger text sizes. 13px figures and 4px cell padding give ~253px; the old 14px/8px plus a 17px bold totals label gave 348px. */
+/* Phone: the five B-min columns (Date, Total, PIC, Dual, Ldg) must fit the full page width at 100% text on every phone from 320px; they scroll
+   sideways only at larger text sizes. 13px figures and the mockup's 8px cell padding give ~273px; the old 14px plus a 17px bold totals label gave 348px. */
 .mn-led .mn-gonly { display: none; } .mn-led .mn-mofig { display: inline; }
 @media (max-width: 719px) {
   .mn-led .wide { display: none; }
   .mn-led { font-size: 0.8125rem; }
-  .mn-led th, .mn-led td { padding: 0 4px; }
-  .mn-led th:first-child, .mn-led td:first-child { padding-left: 6px; }
+  .mn-led th, .mn-led td { padding: 0 8px; }
+  .mn-led th:first-child, .mn-led td:first-child { padding-left: 8px; }
   .mn-led tr.mo td { font-size: var(--fs-p); }
   .mn-led .mn-mofig { display: none; }
   .mn-led .mn-gonly { display: table-cell; text-align: right; }
   .mn-led tfoot td { font-size: 0.8125rem; }
 }
+@media (max-width: 359px) { .mn-led th, .mn-led td { padding: 0 6px; } .mn-led th:first-child, .mn-led td:first-child { padding-left: 6px; } } /* 320px: 293px of Ledger would not fit 288px */
 
 /* detail */
 .mn-detail { display: grid; gap: 24px; align-content: start; min-width: 0; }
