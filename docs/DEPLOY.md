@@ -64,12 +64,11 @@ obvious from the names.
 
 1. In the project folder, copy `.env.production.example` to `.env.production` and fill in `TURSO_DATABASE_URL`
    and `TURSO_AUTH_TOKEN`.
-2. Create the tables and load the airport and runway lists (about 72,000 airports plus ~40,000 runways,
+2. Create the tables and load the airport list (about 72,000 airports,
    takes a couple of minutes):
    ```bash
    npm run migrate:prod -w server
    npm run seed:prod -w server
-   npm run seed:runways:prod -w server
    ```
 3. Copy your existing flights and flight reviews from the local file. It only reads `server/logbook.db`, and refuses to
    run if Turso already has flights:
@@ -78,20 +77,10 @@ obvious from the names.
    ```
 4. In the Turso dashboard's data browser, check that `flights` has your rows.
 
-### Adding runways to an already-live production database
+### Runways (no longer used, 2026-10-17)
 
-If you're adding the weather checker to a **database that's already in production** from before this
-feature existed, `runways` is empty until you seed it once:
-
-```bash
-npm run db:backup:prod -w server     # back up first — see "Branch and deploy safety" in CLAUDE.md
-npm run migrate:prod -w server       # applies 011_pilot_settings and 012_runways if not already applied
-npm run seed:runways:prod -w server
-```
-
-This is a separate, explicit step — it is **not** run automatically by `build:vercel` on every deploy
-(same as the airports seed), so it only touches production when you choose to run it. Skipping it isn't
-harmful: crosswind checks just report "no runway data for this airport" until you do.
+The weather checker that read `runways` was removed. The table and its rows stay in the database (never deleted), and the seed scripts
+(`seed:runways`, `seed:runways:prod`) are gone. Airports are still seeded with `seed` / `seed:prod`.
 
 ### Local vs. production commands
 
@@ -101,7 +90,6 @@ Every database script in `server/package.json` comes in two forms:
 | --- | --- | --- |
 | `npm run migrate -w server` | `npm run migrate:prod -w server` | `.env.production` |
 | `npm run seed -w server` | `npm run seed:prod -w server` | `.env.production` |
-| `npm run seed:runways -w server` | `npm run seed:runways:prod -w server` | `.env.production` |
 | `npm run db:backup -w server` | `npm run db:backup:prod -w server` | `.env.production` |
 | — (Turso-only) | `npm run db:reconcile:prod -w server` | `.env.production` |
 | — (Turso-only) | `npm run db:copy-local:prod -w server` | `.env.production` |
@@ -131,23 +119,10 @@ have no local variant.
    `*.vercel.app` address, enter your passcode, and check your flights are there.
 6. On your phone, open the address and use **Add to Home Screen** for an app-style icon.
 
-### 5. Automatic registration (optional, inert until the key is set)
+### 5. Automatic registration (removed 2026-10-17)
 
-A daily Vercel Cron (`/api/cron/registrations`, 06:00 UTC, `vercel.json`) fills a blank aircraft registration on
-passenger flights that have a flight number and date, from AeroDataBox (via RapidAPI). It does nothing at all until
-**both** of these are set in Vercel (Production only), so merging it is safe before then:
-
-| Name | Value |
-| --- | --- |
-| `FLIGHT_DATA_API_KEY` | your RapidAPI key for AeroDataBox. Never paste it in chat, code, logs or a tracked file; regenerate it when you set it in Vercel |
-| `CRON_SECRET` | already set for the weekly backup; the same secret protects this route |
-
-Optional overrides (defaults are what you want): `FLIGHT_DATA_MAX_PER_RUN` (default 1 lookup per run, one run a day) and
-`FLIGHT_DATA_UNITS_RESERVE` (default 40: stop when `x-ratelimit-api-units-remaining` is below it). The units header is the only
-budget signal; if it is missing the run stops after one response and logs "units header missing". A 429, 401 or 403 also
-stops the run. Each run logs one line of counts only (`registrations: due= checked= filled= ...`). Only passenger flights
-with a blank registration are ever touched; a value you clear or type is never overwritten (migration 024 holds the provenance).
-Scratch dry run: `DB_FILE=server/scratch-<name>.db node server/scripts/registrations-dry-run.js` (counts only, no provider call).
+The daily registration cron and its AeroDataBox call are gone. Delete `FLIGHT_DATA_API_KEY` (and any `FLIGHT_DATA_MAX_PER_RUN` / `FLIGHT_DATA_UNITS_RESERVE`)
+from the Vercel project settings, and revoke the key at RapidAPI. `CRON_SECRET` stays: the weekly backup uses it.
 
 ## Deploying after that
 

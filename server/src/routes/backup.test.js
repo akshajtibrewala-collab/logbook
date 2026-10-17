@@ -5,6 +5,7 @@ process.env.DB_FILE = ':memory:';
 process.env.APP_PASSCODE = 'test-passcode';
 const { app } = await import('../app.js');
 const { migrate } = await import('../migrate.js');
+const { run } = await import('../db.js');
 let server;
 let base;
 
@@ -59,14 +60,15 @@ test('round trip: export -> restore into an empty database -> export again match
   await call('POST', '/expirations', { kind: 'medical', label: '3rd Class', expires_date: '2027-01-01' });
   await call('PUT', '/milestone-completions/private/solo_xc_150nm', { completed_at: '2026-04-01', note: 'KPAO-KSNS-KWVI-KPAO' });
   await call('PUT', '/settings', { home_airport_ident: 'KPAO', min_ceiling_ft: 1000, max_crosswind_kt: 10 });
-  await call('POST', '/costs/rates/aircraft', { certificate: 'private', aircraft_id: aircraft.id, effective_date: '2026-01-01', rental_rate_per_hr: 195, fuel_surcharge_per_hr: 15 });
-  await call('POST', '/costs/rates/instructor', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 85 });
-  await call('POST', '/costs/rates/ground', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 85 });
-  await call('POST', '/costs/rates/simulator', { certificate: 'private', effective_date: '2026-01-01', hourly_rate: 50 });
-  await call('POST', '/costs/expenses', { category: 'headset', date: '2026-05-01', amount: 899, note: 'Bose A20' });
+  // The cost routes are gone but the cost tables are kept, so the backup must still carry them: write the rows directly.
+  await run('INSERT INTO aircraft_rates (certificate, aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr) VALUES (?, ?, ?, ?, ?)', ['private', aircraft.id, '2026-01-01', 195, 15]);
+  await run('INSERT INTO instructor_rates (certificate, effective_date, hourly_rate) VALUES (?, ?, ?)', ['private', '2026-01-01', 85]);
+  await run('INSERT INTO ground_rates (certificate, effective_date, hourly_rate) VALUES (?, ?, ?)', ['private', '2026-01-01', 85]);
+  await run('INSERT INTO simulator_rates (certificate, effective_date, hourly_rate) VALUES (?, ?, ?)', ['private', '2026-01-01', 50]);
+  await run('INSERT INTO other_expenses (category, date, amount, note) VALUES (?, ?, ?, ?)', ['headset', '2026-05-01', 899, 'Bose A20']);
   await call('POST', '/costs/ground-sessions', { date: '2026-05-01', hours: 1, instructor: 'Jane', topics: 'Weather' });
-  await call('PUT', '/costs/phases/private', { start_date: '2026-01-01', end_date: null });
-  await call('POST', '/costs/planned-costs', { certificate: 'private', label: 'Checkride examiner fee', amount: 700 });
+  await run('INSERT INTO training_phases (certificate, start_date, end_date, track_costs) VALUES (?, ?, ?, ?) ON CONFLICT(certificate) DO UPDATE SET start_date = excluded.start_date, end_date = excluded.end_date, track_costs = excluded.track_costs', ['private', '2026-01-01', null, 1]);
+  await run('INSERT INTO planned_costs (certificate, label, amount) VALUES (?, ?, ?)', ['private', 'Checkride examiner fee', 700]);
 
   const before = await (await call('GET', '/backup/export')).json();
   assert.equal(before.tables.flights.length, 2); // the one from the previous test plus this one
@@ -80,7 +82,7 @@ test('round trip: export -> restore into an empty database -> export again match
   assert.equal(before.tables.pilot_settings[0].home_airport_ident, 'KPAO');
   assert.equal(before.tables.aircraft_rates.length, 1);
   // Migration 013 itself already seeded one instructor_rates and one ground_rates row (effective today,
-  // since this test database had no flights at migration time) — the POSTs above add a second of each.
+  // since this test database had no flights at migration time) — the inserts above add a second of each.
   assert.equal(before.tables.instructor_rates.length, 2);
   assert.equal(before.tables.ground_rates.length, 2);
   assert.equal(before.tables.simulator_rates.length, 1);

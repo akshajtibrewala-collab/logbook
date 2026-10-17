@@ -42,7 +42,6 @@ export const api = {
   createFlight: (f) => request('POST', '/flights', f),
   updateFlight: (id, f) => request('PUT', `/flights/${id}`, f),
   deleteFlight: (id) => request('DELETE', `/flights/${id}`),
-  clearRegistration: (id) => request('POST', `/flights/${id}/clear-registration`),
   bulkCreateFlights: (flights) => request('POST', '/flights/bulk', { flights }),
   listReviews: () => request('GET', '/reviews'),
   addReview: (date) => request('POST', '/reviews', { date }),
@@ -68,12 +67,6 @@ export const api = {
   deleteExpiration: (id) => request('DELETE', `/expirations/${id}`),
   getSettings: () => request('GET', '/settings'),
   updateSettings: (s) => request('PUT', '/settings', s),
-  checkWeather: (ident) => request('GET', `/weather/${encodeURIComponent(ident)}`),
-  planWeather: (legs) => request('POST', '/weather/plan', { legs }),
-  listPhotos: (flightId) => request('GET', `/photos/flight/${flightId}`),
-  photoCounts: () => request('GET', '/photos/counts'),
-  addPhoto: (flightId, photo) => request('POST', `/photos/flight/${flightId}`, photo),
-  deletePhoto: (id) => request('DELETE', `/photos/${id}`),
   getShare: () => request('GET', '/share'),
   getShareSummary: (notes = true) => request('GET', `/share/summary?limit=25${notes ? '' : '&notes=0'}`),
   enableShare: () => request('POST', '/share'),
@@ -85,7 +78,7 @@ export const api = {
   exportBackup: () => request('GET', '/backup/export'),
   restoreBackup: (backup, mode) => request('POST', '/backup/restore', mode ? { ...backup, mode } : backup),
 
-  // Ground sessions keep their historical /costs/... API path (the tables and routes are unchanged); they are a logbook feature, not a cost screen.
+  // Ground sessions keep their historical /costs/ground-sessions API path (old cached clients and every check use it).
   listGroundSessions: () => request('GET', '/costs/ground-sessions'),
   getGroundSession: (id) => request('GET', `/costs/ground-sessions/${id}`),
   createGroundSession: (s) => request('POST', '/costs/ground-sessions', s),
@@ -95,8 +88,8 @@ export const api = {
 
 /**
  * Saves part of the pilot settings without disturbing the rest. The settings endpoint replaces the whole
- * row (a field left out is cleared), and the weather settings page edits only its own
- * fields — so each merges its changes into the current settings instead of sending a partial form.
+ * row (a field left out is cleared), and a page that edits only its own
+ * fields (e.g. a Commercial-certificate form later) merges its changes into the current settings instead of sending a partial form.
  */
 export async function saveSettingsMerged(patch) {
   const current = await api.getSettings();

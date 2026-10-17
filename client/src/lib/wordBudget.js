@@ -16,7 +16,6 @@ export const BUDGETS = {
   travel: 40,
   currency: 45,
   milestones: 50,
-  weather: 45,
   stats: 40,
   map: 25,
   aircraft: 40,

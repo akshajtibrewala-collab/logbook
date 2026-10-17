@@ -37,7 +37,7 @@ await probeCtx.close();
 
 const ROUTES = [
   `/logbook/${ids.pilotRich}`, `/logbook/${ids.pilotBare}`, `/travel/${ids.paxRich}`, `/travel/${ids.paxBare}`, `/logbook/ground/${ids.ground}`, `/aircraft/${ids.aircraft}`,
-  '/', '/logbook', '/travel', '/milestones', '/currency', '/weather', '/stats', '/more', '/settings', '/aircraft', '/logbook/data',
+  '/', '/logbook', '/travel', '/milestones', '/currency', '/stats', '/more', '/settings', '/aircraft', '/logbook/data',
 ];
 
 const measure = () => {

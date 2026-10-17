@@ -7,7 +7,7 @@ const flights = [
     aircraft_type: 'C172', tail_number: 'N1', remarks: 'secret note', debrief_work_on: 'flare', instructor: 'Jane', invoice_ref: 'INV1', cost_override: 200 },
   { id: 2, date: '2026-02-01', departure_airport: 'KSQL', arrival_airport: 'KPAO', total_time: 0.8, dual_received: 0.8, instrument_actual: 0.2, instrument_simulated: 0.1, day_landings: 1, remarks: null },
 ];
-const share = { show_recent_flights: 1, show_aircraft: 1, show_notes: 0, show_photos: 0 };
+const share = { show_recent_flights: 1, show_aircraft: 1, show_notes: 0 };
 const now = new Date('2026-03-01T00:00:00Z');
 
 test('totals add up and target progress uses total hours', () => {
@@ -31,10 +31,4 @@ test('recent list is newest first and respects toggles', () => {
   const s = buildShareSummary({ flights, share: { ...share, show_aircraft: 0 }, now });
   assert.ok(!('tail_number' in s.recent[0]));
   assert.deepEqual(buildShareSummary({ flights, share: { ...share, show_recent_flights: 0 }, now }).recent, []);
-});
-
-test('photo ids appear only when photos are shared', () => {
-  const ids = { 2: [7, 8] };
-  assert.ok(!('photo_ids' in buildShareSummary({ flights, share, photoIdsByFlight: ids, now }).recent[0]));
-  assert.deepEqual(buildShareSummary({ flights, share: { ...share, show_photos: 1 }, photoIdsByFlight: ids, now }).recent[0].photo_ids, [7, 8]);
 });

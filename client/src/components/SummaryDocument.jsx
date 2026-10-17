@@ -12,9 +12,8 @@ const TOTALS = [
  * The logbook summary as a document (B-calm): totals, goal progress, optional certificate progress and recent flights. Shared by the pilot's printable page and
  * the public share link, so both look the same. PILOT FLIGHTS ONLY: the server builds the summary from pilot flights; nothing here adds passenger flights.
  * Dark on screen like the app; print is solid white with dark ink and no shadows or glass (the print tokens in ds/tokens.css, ds/summary.css).
- * `photoSrc(id)` turns a photo id into an image URL (public link only).
  */
-export default function SummaryDocument({ summary, title = 'Pilot logbook summary', certificates = [], photoSrc }) {
+export default function SummaryDocument({ summary, title = 'Pilot logbook summary', certificates = [] }) {
   const { totals, target, recent, options } = summary;
   const pct = target ? Math.min(100, Math.round((target.flown / target.hours) * 100)) : 0;
   return (
@@ -63,11 +62,6 @@ export default function SummaryDocument({ summary, title = 'Pilot logbook summar
                     {formatDate(f.date)}{options.show_aircraft && (f.aircraft_type || f.tail_number) ? ` · ${[f.aircraft_type, f.tail_number].filter(Boolean).join(' · ')}` : ''}
                   </div>
                   {f.note && <p className="note">{f.note}</p>}
-                  {photoSrc && f.photo_ids?.length > 0 && (
-                    <div className="ph">
-                      {f.photo_ids.map((id) => <img key={id} src={photoSrc(id)} alt="From this flight" loading="lazy" />)}
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>

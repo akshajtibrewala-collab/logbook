@@ -24,7 +24,7 @@ const ids = await (async () => {
   return { pilot: f.find((x) => x.role === 'pilot')?.id, pax: f.find((x) => x.role === 'passenger')?.id, ground: g[0]?.id, aircraft: a[0]?.id };
 })();
 const ROUTES = ['/', '/logbook', `/logbook/${ids.pilot}`, `/logbook/${ids.pilot}/edit`, '/logbook/new', '/logbook/new?role=passenger', '/logbook/quick', `/logbook/ground/${ids.ground}`, `/logbook/ground/${ids.ground}/edit`,
-  '/logbook/ground/new', '/travel', `/travel/${ids.pax}`, '/aircraft', `/aircraft/${ids.aircraft}`, '/milestones', '/currency', '/weather', '/weather/settings', '/map', '/stats', '/stats?tab=travel',
+  '/logbook/ground/new', '/travel', `/travel/${ids.pax}`, '/aircraft', `/aircraft/${ids.aircraft}`, '/milestones', '/currency', '/map', '/stats', '/stats?tab=travel',
   '/more', '/settings', '/logbook/data', '/logbook/share', '/logbook/print'];
 const WORDS = /\bcosts?\b|\bspen[dt]\b|\bspending\b|\binvoices?\b|\bexpenses?\b|\btraining phases?\b|\bper pilot hour\b|\$\s?\d/i;
 const problems = [];

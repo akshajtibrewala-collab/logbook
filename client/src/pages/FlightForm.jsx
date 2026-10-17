@@ -9,7 +9,6 @@ import HoursInput from '../components/HoursInput.jsx';
 import CountInput from '../components/CountInput.jsx';
 import TextField from '../components/TextField.jsx';
 import AirportSearchField from '../components/AirportSearchField.jsx';
-import PhotoPicker, { uploadPending } from '../components/PhotoPicker.jsx';
 import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
 import { followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload } from '../lib/flightDraft.js';
 import { saveDraft, loadDraft, clearDraft, enqueue, outboxList, removeFromOutbox, isNetworkError } from '../lib/outbox.js';
@@ -23,7 +22,6 @@ import StopsEditor from '../components/StopsEditor.jsx';
 import ApproachesEditor from '../components/ApproachesEditor.jsx';
 import BigHours from '../components/calm/BigHours.jsx';
 import Select from '../components/Select.jsx';
-import useInstructorNames from '../hooks/useInstructorNames.js';
 import { Segmented } from '../ds/Controls.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 import { FLIGHT_ROLES, pilotFlights } from '../lib/flightRoles.js';
@@ -37,10 +35,12 @@ const TIME_FIELDS = [
   ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
   ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
 ];
+// Dual given and Simulator have no inputs any more; their stored values ride along unchanged on edit (the server replaces the whole row).
+const HIDDEN_TIME = new Set(['dual_given', 'simulator_time']);
 const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
 // Fields under "More details" (an error on any of them opens it, so a problem is never hidden).
-const MORE_PILOT = ['stops', 'pic_time', 'sic_time', 'dual_received', 'dual_given', 'solo_time', 'simulator_time', 'ground_time', 'night_time', 'cross_country_time', 'instrument_actual', 'instrument_simulated',
-  'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds', 'approach_types', 'cost_override', 'airline', 'flight_number', 'remarks', 'debrief_went_well', 'debrief_work_on'];
+const MORE_PILOT = ['stops', 'pic_time', 'sic_time', 'dual_received', 'solo_time', 'ground_time', 'night_time', 'cross_country_time', 'instrument_actual', 'instrument_simulated',
+  'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds', 'approach_types', 'cost_override', 'airline', 'flight_number', 'remarks'];
 const MORE_PAX = ['seat_class', 'confirmation_code', 'aircraft_id', 'remarks', 'stops'];
 
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
@@ -48,7 +48,7 @@ const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in loc
 const blank = (role) => ({
   date: today(), role: role === 'passenger' ? 'passenger' : 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
   airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
-  instructor: '', invoice_ref: '', // carried through unchanged on edit (cost_override and invoice_ref have no inputs any more): the server replaces the whole row, so leaving them out would erase them
+  instructor: '', invoice_ref: '', // carried through unchanged on edit (instructor, the debrief notes, cost_override and invoice_ref have no inputs any more): the server replaces the whole row, so leaving them out would erase them
   dep_time: '', arr_time: '', arr_day_offset: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
@@ -93,9 +93,7 @@ export default function FlightForm() {
   const [defaultGroundTime, setDefaultGroundTime] = useState(null);
   const [groundTouched, setGroundTouched] = useState(false);
   const [params] = useSearchParams();
-  const instructors = useInstructorNames(); // names already used, offered as suggestions so a spelling can't drift
   const [notice, setNotice] = useState('');
-  const [pendingPhotos, setPendingPhotos] = useState([]);
   const [more, setMore] = useState(Boolean(id)); // editing shows everything; a new flight starts with the short form
   // ?from=travel means this form was opened from the Passenger flights page, so back/save/delete should
   // return there instead of the pilot logbook.
@@ -242,26 +240,14 @@ export default function FlightForm() {
     setErrors({});
     setMessage('');
     try {
-      let savedId = id;
       if (id) await api.updateFlight(id, payload);
-      else savedId = (await api.createFlight(payload)).id;
+      else await api.createFlight(payload);
       const outboxId = params.get('outbox');
       if (outboxId) { removeFromOutbox(outboxId); window.dispatchEvent(new Event(OUTBOX_CHANGED)); }
       if (!id) clearDraft(DRAFT_NAME);
-      if (pendingPhotos.length) {
-        const failed = await uploadPending(savedId, pendingPhotos);
-        if (failed) {
-          // The flight itself is saved; keep the person on its edit screen to add the missing photos.
-          setPendingPhotos([]);
-          setMessage(`Flight saved, but ${failed} photo${failed === 1 ? '' : 's'} didn’t upload. Add ${failed === 1 ? 'it' : 'them'} again below.`);
-          setSaving(false);
-          navigate(`/logbook/${savedId}/edit${base === '/travel' ? '?from=travel' : ''}`, { replace: true });
-          return undefined;
-        }
-      }
       navigate(id ? `${base}/${id}` : base);
     } catch (err) {
-      if (isNetworkError(err) && !id && !pendingPhotos.length && enqueue(payload)) {
+      if (isNetworkError(err) && !id && enqueue(payload)) {
         // Offline: keep the entry safely on the device and retry automatically (OutboxBanner).
         clearDraft(DRAFT_NAME);
         window.dispatchEvent(new Event(OUTBOX_CHANGED));
@@ -311,10 +297,6 @@ export default function FlightForm() {
           <>
             <div className="cl-two">
               <DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} />
-              <div>
-                <TextField label="Instructor" value={form.instructor} onChange={set('instructor')} error={errors.instructor} placeholder="Optional" list="instructor-names" />
-                <datalist id="instructor-names">{instructors.map((n) => <option key={n} value={n} />)}</datalist>
-              </div>
             </div>
             <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
               ...f,
@@ -370,7 +352,7 @@ export default function FlightForm() {
                 {typeof errors.stops === 'object' && <p className="cl-note" style={{ color: 'var(--ds-bad)' }}>Check the stop airport codes above.</p>}
               </MoreBlock>
               <MoreBlock title="Time (hours — 1.5 or 1:30)">
-                {TIME_FIELDS.filter(([k]) => k !== 'total_time').map(([k, label]) => <HoursInput key={k} label={label} value={form[k]} onChange={set(k)} error={errors[k]} />)}
+                {TIME_FIELDS.filter(([k]) => k !== 'total_time' && !HIDDEN_TIME.has(k)).map(([k, label]) => <HoursInput key={k} label={label} value={form[k]} onChange={set(k)} error={errors[k]} />)}
               </MoreBlock>
               <MoreBlock title="Landings and approaches">
                 <CountInput label="Day, full stop" value={form.day_landings_full_stop} onChange={set('day_landings_full_stop')} error={errors.day_landings_full_stop} />
@@ -397,12 +379,7 @@ export default function FlightForm() {
               <MoreBlock title="Notes">
                 <label className="block"><span className="mb-1 block text-xs text-slate-400">Remarks</span>
                   <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3} className="gl-field w-full p-3 text-base" /></label>
-                <label className="block"><span className="mb-1 block text-xs text-slate-400">What went well</span>
-                  <textarea value={form.debrief_went_well} onChange={(e) => set('debrief_went_well')(e.target.value)} rows={2} className="gl-field w-full p-3 text-base" /></label>
-                <label className="block"><span className="mb-1 block text-xs text-slate-400">What to work on</span>
-                  <textarea value={form.debrief_work_on} onChange={(e) => set('debrief_work_on')(e.target.value)} rows={2} className="gl-field w-full p-3 text-base" /></label>
               </MoreBlock>
-              <MoreBlock title="Photos"><PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} /></MoreBlock>
             </div>
           ) : (
             <div className="cl-open">
@@ -419,7 +396,6 @@ export default function FlightForm() {
               </MoreBlock>
               <label className="block"><span className="mb-1 block text-xs text-slate-400">Note</span>
                 <textarea value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} rows={3} className="gl-field w-full p-3 text-base" /></label>
-              <MoreBlock title="Photos"><PhotoPicker flightId={id} pending={pendingPhotos} onPendingChange={setPendingPhotos} /></MoreBlock>
             </div>
           ))}
         </div>

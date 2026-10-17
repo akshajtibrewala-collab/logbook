@@ -27,7 +27,7 @@ const flights = await get('/flights'); const ground = await get('/costs/ground-s
 const pilot = flights.find((f) => f.role === 'pilot')?.id, pax = flights.find((f) => f.role === 'passenger')?.id;
 const ROUTES = ['/', '/logbook', `/logbook/${pilot}`, `/logbook/ground/${ground[0]?.id ?? 1}`, '/travel', `/travel/${pax}`, '/logbook/data', '/aircraft', '/aircraft/new', `/aircraft/${aircraft[0]?.id ?? 1}`,
   '/logbook/new', '/logbook/new?role=passenger', '/logbook/quick', '/logbook/share', '/logbook/print', `/logbook/${pilot}/edit`, '/logbook/ground/new', '/milestones', '/currency', '/currency/new',
-  '/weather', '/weather/settings', '/map', '/stats', '/more', '/settings']
+  '/map', '/stats', '/more', '/settings']
   .filter((r) => !ONLY || ONLY.includes(r));
 const LOOSE = new Set(['/']); // the greeting and the animated numbers: allow a larger changed area
 const NO_PIXELS = new Set(['/map']); // live map tiles arrive from the network and pop in at their own time: flags are still compared

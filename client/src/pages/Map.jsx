@@ -10,7 +10,6 @@ import { greatCircle, fmtNm } from '../lib/geo.js';
 import { buildMapData } from '../lib/mapdata.js';
 import { airportSummary, routeColorFor, passengerRouteColorFor, PASSENGER_ROUTE_DASH, shouldAnimateRoutes, visitedCounts, loadAnimatePref, saveAnimatePref, orientedPositions, ANIMATE_ROUTE_LIMIT } from '../lib/mapstyle.js';
 import { fmtHours } from '../lib/hours.js';
-import { PhotoImage } from '../components/PhotoGrid.jsx';
 import { isPlaceholderMean, meanLuminance, tileNote, retryUrl } from '../lib/mapTiles.js';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 import { pilotFlights, roleOf } from '../lib/flightRoles.js';
@@ -210,20 +209,10 @@ function RouteLine({ positions, pathOptions, mode, playKey, delay, children }) {
   return <Polyline ref={ref} positions={positions} interactive={false} pathOptions={pathOptions}>{children}</Polyline>;
 }
 
-// Mini-summary shown when an airport pin is tapped: visits, total hours, last visit, and (when a recent
-// flight there has one) a photo, fetched only when the popup is open. Deliberately no note/remarks
+// Mini-summary shown when an airport pin is tapped: visits, total hours and last visit. Deliberately no note/remarks
 // snippet here — the flight's note still shows on Flight Detail and the printable/share summary as before.
-function PinSummary({ stop, photoCounts }) {
+function PinSummary({ stop }) {
   const s = airportSummary(stop);
-  const withPhoto = stop.flights.find((f) => photoCounts[f.id] > 0);
-  const [photo, setPhoto] = useState(null); // { data_url, width, height }
-  useEffect(() => {
-    if (!withPhoto) return undefined;
-    let cancelled = false;
-    api.listPhotos(withPhoto.id).then((p) => { if (!cancelled && p[0]) setPhoto(p[0]); }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [withPhoto?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const code = airportCode(stop);
   // Only show the IATA/local code separately when it's not already implied by the ICAO code (e.g. K + SUS
   // -> KSUS shouldn't also show "· SUS").
@@ -254,7 +243,6 @@ function PinSummary({ stop, photoCounts }) {
         <span className="whitespace-nowrap font-semibold">{fmtDate(s.last)}</span>
       </div>
 
-      {photo && <PhotoImage className="mt-2.5" src={photo.data_url} width={photo.width} height={photo.height} alt="From a flight here" maxHeight={140} />}
     </div>
   );
 }
@@ -271,7 +259,6 @@ const Stat = ({ label, value, unit }) => (
 export default function MapPage() {
   const [flights, setFlights] = useState(null);
   const [airports, setAirports] = useState({});
-  const [photoCounts, setPhotoCounts] = useState({});
   const [error, setError] = useState('');
   const [animate, setAnimate] = useState(() => loadAnimatePref(prefersReducedMotion()));
   const [plays, setPlays] = useState(0); // bumped by the replay button; also re-runs the draw-in
@@ -313,7 +300,6 @@ export default function MapPage() {
       const codes = [...new Set(list.flatMap(flightCodes))];
       setAirports(codes.length ? await api.resolveAirports(codes) : {});
       setFlights(list);
-      api.photoCounts().then(setPhotoCounts).catch(() => {});
     })().catch((e) => setError(e.message));
   }, []);
 
@@ -446,7 +432,7 @@ export default function MapPage() {
             {/* Extra top-left padding keeps the popup clear of the floating stats panel/legend; extra
                 bottom-right padding keeps it clear of the attribution toggle. */}
             <Popup autoPanPaddingTopLeft={[16, 170]} autoPanPaddingBottomRight={[16, 70]}>
-              <PinSummary stop={s} photoCounts={photoCounts} />
+              <PinSummary stop={s} />
             </Popup>
           </Marker>
         ))}

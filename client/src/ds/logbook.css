@@ -50,7 +50,6 @@
 .lb-end b { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ds-pilot); }
 .lb-row.pax .lb-end b { color: var(--ds-pax); }
 .lb-end i { font-style: normal; font-size: 0.75rem; color: var(--ds-text-3); }
-.lb-photo { width: 0.875rem; height: 0.875rem; vertical-align: -2px; margin-left: 0.4rem; color: var(--ds-text-3); fill: none; stroke: currentColor; stroke-width: 2; }
 
 .lb-fs { display: grid; gap: var(--ds-s-4); }
 .lb-two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ds-s-3); }

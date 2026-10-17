@@ -1,14 +1,15 @@
 # AeroHub
 
-AeroHub is my private, lifelong, one-stop personal aviation system — not just a logbook. It's meant to hold
-everything aviation in my life over time: pilot logbook, passenger flights, a map, aircraft, airports, airlines,
-photos, trips, pilot progress, a journal, knowledge, and a timeline. Currently built out: flights (with
-structured stops and typed approaches), aircraft, currency/expirations, milestone progress toward certificates,
-a map and stats, manual milestone completions, a weather go/no-go checker against personal minimums, a training
-cost tracker (per-phase rates, ground-only sessions, expenses, projections, a cost cutoff date), fast logging
-(Quick log, copy last flight, offline retry), photos/notes, stats charts, an animated map, and a read-only share
-link/print view. Everything through migration 021 is merged and live — see `docs/ROADMAP.md` for details and
-what's next.
+AeroHub is my private aviation system. **Scope (simplified 2026-10-17, branch feat/simplify):** the pilot logbook (totals by category,
+hours per month/year, PPL progress, currency, milestones, landings, airports, aircraft, print/share), passenger flights (airlines,
+types, registrations, miles, airports, countries, firsts) and a map of both (sky blue pilot, violet passenger). Everything else was
+removed from the UI and the code, with **all data kept in the database** (no migration, no deletes): the weather checker, the cost
+backend (`/api/costs/*` except ground sessions), the automatic-registration cron and AeroDataBox, flight photos, the goal chart,
+the instructor/debrief/dual-given/simulator inputs on the flight form, and the hidden `/design` pages. Kept on purpose: typed approaches
+and holds, via stops, ground sessions, expirations and flight reviews, backups and import/export, Quick log, aircraft photos (Planespotters),
+the Settings page (it will hold Commercial-certificate fields later) and the `?debug=1` diagnostics panel (`check-map-zoom.mjs` reads it).
+Tables and columns of removed features (`runways`, rate/phase/expense tables, `flight_photos`, `reg_*`, `debrief_*`, `cost_*`, `share_settings.show_photos`)
+stay in the schema and in the JSON backup; the forms carry the hidden values through an edit unchanged. See `docs/ROADMAP.md`.
 
 **Aircraft Paradise is a separate, public aviation-photography website. Never merge it into this app.** AeroHub
 is private data; nothing here becomes public unless a feature explicitly marks it published (today, only the
@@ -65,28 +66,12 @@ The database holds real flight records, not sample data. This overrides convenie
 - **Every API route authenticates and scopes its queries to the owner.** AeroHub is currently single-pilot
   behind one shared passcode (`server/src/auth.js`); if real per-user accounts are ever added, every route must
   filter by the authenticated owner, not just check that a passcode was supplied.
-- **Private photos are never served from a public URL.** `flight_photos` are served today only behind the app
-  passcode or through the narrow, revocable public-share routes (`server/src/routes/share.js`) that already
-  control exactly what a link can expose — any new photo-serving route must follow that same pattern, never a
-  bare, guessable, or permanently-public URL.
-
-## Workflow
-
-- **Work one phase at a time.** After each phase: run the app, test the existing logbook features that phase
-  touches, test the new feature, check phone width (~375px), verify database integrity (row counts/spot checks
-  before and after, as already practiced for migrations — see "Branch and deploy safety"), fix errors, then
-  summarize and stop rather than rolling straight into the next phase.
-- **Don't invent features that aren't in the repo.** If unsure whether something exists or how it currently
-  works, inspect the code first rather than assuming.
-- **UI stays clean, minimal, and responsive**, following the existing design language — dark only (see "Theme")
-  and the personalized greeting on the Dashboard (`client/src/lib/greeting.js`). No clutter, no
-  filler stats, no HUD gimmicks (the map's stats panel was deliberately trimmed for this — see "Status"). The
-  flight logbook must stay fast and usable on a phone above everything else.
+- **Private photos are never served from a public URL.** There is no photo-serving route any more (flight photos were removed); aircraft photos come from Planespotters in the browser only. Any new photo route must sit behind the app passcode or a narrow, revocable share route, never a bare or guessable URL.
 
 ## Stack
 
 - `client/` — React + Vite + Tailwind, react-router-dom, lucide-react icons. Dark only (see "Theme"); the
-  redesign's design system lives in `client/src/ds/` and is shown on the hidden `/design` route.
+  redesign's design system lives in `client/src/ds/` (the hidden `/design` specimen pages were removed 2026-10-17).
 - `server/` — Express + `@libsql/client`. SQLite file locally (`server/logbook.db`), Turso (hosted
   libSQL) when `TURSO_DATABASE_URL` is set — in Vercel, or in `.env.production` for the `:prod` npm
   scripts (see "Running and testing locally" below). **Never** in the plain root `.env`/`.env.local`.
@@ -120,13 +105,13 @@ Local dev **never touches Turso** — `npm run dev` loads no `.env` file at all.
 accident. To poke at a real data copy without risk, copy `server/logbook.db` to a scratch file and set
 `DB_FILE=<path>` when starting the server.
 
-Each of those has a **`:prod` counterpart** (`migrate:prod`, `seed:prod`, `seed:runways:prod`,
+Each of those has a **`:prod` counterpart** (`migrate:prod`, `seed:prod`,
 `db:backup:prod`, `db:reconcile:prod`, `db:copy-local:prod`, all run with `-w server`) that loads
 `.env.production` (repo root, gitignored, copy from `.env.production.example`) and prints a `⚠ PRODUCTION
 TURSO ⚠` warning naming the database URL before doing anything. These are the only commands that can ever
 reach Turso from your machine — never run one without meaning to. Each `:prod` script
 (`server/scripts/prod/*.js`) spawns its target script as a real child process
-(`server/scripts/lib/run-target.js`) rather than `import`ing it — `seed-airports.js`/`seed-runways.js`
+(`server/scripts/lib/run-target.js`) rather than `import`ing it — `seed-airports.js`
 guard their own side effects on `process.argv[1]` being their own path, which only holds true for a real
 subprocess; an earlier version of these wrappers used `import` and silently did nothing.
 
@@ -157,13 +142,13 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
   `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` are scoped to Preview in Vercel project settings. `TURSO_*`
   should stay **Production-only**; check that scoping before assuming a preview build is safe, and never
   change it yourself without being asked.
-- Migrations run on **every** Vercel build (previews too). The latest is **021**. Before merging a branch that
+- Migrations run on **every** Vercel build (previews too). The latest is **024**. Before merging a branch that
   adds one: back up production Turso (`npm run db:backup:prod -w server`), verify the backup file, and say so
   explicitly — don't just merge silently. Don't push a migration branch unless the Turso env vars are confirmed
   Production-only, since a preview build would run it against the real database.
 - `migrate()` refuses to run against any database that has no `_migrations` table and tables it doesn't
   recognize — the safety net for the incident recorded in `docs/TURSO_RECONCILE.md`. Production Turso
-  was reconciled and is current as of this writing: migrations 001–021 applied and verified (flights,
+  was reconciled and is current as of this writing: migrations 001–024 applied and verified (flights,
   hours, landings, and aircraft counts checked unchanged before/after each deploy), runways seeded
   (39,566 rows). Production's Phase 2b cost data (20 invoiced flights, 6 ground sessions, expenses) was
   applied once with a separate, idempotent, atomic import (keyed on `invoice_ref`); that data is personal and
@@ -171,39 +156,19 @@ subprocess; an earlier version of these wrappers used `import` and silently did 
 - Only commit when asked. Run the full test suite once before each commit; otherwise run just the tests
   for what changed.
 
-## Automatic registration (migration 024)
+## Automatic registration (removed 2026-10-17)
 
-A daily Vercel Cron (`/api/cron/registrations`, `vercel.json`, protected by `CRON_SECRET`) fills a blank `tail_number` on
-**passenger** flights that have a flight number and date, from AeroDataBox via RapidAPI. The registration then feeds the existing
-Planespotters photo. Code: `server/src/lib/flight-data.js` (parsing and the match guard), `registration-job.js` (selection, cap,
-guarded write), `server/src/routes/registration-job.js`, migration `024_auto_registration`.
-
-- **Inert until configured:** nothing happens without `FLIGHT_DATA_API_KEY` and `CRON_SECRET` (both Vercel, Production only).
-  The key is read from the environment only, sent only in a header, never logged. Regenerate the key when it is set in Vercel.
-- **Budget:** one lookup per run, one run a day (`FLIGHT_DATA_MAX_PER_RUN`, default 1); stops when
-  `x-ratelimit-api-units-remaining` is below `FLIGHT_DATA_UNITS_RESERVE` (default 40), on any 429/401/403, and when the units
-  header is missing (it logs "units header missing" and stops). The units header is the only budget signal; no per-call cost is assumed.
-  Does nothing, at no cost, when no flight is eligible. One log line per run, counts only.
-- **Safety:** only `role = 'passenger'`, blank tail, no aircraft link, never cleared, flight 1 to 364 days old, at most 4 checks.
-  A match needs both recorded airports to match and exactly one valid registration. The write is one guarded UPDATE that never
-  overwrites a value, never touches pilot flights and never deletes. Passenger flights get no cost rates from it.
-- **Provenance:** `reg_source` (NULL = the pilot's own), `reg_filled_at`, `reg_cleared_at` (never refill), `reg_checked_at`,
-  `reg_check_count`; `aircraft.auto_created_at` marks an aircraft row the job made. Changing the tail makes it the pilot's own;
-  blanking it marks it cleared. The flight detail shows an "auto" marker (sheet: source link, Clear). `POST /api/flights/:id/clear-registration`
-  removes the tail and link and deletes only an unreferenced aircraft the job created.
-- **Licensing, accepted risk:** AeroDataBox's terms forbid "permanent copies" (5.2(g)) and keep "user records" for as long as the owner
-  keeps them (5.8). The question of whether one registration on the pilot's own record is a user record was **not asked** of the
-  provider and the risk was **accepted by the owner**. The free plan also requires attribution: the sheet's "Source" link carries it.
-- **Reach:** the free plan covers 365 days back and registration only appears where the provider has ADS-B or live data, so older
-  flights stay manual. `server/scripts/registrations-dry-run.js` (scratch only, counts only) shows what a run could touch.
+The daily AeroDataBox job, its cron, `/api/cron/registrations`, the "auto" marker and `clear-registration` are gone. The columns from migration 024
+(`flights.reg_*`, `aircraft.auto_created_at`) stay with whatever they hold. **Delete `FLIGHT_DATA_API_KEY` (and any `FLIGHT_DATA_*`) from Vercel and the key from RapidAPI by hand**
+(it was never in a local .env). `CRON_SECRET` is still used by the weekly backup.
 
 ## Conventions worth knowing
 
 - **Dates display as MM/DD/YYYY** everywhere, via the one string-based `formatDate` in
   `client/src/lib/calendar.js` (never a `Date` conversion that could shift a day). Storage, the JSON backup
   and CSV exports stay `YYYY-MM-DD`.
-- **Costs are per training phase.** A flight/ground session only gets a calculated cost inside a phase with
-  cost tracking on, using that phase's own rates (`client/src/lib/cost.js`); outside one, cost is `null`
+- **Costs (stored data only, no UI or API) are per training phase.** A flight/ground session only gets a calculated cost inside a phase with
+  cost tracking on, using that phase's own rates; outside one, cost is `null`
   ("Not tracked"), never $0. Ending a phase freezes its totals. A manual cost override applies anywhere.
 - Hours always display with two decimals (`fmtHours`).
 
@@ -233,14 +198,13 @@ All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details i
   `client/scripts/lib/playwright-photo-stub` so they never call the real service. See `docs/design/DESIGN_LANGUAGE.md`.
 - **Logging:** Quick log (`/logbook/quick`), copy last flight, airport autocomplete with remembered airports, draft
   autosave, and an offline retry queue (`lib/outbox.js`) so a failed save never loses an entry.
-- **Stats:** hours by month / aircraft type or tail / category, and a cumulative-hours line toward a goal you set.
+- **Stats:** hours by month / aircraft type or tail / category, and the Pilot tab total; the goal (`pilot_settings.hours_target`, default 50) still sets the PPL progress line on Home and the Logbook.
 - **Map:** one theme-aware route colour (the by-year/aircraft colour modes were removed); routes draw in then flow
   along the flight direction, with an "Animate routes" toggle (remembered; off by default under reduced motion)
   and a replay button; a compact "airports · states" chip that expands to fuller stats; pin popups with visits,
   hours, last visit, note and photo; tile-caching service worker (`public/sw.js`, tiles only).
-- **Photos and notes:** up to 8 photos per flight, resized in the browser (EXIF rotation applied), stored in the
-  database (`flight_photos`) at their natural orientation; the note is the flight's existing remarks field.
-- **Sharing:** a revocable read-only public link (`/share/:token`, unguessable token, notes/photos off by default,
+- **Notes:** the note is the flight's remarks field (flight photos were removed 2026-10-17; the `flight_photos` rows are kept).
+- **Sharing:** a revocable read-only public link (`/share/:token`, unguessable token, notes on by default,
   never costs or debriefs) and a printable/PDF summary (`/logbook/print`). Dark on screen like the rest of the app,
   but **print output is always solid white with dark ink, no shadows or glass** (print stylesheet only), and the
   public share page and print view stay pilot-only.
@@ -269,35 +233,25 @@ The pre-redesign pages still carry the old navy/`.light` Tailwind tokens until t
 - **Every control** (buttons, round icon buttons, filter chips, segmented controls and tabs, selects, switches, steppers, text-action
   links and the Add button) uses the approved "V-a" lite-glass recipe below; text inputs stay solid with the same rim (`.gl-field`).
   `client/scripts/check-controls.mjs` fails when a visible control lacks the recipe marker (allowlist: `client/src/lib/controlAudit.js`)
-  or a route exceeds the blur budget — run it on every route at 390px in every phase. The build id is shown in Settings and on `/design`.
+  or a route exceeds the blur budget — run it on every route at 390px in every phase. The build id is shown in Settings.
 - **Buttons, filter chips, segmented-control buttons and the Add button** use the approved "V-a" lite-glass recipe
   (`client/src/ds/buttons.css`, no `backdrop-filter`): clear glass with a thin coloured rim and a white label. Sky tint = pilot
   primary, violet = passenger primary, clear = secondary, restrained red only on a destructive confirm step (a delete trigger is a
   plain clear button), one primary per screen or sheet. Solid, Reduce transparency and unsupported browsers get solid tinted fills.
-  The Add button is "option 3": a violet-to-sky ring around dark clear glass. Specimens at the hidden `/design/buttons`. This is an
+  The Add button is "option 3": a violet-to-sky ring around dark clear glass. This is an
   approved change to the design language; details in `docs/design/DESIGN_LANGUAGE.md` "Buttons".
 - **Glass (Liquid Glass V3)** is only for the floating navigation/control layer (tab bar, top bar, one popover or sheet at
   a time); content stays solid. Quality levels Full / Lite / Solid (Auto steps down from measured frame times and never up;
   Reduce transparency, no `backdrop-filter` and `prefers-reduced-transparency` all mean Solid). See `client/src/ds/glass.js`.
 
 **Behaviours to preserve**
-- **Weather planning:** each leg stores a UTC instant (`lib/planlegs.js`); the airport's time zone only reads and
-  displays it. Changing an airport keeps the same moment and clears stale results; a missing zone falls back to UTC
-  with a message.
-- **Cost cutoff:** the optional "Commercial certificate date" setting (`pilot_settings.cost_cutoff_date`) excludes
-  flights and ground sessions on or after that calendar day from every cost total, average, chart and projection.
-  Stored cost data is untouched; other expenses still count. It travels on `rates.cost_cutoff_date` from
-  `fetchAllRates`.
 - **Settings:** the settings endpoint replaces the whole row, so pages save via `saveSettingsMerged` (merged into
-  the current settings) — never send a partial form, or one page blanks another's fields.
+  the current settings) — never send a partial form (the server still validates the weather-minimum and cost-cutoff columns so a save never blanks them), or one page blanks another's fields.
 
 **Manual steps after deploys that need them:** `npm run seed:prod -w server` (back up first) fills airport regions
 for the states counter; the public link is turned on from Logbook → share icon.
 
-**Known gaps:** the public share page shows square photo thumbnails (it only receives photo ids, not sizes); the
-logbook list shows only a camera icon, not photo thumbnails; photos and the share link are left out of the JSON and
-weekly backups (size, and so a restore can't revive a revoked link); older photos saved without a size are measured
-on load. Also open: no on-screen-keyboard-covers-Save handling and no broader hover/focus audit; study mode and the
+**Known gaps:** Also open: no on-screen-keyboard-covers-Save handling and no broader hover/focus audit; study mode and the
 document vault (with auth hardening) are next.
 
 **Known flakes:** `client/scripts/check-scroll.mjs` on `/logbook/quick`, WebKit, 390px showed 2.33% of pixels changed after the

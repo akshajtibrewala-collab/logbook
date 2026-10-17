@@ -1,5 +1,5 @@
 // Spawns another script as a real child process, rather than `import`ing it, and exits with its exit
-// code. This matters specifically because some target scripts (seed-airports.js, seed-runways.js) guard
+// code. This matters specifically because some target scripts (seed-airports.js) guard
 // their own side effects with `if (import.meta.url === pathToFileURL(process.argv[1]).href)` so their
 // parsing helpers can be imported elsewhere without side effects — that guard is only ever true when the
 // script is the process's actual entry point. Importing it from a wrapper (as these prod/ scripts

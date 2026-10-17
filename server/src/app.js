@@ -9,12 +9,8 @@ import milestoneCompletions from './routes/milestone-completions.js';
 import expirations from './routes/expirations.js';
 import backup from './routes/backup.js';
 import settings from './routes/settings.js';
-import weather from './routes/weather.js';
-import costs from './routes/costs.js';
+import groundSessions from './routes/ground-sessions.js';
 import { cronRouter, backupJobRouter } from './routes/backup-job.js';
-import { makeRegistrationCronRouter } from './routes/registration-job.js';
-import { runRegistrationJob, budgetFromEnv } from './lib/registration-job.js';
-import photos from './routes/photos.js';
 import { shareAdminRouter, publicRouter } from './routes/share.js';
 
 export const app = express();
@@ -28,7 +24,6 @@ app.get('/api/session', (req, res) => res.json({ required: passcodeRequired(), o
 
 // The scheduled backup authenticates with its own CRON_SECRET (Vercel Cron sends it), not the app passcode.
 app.use('/api/cron', cronRouter);
-app.use('/api/cron', makeRegistrationCronRouter({ runJob: runRegistrationJob, budget: budgetFromEnv }));
 
 // The read-only public summary authenticates with its own unguessable share token, not the app passcode.
 app.use('/api/public', publicRouter);
@@ -43,10 +38,8 @@ app.use('/api/milestone-completions', milestoneCompletions);
 app.use('/api/expirations', expirations);
 app.use('/api/backup', backup);
 app.use('/api/settings', settings);
-app.use('/api/weather', weather);
-app.use('/api/costs', costs);
+app.use('/api/costs/ground-sessions', groundSessions); // historical path, kept so cached clients keep working
 app.use('/api/backup-job', backupJobRouter);
-app.use('/api/photos', photos);
 app.use('/api/share', shareAdminRouter);
 
 app.use((err, _req, res, _next) => {

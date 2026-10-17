@@ -4,7 +4,7 @@
 //           names the v2 file first, the manifest parses and its icons answer 200 image/png at their declared sizes, and the service worker never touches them.
 //   width   the Log's List and Ledger run the full page width: the Ledger's scroller ends where the page content ends (+-1px), the Ledger needs no sideways
 //           scroll at 100% text on a phone, and a list row's trailing hours end within 16px of the content's right edge (not 60px short for the Add button).
-//   flat    the older form and settings pages (aircraft, expiration, ground session, quick log, cost and weather settings, share, settings): on a phone their
+//   flat    the older form and settings pages (aircraft, expiration, ground session, quick log, share, settings): on a phone their
 //           fields, selects and buttons span the page column like the redesigned forms (no 17-20px card inset).
 //   covered at the end of the page, on the Log's List and Ledger and on Travel, no figure or Ledger column sits under the Add button or the tab bar.
 //   field   the departure and arrival time boxes match a text field next to them: same box height, and the value's ink starts at the same x offset and is
@@ -126,7 +126,7 @@ for (const d of profiles) for (const TEXT of TEXTS) {
     if (hidden.length) say(`covered: ${tag} ${route} (${view}): ${hidden.join(', ')} sit under the Add button or the tab bar at the end of the page`);
   }
   // flat: older form pages span the column
-  if (d.kind === 'phone') for (const route of ['/aircraft/new', '/currency/new', '/logbook/ground/new', '/logbook/quick', '/weather/settings', '/logbook/share', '/settings']) {
+  if (d.kind === 'phone') for (const route of ['/aircraft/new', '/currency/new', '/logbook/ground/new', '/logbook/quick', '/logbook/share', '/settings']) {
     await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' }).catch(() => {});
     await page.waitForTimeout(350);
     const m = await page.evaluate(() => {

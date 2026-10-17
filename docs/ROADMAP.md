@@ -197,3 +197,11 @@ Design record: `docs/design/_private/AUTO_REGISTRATION_DESIGN.md` (private).
   stored alongside the expirations they relate to.
 - **Later**: CFI tools (student tracking, endorsement templates) and airline-career features (application
   tracking, interview prep, type-rating planning).
+
+## Simplification (2026-10-17, branch feat/simplify)
+
+Scope narrowed to the pilot logbook, passenger flights and the map. Removed from the UI and code (data, tables and columns all kept; no migration):
+the weather checker (pages, `/api/weather`, aviationweather.gov, `runways` seeding), the cost backend (`/api/costs/*` except ground sessions, which keep
+the historical `/api/costs/ground-sessions` path), the automatic-registration cron and AeroDataBox, flight photos (`/api/photos`, share photos),
+the goal chart (the goal itself still sets the PPL progress line), the instructor / debrief / dual-given / simulator inputs on the flight form,
+and the hidden `/design` pages. See CLAUDE.md for what was kept on purpose.

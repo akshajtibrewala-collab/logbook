@@ -3,12 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { Popover } from '../ds/Overlays.jsx';
 
-// The four Flying pages. The top bar's title is the way between them (two taps from anywhere in Flying): it replaced the strip of tabs.
+// The three Flying pages. The top bar's title is the way between them (two taps from anywhere in Flying): it replaced the strip of tabs.
 export const FLYING_PAGES = [
   { to: '/logbook', label: 'Logbook', test: (p) => p === '/logbook' || p === '/flying' },
   { to: '/currency', label: 'Currency', test: (p) => p === '/currency' },
   { to: '/milestones', label: 'Milestones', test: (p) => p === '/milestones' },
-  { to: '/weather', label: 'Weather', test: (p) => p === '/weather' },
 ];
 export const currentFlyingPage = (pathname) => (FLYING_PAGES.find((f) => f.test(pathname)) ?? FLYING_PAGES[0]);
 

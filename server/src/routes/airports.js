@@ -17,8 +17,8 @@ const BY_CODE = `SELECT ${COLUMNS} FROM airports
 // US airports written as K + the 3-character FAA code (KFYG) may only be stored under their local code (FYG).
 const BY_US_LOCAL = `SELECT ${COLUMNS} FROM airports WHERE country = 'US' AND local_code = :local ORDER BY ${TYPE_RANK} LIMIT 1`;
 
-// Single-airport lookup, sharing the same K+local-code fallback as /resolve — used by other routes
-// (server/src/routes/weather.js) that need one airport's row rather than a batch of them.
+// Single-airport lookup, sharing the same K+local-code fallback as /resolve — used by the flights route
+// when it needs one airport's row rather than a batch of them.
 export async function resolveAirportRow(code) {
   const c = String(code ?? '').trim().toUpperCase();
   if (!c) return null;

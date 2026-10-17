@@ -1,8 +1,8 @@
 // WRITE TEST for the redesigned screens, through the real UI, on the SCRATCH app only. It prints which backend it points at BEFORE the first write and
 // refuses to run against anything that looks like the real local database. Every change is read back from the API (not from the screen).
-//   covers: log a ground session, Quick log, log a flight review, mark a manual milestone complete and undo it, log a pilot flight with an instructor
-//   suggestion, log a passenger flight, and (the cost screens are gone from the UI) that editing a flight and a ground session leaves the stored cost
-//   override and invoice reference exactly as they were.
+//   covers: log a ground session, Quick log, log a flight review, mark a manual milestone complete and undo it, log a pilot flight
+//   (the flight form has no instructor input since 2026-10-17), log a passenger flight, and that editing a flight and a ground session leaves the stored
+//   cost override, invoice reference, instructor, debrief notes, dual-given and simulator time exactly as they were. Photos and the auto-registration marker are gone.
 //
 //   PLAYWRIGHT_CORE=<playwright-core folder> BROWSER_EXE=<chromium> node client/scripts/check-writes.mjs --scratch --base http://localhost:4174
 import { pathToFileURL } from 'node:url';
@@ -73,13 +73,11 @@ if (marked) {
 const idsBefore = new Set((await api('/flights')).map((f) => f.id));
 await go('/logbook');
 await p.evaluate(() => localStorage.clear()); await go('/logbook/new');
-const sugg = await p.locator('#instructor-names option').evaluateAll((os) => os.map((o) => o.value));
-ok(sugg.includes('Pat Rivera') || sugg.length > 0, `the instructor field offers the names already used (${sugg.slice(0, 3).join(', ') || 'none yet'})`);
-await p.getByLabel('Instructor').fill(sugg[0] || 'Pat Rivera'); await p.keyboard.press('Tab'); await p.waitForTimeout(200);
+ok(!(await p.getByLabel('Instructor').count()) && !(await p.locator('#instructor-names').count()), 'the pilot flight form has no instructor input');
 await press('Add flight');
 await p.waitForTimeout(900);
 const fl = (await api('/flights')).find((f) => !idsBefore.has(f.id));
-ok(Boolean(fl) && fl.role === 'pilot' && Boolean(fl.instructor), `a pilot flight was saved with an instructor (${fl?.instructor ?? '-'})`);
+ok(Boolean(fl) && fl.role === 'pilot', 'a pilot flight was saved');
 ok(!(await p.getByText(/invoice|cost/i).count()), 'the flight form shows no invoice or cost wording');
 
 // ---- log a passenger flight
@@ -95,44 +93,29 @@ await p.waitForTimeout(900);
 const pax = (await api('/flights')).find((f) => f.airline === 'Write Test Air');
 ok(Boolean(pax) && pax.role === 'passenger', 'a passenger flight was saved through the shared form');
 
-// ---- automatic registration marker (scratch only; the provenance columns can't be set through the app, so the
-// script marks the row it just created directly in the scratch database file named by SCRATCH_DB_FILE)
-const scratchFile = process.env.SCRATCH_DB_FILE;
-if (!scratchFile || /(^|[\\/])logbook\.db$/i.test(scratchFile)) {
-  console.log('skip automatic registration checks: set SCRATCH_DB_FILE to the scratch database file (never server/logbook.db)');
-} else if (pax) {
-  const { DatabaseSync } = await import('node:sqlite');
-  await fetch(`${BASE}/api/flights/${pax.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tail_number: 'N0TEST' }) });
-  console.log(`BACKEND for the marker setup: scratch database file ${path.basename(scratchFile)} (one UPDATE on the flight just created)`);
-  const sdb = new DatabaseSync(scratchFile);
-  sdb.prepare("UPDATE flights SET reg_source = 'aerodatabox', reg_filled_at = '2026-06-15T06:00:00.000Z' WHERE id = ?").run(pax.id);
-  sdb.close();
+// ---- the automatic registration marker and its Clear action are gone
+if (pax) {
   await go(`/travel/${pax.id}`);
-  const chip = p.getByRole('button', { name: /filled automatically/i });
-  ok(await chip.count() === 1, 'the auto marker shows on an automatically filled registration');
-  await chip.click(); await p.waitForTimeout(500);
-  ok(await p.getByRole('link', { name: 'AeroDataBox' }).count() === 1, 'the sheet credits the source with a link');
-  await press('Clear registration');
-  ok((await api(`/flights/${pax.id}`)).tail_number === 'N0TEST', 'clearing asks first: nothing is cleared before the confirmation');
-  await p.locator('[role="dialog"]').getByRole('button', { name: 'Clear', exact: true }).click(); await p.waitForTimeout(900);
-  const cleared = await api(`/flights/${pax.id}`);
-  ok(cleared.tail_number === null && Boolean(cleared.reg_cleared_at), 'confirming cleared the registration and marked it never to be refilled');
-  ok(await p.getByRole('button', { name: /filled automatically/i }).count() === 0, 'the marker is gone after clearing');
+  ok(await p.getByRole('button', { name: /filled automatically/i }).count() === 0, 'no auto-registration marker on a passenger flight');
+  const gone = await fetch(`${BASE}/api/flights/${pax.id}/clear-registration`, { method: 'POST' });
+  ok(gone.status === 404, `the clear-registration route is gone (${gone.status})`);
 }
 
 // ---- cost data survives edits (no cost screen or field is left in the UI, but the stored values must not be erased by an edit)
 const post = async (path, body) => (await fetch(`${BASE}/api${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json();
 const tmpl = (await api('/flights')).find((f) => f.role === 'pilot');
 const { id: _i, created_at: _c, updated_at: _u, ...base } = tmpl;
-const kept = await post('/flights', { ...base, remarks: 'keep test', cost_override: 123.45, invoice_ref: 'KEEP-1' });
+const kept = await post('/flights', { ...base, remarks: 'keep test', cost_override: 123.45, invoice_ref: 'KEEP-1', instructor: 'Pat Keep', debrief_went_well: 'kept well', debrief_work_on: 'kept work', dual_given: 0.4, simulator_time: 0.3 });
 ok(Boolean(kept.id) && Number(kept.cost_override) === 123.45, 'a scratch flight with a stored cost override and invoice reference was created through the API');
 await go(`/logbook/${kept.id}`);
 ok(!(await p.getByText(/\bcost\b/i).count()) && !(await p.getByText(/invoice/i).count()), 'the flight detail shows no cost or invoice');
 await go(`/logbook/${kept.id}/edit`);
 if (!(await p.getByLabel('Remarks').isVisible())) { await p.getByRole('button', { name: /More details/ }).click(); await p.waitForTimeout(300); }
 ok(!(await p.getByText(/invoice|manual override|calculated cost/i).count()), 'the flight edit form has no cost or invoice inputs');
+ok(!(await p.getByLabel('Instructor').count()) && !(await p.getByText('What went well').count()) && !(await p.getByText('Dual given').count()) && !(await p.getByLabel('Simulator').count()) && !(await p.getByText('Photos').count()), 'the flight edit form has no instructor, debrief, dual-given, simulator or photo inputs');
 await p.getByLabel('Remarks').fill('keep test, edited'); await press('Save changes'); await p.waitForTimeout(900);
 const after = (await api('/flights')).find((f) => f.id === kept.id);
+ok(after && after.instructor === 'Pat Keep' && after.debrief_went_well === 'kept well' && after.debrief_work_on === 'kept work' && Number(after.dual_given) === 0.4 && Number(after.simulator_time) === 0.3, `editing the flight kept its instructor, debrief notes, dual given and simulator time (${after?.instructor ?? '-'})`);
 ok(after && after.remarks === 'keep test, edited' && Number(after.cost_override) === 123.45 && after.invoice_ref === 'KEEP-1', `editing the flight kept its cost override and invoice reference (${after?.cost_override ?? '-'}, ${after?.invoice_ref ?? '-'})`);
 const gk = await post('/costs/ground-sessions', { date: '2026-01-05', hours: 1, instructor: 'Pat Keep', topics: 'keep ground', notes: '', cost_override: 77.7 });
 await go(`/logbook/ground/${gk.id}/edit`);

@@ -29,7 +29,7 @@ if (flightsRes.length === REAL_FLIGHTS) { console.error(`Refusing: ${REAL_FLIGHT
 const ground = await fetch(`${BASE}/api/costs/ground-sessions`).then((r) => r.json());
 const ids = { pilot: flightsRes.find((f) => f.role === 'pilot')?.id, pax: flightsRes.find((f) => f.role === 'passenger')?.id, ground: ground[0]?.id };
 const ROUTES = ['/', '/logbook', `/logbook/${ids.pilot}`, `/logbook/ground/${ids.ground}`, '/travel', `/travel/${ids.pax}`, '/aircraft', '/logbook/new', '/logbook/new?role=passenger&from=travel',
-  '/logbook/quick', '/logbook/ground/new', '/milestones', '/currency', '/weather', '/map', '/stats', '/more', '/settings', '/logbook/data', '/logbook/share', '/weather/settings']
+  '/logbook/quick', '/logbook/ground/new', '/milestones', '/currency', '/map', '/stats', '/more', '/settings', '/logbook/data', '/logbook/share']
   .filter((r) => !ONLY || ONLY.includes(r));
 const SKIP = /delete|remove|sign out|log out|restore|import|reset|erase|discard|revoke|turn off|clear all|run backup/i;
 

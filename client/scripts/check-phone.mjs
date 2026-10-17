@@ -29,9 +29,9 @@ const flights = await get('/flights'); const ground = await get('/costs/ground-s
 const pilot = flights.find((f) => f.role === 'pilot')?.id, pax = flights.find((f) => f.role === 'passenger')?.id;
 const ROUTES = ['/', '/logbook', `/logbook/${pilot}`, `/logbook/ground/${ground[0]?.id ?? 1}`, '/travel', `/travel/${pax}`, '/logbook/data', '/aircraft', '/aircraft/new', `/aircraft/${aircraft[0]?.id ?? 1}`,
   '/logbook/new', '/logbook/new?role=passenger', '/logbook/quick', '/logbook/share', '/logbook/print', `/logbook/${pilot}/edit`, '/logbook/ground/new', '/milestones', '/currency', '/currency/new',
-  '/weather', '/weather/settings', '/map', '/stats', '/more', '/settings']
+  '/map', '/stats', '/more', '/settings']
   .filter((r) => !ONLY || ONLY.includes(r));
-const FORMS = new Set(['/logbook/new', '/logbook/new?role=passenger', '/logbook/quick', '/logbook/ground/new', '/aircraft/new', '/currency/new', '/weather/settings']);
+const FORMS = new Set(['/logbook/new', '/logbook/new?role=passenger', '/logbook/quick', '/logbook/ground/new', '/aircraft/new', '/currency/new']);
 
 const probe = (mode = 'top') => {
   const out = []; const add = (type, el, text = '') => out.push({ type, el: `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : ''}`, text: String(text).replace(/\s+/g, ' ').slice(0, 50) });

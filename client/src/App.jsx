@@ -6,7 +6,7 @@ import Skeleton from './components/Skeleton.jsx';
 import ChunkBoundary from './components/ChunkBoundary.jsx';
 
 // Home is the only page in the first load. Everything else loads on demand behind the skeleton below: the Logbook and its Ledger, the log-a-flight form, flight and
-// ground-session detail, Map, Stats, the CSV and Aircraft screens, and (in main.jsx) the hidden /design lab.
+// ground-session detail, Map, Stats, the CSV and Aircraft screens,.
 const Logbook = lazy(() => import('./pages/Logbook.jsx'));
 const FlightForm = lazy(() => import('./pages/FlightForm.jsx'));
 const FlightDetail = lazy(() => import('./pages/FlightDetail.jsx'));
@@ -19,8 +19,6 @@ const AircraftForm = lazy(() => import('./pages/AircraftForm.jsx'));
 const Milestones = lazy(() => import('./pages/Milestones.jsx'));
 const Currency = lazy(() => import('./pages/Currency.jsx'));
 const ExpirationForm = lazy(() => import('./pages/ExpirationForm.jsx'));
-const Weather = lazy(() => import('./pages/Weather.jsx'));
-const WeatherSettings = lazy(() => import('./pages/WeatherSettings.jsx'));
 const GroundSessionForm = lazy(() => import('./pages/GroundSessionForm.jsx'));
 const QuickFlight = lazy(() => import('./pages/QuickFlight.jsx'));
 const ShareSettings = lazy(() => import('./pages/ShareSettings.jsx'));
@@ -72,8 +70,6 @@ export default function App() {
           <Route path="/currency" element={<Currency />} />
           <Route path="/currency/new" element={<ExpirationForm />} />
           <Route path="/currency/:id" element={<ExpirationForm />} />
-          <Route path="/weather" element={<Weather />} />
-          <Route path="/weather/settings" element={<WeatherSettings />} />
           <Route path="/map" element={<Suspense fallback={<div className="ds-map-boot" aria-busy="true" />}><MapPage /></Suspense>} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/more" element={<More />} />

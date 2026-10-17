@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
-import { all, get, run } from '../db.js';
-import { buildShareSummary, recentFlights } from '../lib/share-summary.js';
+import { get, run } from '../db.js';
+import { buildShareSummary } from '../lib/share-summary.js';
 import { pilotFlights } from '../lib/flightRoles.js';
 
-const FLAGS = ['show_notes', 'show_photos', 'show_recent_flights', 'show_aircraft'];
+const FLAGS = ['show_notes', 'show_recent_flights', 'show_aircraft'];
 const newToken = () => randomBytes(24).toString('base64url'); // 192 bits: not guessable
 const digest = (s) => createHash('sha256').update(String(s)).digest();
 
 const view = (row) => (row ? {
   exists: true, enabled: Boolean(row.enabled), token: row.enabled ? row.token : null, ...Object.fromEntries(FLAGS.map((f) => [f, Boolean(row[f])])),
-} : { exists: false, enabled: false, token: null, show_notes: false, show_photos: false, show_recent_flights: true, show_aircraft: true });
+} : { exists: false, enabled: false, token: null, show_notes: false, show_recent_flights: true, show_aircraft: true });
 
 // ---- Managed by the pilot (behind the app passcode) -------------------------------------------------
 export const shareAdminRouter = Router();
@@ -51,7 +51,7 @@ shareAdminRouter.get('/summary', async (req, res) => {
   const flights = await pilotFlights();
   const settings = await get('SELECT hours_target, hours_target_label FROM pilot_settings WHERE id = 1');
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
-  const share = { show_recent_flights: 1, show_aircraft: 1, show_notes: req.query.notes === '0' ? 0 : 1, show_photos: 0 };
+  const share = { show_recent_flights: 1, show_aircraft: 1, show_notes: req.query.notes === '0' ? 0 : 1 };
   res.json(buildShareSummary({ flights, share, settings, recentLimit: limit }));
 });
 
@@ -81,30 +81,6 @@ publicRouter.get('/:token', async (req, res) => {
   if (!share) return res.status(404).json({ error: 'This link is not valid.' });
   const flights = await pilotFlights();
   const settings = await get('SELECT hours_target, hours_target_label FROM pilot_settings WHERE id = 1');
-  const photoIdsByFlight = {};
-  if (share.show_photos) {
-    const ids = recentFlights(flights).map((f) => f.id);
-    if (ids.length) {
-      const rows = await all(`SELECT id, flight_id FROM flight_photos WHERE flight_id IN (${ids.map(() => '?').join(',')}) ORDER BY id`, ids);
-      for (const r of rows) (photoIdsByFlight[r.flight_id] ??= []).push(r.id);
-    }
-  }
   res.set('X-Robots-Tag', 'noindex, nofollow');
-  res.json(buildShareSummary({ flights, share, settings, photoIdsByFlight }));
-});
-
-// A single photo as an image, only when photos are shared and it belongs to one of the listed flights.
-publicRouter.get('/:token/photos/:id', async (req, res) => {
-  const share = await activeShare(req.params.token);
-  if (!share || !share.show_photos) return res.status(404).end();
-  const photo = await get('SELECT flight_id, data_url FROM flight_photos WHERE id = ?', [req.params.id]);
-  if (!photo) return res.status(404).end();
-  const listed = recentFlights(await all("SELECT id, date FROM flights WHERE role = 'pilot'")).some((f) => f.id === photo.flight_id);
-  if (!listed) return res.status(404).end();
-  const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(photo.data_url);
-  if (!m) return res.status(404).end();
-  res.set('Content-Type', m[1]);
-  res.set('Cache-Control', 'private, max-age=300');
-  res.set('X-Robots-Tag', 'noindex, nofollow');
-  res.send(Buffer.from(m[2], 'base64'));
+  res.json(buildShareSummary({ flights, share, settings }));
 });

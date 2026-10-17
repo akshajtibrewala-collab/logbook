@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
-import { Sheet } from '../ds/Overlays.jsx';
-import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import { registrationMarker } from '../lib/regSource.js';
 import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
 import Button from '../components/Button.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
-import PhotoGallery from '../components/PhotoGallery.jsx';
 import AircraftPhoto from '../components/AircraftPhoto.jsx';
 import { designatorFromType } from '../lib/aircraftPhoto.js';
 import { MnFold, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
@@ -26,13 +22,6 @@ const MORE_TIMES = [
 ];
 const COUNT_FIELDS = [['day_landings', 'Day landings'], ['night_landings', 'Night landings'], ['approaches', 'Approaches'], ['holds', 'Holds']];
 
-// The number of photos on this flight (the Photos row appears only when there are some).
-function usePhotoCount(flightId) {
-  const [count, setCount] = useState(0);
-  useEffect(() => { api.photoCounts().then((c) => setCount(c[flightId] || 0)).catch(() => {}); }, [flightId]);
-  return count;
-}
-
 /** A flight or passenger flight in the minimalist detail layout: the hours numeral, three headline figures, a short card, and everything else one tap down. */
 export default function FlightDetail() {
   const { id } = useParams();
@@ -44,11 +33,6 @@ export default function FlightDetail() {
   const [tz, setTz] = useState({});
   const [open, setOpen] = useState({});
   const [showCode, setShowCode] = useState(false);
-  const [regSheet, setRegSheet] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const [clearError, setClearError] = useState('');
-  const photoCount = usePhotoCount(Number(id));
   const fold = (k) => ({ open: Boolean(open[k]), onToggle: () => setOpen((o) => ({ ...o, [k]: !o[k] })) });
 
   const load = useCallback(() => {
@@ -95,19 +79,6 @@ export default function FlightDetail() {
   if (error) return <div className="cl mn"><ErrorNote message={error} onRetry={load} /></div>;
   if (!flight) return <div className={`cl mn ${pilot ? '' : 'pax'}`}><MnSkeleton rows={3} /></div>;
 
-  const marker = registrationMarker(flight);
-  const clearRegistration = async () => {
-    setClearing(true);
-    setClearError('');
-    try {
-      setFlight(await api.clearRegistration(flight.id));
-      setConfirmClear(false);
-      setRegSheet(false);
-    } catch (e) {
-      setClearError(e.message || 'Could not clear it');
-      setConfirmClear(false);
-    } finally { setClearing(false); }
-  };
   const utc = utcLine();
   const landings = flight.day_landings + flight.night_landings;
   const title = local ? `Local ${flight.departure_airport.trim().toUpperCase()}` : routeTitle;
@@ -134,17 +105,8 @@ export default function FlightDetail() {
         <AircraftPhoto registration={flight.tail_number} designator={designatorFromType(flight.aircraft_type)} />
 
         <div className="mn-card">
-          {pilot && <MnKv k="Instructor" v={flight.instructor} />}
           <MnKv k="Aircraft" v={flight.aircraft_type} />
-          {marker ? (
-            <div className="mn-kv">
-              <span className="k">Tail</span>
-              <span className="v">
-                {flight.tail_number}{' '}
-                <button type="button" className="gl link sm pax" aria-label="Registration filled automatically, tap to review" onClick={() => setRegSheet(true)}>auto</button>
-              </span>
-            </div>
-          ) : flight.tail_number && flight.aircraft_type && <MnKv k="Tail" v={flight.tail_number} />}
+          {flight.tail_number && flight.aircraft_type && <MnKv k="Tail" v={flight.tail_number} />}
 
           {pilot && moreTimes.length > 0 && (
             <MnFold label="All times" value={`${moreTimes.length + 3}`} {...fold('times')}>
@@ -182,30 +144,7 @@ export default function FlightDetail() {
             </MnFold>
           )}
           {flight.remarks && <MnFold label="Note" value="" {...fold('note')}><p>{flight.remarks}</p></MnFold>}
-          {pilot && (flight.debrief_went_well || flight.debrief_work_on) && (
-            <MnFold label="Debrief" value="" {...fold('debrief')}>
-              {flight.debrief_went_well && <p><span className="k">What went well</span>{flight.debrief_went_well}</p>}
-              {flight.debrief_work_on && <p><span className="k">What to work on</span>{flight.debrief_work_on}</p>}
-            </MnFold>
-          )}
-          {photoCount > 0 && <MnFold label="Photos" value={photoCount} {...fold('photos')}><PhotoGallery flightId={flight.id} /></MnFold>}
         </div>
-
-        {marker && (
-          <Sheet open={regSheet} onClose={() => setRegSheet(false)} title="Filled automatically" detent="medium">
-            <div className="cl mn mn-sheet">
-              <MnKv k="Tail" v={flight.tail_number} />
-              <MnKv k="Filled" v={marker.filledOn ? fmtDate(marker.filledOn) : null} />
-              <div className="mn-kv"><span className="k">Source</span><span className="v"><a href={marker.url} target="_blank" rel="noopener noreferrer">{marker.provider}</a></span></div>
-              {clearError && <p className="mn-note" style={{ color: 'var(--ds-bad)' }}>{clearError}</p>}
-              <div className="mn-actions">
-                <Button type="button" variant="danger" size="lg" onClick={() => setConfirmClear(true)}>Clear registration</Button>
-              </div>
-            </div>
-          </Sheet>
-        )}
-        <ConfirmDialog open={confirmClear} title="Clear this registration?" description="It won't be filled in again."
-          confirmLabel="Clear" busy={clearing} onConfirm={clearRegistration} onClose={() => setConfirmClear(false)} />
 
         <div className="mn-actions">
           <Button as={Link} to={`/logbook/${id}/edit${base === '/travel' ? '?from=travel' : ''}`} variant={pilot ? 'primary' : 'pax'} size="lg" icon={Pencil}>Edit flight</Button>

@@ -21,7 +21,7 @@ import { installKeyboardState, keyboardEvent } from '../ds/keyboard.js';
 
 const TAB_ICONS = { home: Home, flying: Plane, travel: Luggage, map: MapIcon, more: MoreHorizontal };
 const ADD_ICONS = { zap: Zap, copy: Copy, book: BookOpen, plane: Plane };
-const FLYING_ROOTS = ['/logbook', '/flying', '/currency', '/milestones', '/weather'];
+const FLYING_ROOTS = ['/logbook', '/flying', '/currency', '/milestones'];
 const tabs = TABS.map((t) => ({ ...t, icon: TAB_ICONS[t.key] }));
 
 // The tab bar renders router Links; `end` is a NavLink prop the DS TabBar passes to every link component.

@@ -33,7 +33,7 @@ for (const [level, reduce] of [['full', 0], ['lite', 0], ['solid', 0], ['full', 
   const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
   await ctx.addInitScript(([g, r]) => { try { localStorage.setItem('aerohub-glass-level', g); localStorage.setItem('aerohub-reduce-transparency', r ? '1' : '0'); } catch { /* ignore */ } }, [level, reduce]);
   const p = await ctx.newPage();
-  for (const route of ['settings', 'logbook/new', 'weather/settings']) {
+  for (const route of ['settings', 'logbook/new']) {
     await p.goto(`${BASE}/${route}`, { waitUntil: 'networkidle' }); await p.waitForTimeout(600);
     await p.addStyleTag({ content: '*{transition:none!important;animation:none!important}' });
     const n = await p.locator('.gl-switch').count();

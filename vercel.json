@@ -5,8 +5,7 @@
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "client/dist",
   "crons": [
-    { "path": "/api/cron/backup", "schedule": "0 12 * * 1" },
-    { "path": "/api/cron/registrations", "schedule": "0 6 * * *" }
+    { "path": "/api/cron/backup", "schedule": "0 12 * * 1" }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },

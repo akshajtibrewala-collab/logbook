@@ -12,7 +12,6 @@ const OPTIONS = [
   ['show_recent_flights', 'Recent flights', 'List your last 10 flights (route, date, time).'],
   ['show_aircraft', 'Aircraft', 'Show aircraft type and tail number on each flight.'],
   ['show_notes', 'Notes', 'Show each flight’s personal note. Off by default.'],
-  ['show_photos', 'Photos', 'Show photos attached to those flights. Off by default.'],
 ];
 
 /** Manage the one read-only public link: turn on/off, choose what it shows, regenerate it. */

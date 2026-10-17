@@ -48,7 +48,7 @@ for (const dpr of [1, 1.25, 1.5]) for (const w of DESKTOP) {
 // ---- narrow widths with large text: fit, placeholders, tabs
 for (const w of [320, 390, 430]) for (const text of [100, 150, 200]) {
   const { ctx, p } = await newPage(w, 800);
-  for (const route of ['', 'logbook', 'travel', 'aircraft', 'stats', 'currency', 'milestones', 'weather']) {
+  for (const route of ['', 'logbook', 'travel', 'aircraft', 'stats', 'currency', 'milestones']) {
     await go(p, route, text);
     const r = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
     ok(r.sw <= r.iw + 1, `fit: horizontal scroll on /${route} at ${w}px text ${text}% (${r.sw} > ${r.iw})`);
@@ -58,7 +58,7 @@ for (const w of [320, 390, 430]) for (const text of [100, 150, 200]) {
       return { ph: i.placeholder, need: c.measureText(i.placeholder).width, room };
     }));
     for (const i of inp) ok(i.need <= i.room + 0.5, `input: placeholder "${i.ph}" clipped on /${route} at ${w}px text ${text}% (${Math.round(i.need)} > ${Math.round(i.room)})`);
-    if (['logbook', 'currency', 'milestones', 'weather'].includes(route)) {
+    if (['logbook', 'currency', 'milestones'].includes(route)) {
       const t = await p.evaluate(() => {
         const n = document.querySelector('.fl-tabs'); if (!n) return null;
         const cur = n.querySelector('[aria-current="page"]'), nb = n.getBoundingClientRect(), cb = cur?.getBoundingClientRect();

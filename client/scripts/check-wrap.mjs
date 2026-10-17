@@ -34,7 +34,7 @@ const flights = await get('/flights'); const ground = await get('/costs/ground-s
 const pilot = flights.find((f) => f.role === 'pilot')?.id, pax = flights.find((f) => f.role === 'passenger')?.id;
 const ROUTES = ['/', '/logbook', `/logbook/${pilot}`, `/logbook/ground/${ground[0]?.id ?? 1}`, '/travel', `/travel/${pax}`, '/logbook/data', '/aircraft', '/aircraft/new', `/aircraft/${aircraft[0]?.id ?? 1}`,
   '/logbook/new', '/logbook/new?role=passenger', '/logbook/quick', '/logbook/share', '/logbook/print', `/logbook/${pilot}/edit`, '/logbook/ground/new', '/milestones', '/currency', '/currency/new',
-  '/weather', '/weather/settings', '/map', '/stats', '/stats?tab=travel', '/stats?tab=places', '/more', '/settings']
+  '/map', '/stats', '/stats?tab=travel', '/stats?tab=places', '/more', '/settings']
   .filter((r) => !ONLY || ONLY.includes(r));
 
 /** Runs in the page. */

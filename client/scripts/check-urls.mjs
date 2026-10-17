@@ -23,7 +23,7 @@ const URLS = [
   ['/'], ['/logbook'], [`/logbook/${ids.pilot}`], [`/logbook/ground/${ids.ground}`], ['/flying', '/logbook'], ['/travel'], [`/travel/${ids.pax}`], ['/logbook/data'],
   ['/aircraft'], ['/aircraft/new'], [`/aircraft/${ids.aircraft}`], ['/logbook/new'], ['/logbook/new?role=passenger&from=travel', '/logbook/new'], ['/logbook/quick'], ['/logbook/share'], ['/logbook/print'],
   [`/logbook/${ids.pilot}/edit`], ['/logbook/ground/new'], [`/logbook/ground/${ids.ground}/edit`], ['/milestones'], ['/currency'], ['/currency/new'], ['/currency/' + (ids.expiration ?? 1)],
-  ['/weather'], ['/weather/settings'], ['/map'], ['/stats'], ['/more'], ['/settings'], ['/no-such-page', '/'], ['/costs', '/'], ['/costs/settings', '/'], ['/costs/spending', '/'], ['/costs/expenses', '/'], // the removed Costs screens: an old bookmark lands on Home
+  ['/weather', '/'], ['/weather/settings', '/'], ['/design', '/'], ['/map'], ['/stats'], ['/more'], ['/settings'], ['/no-such-page', '/'], ['/costs', '/'], ['/costs/settings', '/'], ['/costs/spending', '/'], ['/costs/expenses', '/'], // the removed Costs screens: an old bookmark lands on Home
   
 ];
 let fails = 0, checks = 0;

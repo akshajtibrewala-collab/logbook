@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CloudSun, Luggage, Map as MapIcon, Plane, ShieldCheck, Target } from 'lucide-react';
-import { api } from '../../lib/api.js';
+import { BookOpen, Luggage, Map as MapIcon, Plane, ShieldCheck, Target } from 'lucide-react';
 import { fmtHours } from '../../lib/hours.js';
 import '../../ds/hub.css';
 
 /**
- * The Home hub: one tile per module that exists (Logbook, Travel, Map, Aircraft, Currency, Milestones, Weather). Each tile is a real link with a
+ * The Home hub: one tile per module that exists (Logbook, Travel, Map, Aircraft, Currency, Milestones). Each tile is a real link with a
  * name and one live value; the value is the same number its own page shows (computed by the lib/ functions behind useHomeData).
  * Sky dot = pilot, violet = passenger, the status dot is ok/warn. No tile exists for a module that has no page.
  */
@@ -20,25 +18,6 @@ function Tile({ to, icon: Icon, name, value, sub, dot, label }) {
   );
 }
 
-function WeatherTile() {
-  const [state, setState] = useState('loading');
-  useEffect(() => {
-    let cancelled = false;
-    api.getSettings()
-      .then((s) => {
-        if (!s.home_airport_ident) { if (!cancelled) setState('unset'); return undefined; }
-        return api.checkWeather(s.home_airport_ident).then((d) => { if (!cancelled) setState(d); });
-      })
-      .catch(() => { if (!cancelled) setState('unset'); });
-    return () => { cancelled = true; };
-  }, []);
-  if (state === 'unset') return <Tile to="/weather/settings" icon={CloudSun} name="Weather" value="Set up" />;
-  if (state === 'loading') return <Tile to="/weather" icon={CloudSun} name="Weather" value=" " label="Weather" />;
-  const { current } = state;
-  const value = current.unavailable ? 'Unavailable' : current.ceilingFt == null ? 'Clear' : `${current.ceilingFt} ft`;
-  return <Tile to="/weather" icon={CloudSun} name="Weather" value={value} />;
-}
-
 export default function HubTiles({ pilotCount, passengerCount, passengerHours, airports, aircraftCount, status, milestonePercent }) {
   return (
     <div className="hub-grid">
@@ -48,7 +27,6 @@ export default function HubTiles({ pilotCount, passengerCount, passengerHours, a
       <Tile to="/aircraft" icon={Plane} name="Aircraft" value={`${aircraftCount} aircraft`} />
       <Tile to="/currency" icon={ShieldCheck} dot={status.count === 0 ? 'ok' : 'warn'} name="Currency" value={status.count === 0 ? 'All clear' : `${status.count} due`} />
       <Tile to="/milestones" icon={Target} dot="pilot" name="Milestones" value={milestonePercent == null ? 'Open' : `${milestonePercent}%`} label={milestonePercent == null ? 'Milestones' : `Milestones, ${milestonePercent} percent toward the next certificate`} />
-      <WeatherTile />
     </div>
   );
 }

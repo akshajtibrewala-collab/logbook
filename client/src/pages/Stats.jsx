@@ -32,18 +32,10 @@ export default function Stats() {
   const [flights, setFlights] = useState(null);
   const [airports, setAirports] = useState({});
   const [error, setError] = useState('');
-  const [settings, setSettings] = useState(null);
-
-  // The pilot settings PUT replaces the whole row, so a target change sends the current settings back with it.
-  async function saveTarget(patch) {
-    const saved = await api.updateSettings({ ...settings, ...patch });
-    setSettings(saved);
-  }
 
   const load = useCallback(() => {
     setError('');
     (async () => {
-      api.getSettings().then(setSettings).catch(() => {});
       const list = await api.listFlights();
       const codes = [...new Set(list.flatMap(flightCodes))];
       setAirports(codes.length ? await api.resolveAirports(codes) : {});
@@ -68,7 +60,7 @@ export default function Stats() {
           </div>
           {tab === 'places' && <div className="bc-ctl"><Segmented label="Filter by role" scope="pilot" options={ROLES} value={placesRole} onChange={setPlacesRole} /></div>}
 
-          {tab === 'pilot' && <PilotTab pilotFlights={pilotOnly} settings={settings} onSaveTarget={saveTarget} />}
+          {tab === 'pilot' && <PilotTab pilotFlights={pilotOnly} />}
           {tab === 'travel' && <TravelTab passengerFlights={passengerOnly} airports={airports} />}
           {tab === 'places' && <PlacesTab flights={flights} airports={airports} roleFilter={placesRole} />}
         </>

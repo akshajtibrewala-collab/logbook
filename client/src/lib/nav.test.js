@@ -14,8 +14,8 @@ test('every pre-redesign URL maps to a tab and gets a real title (nothing falls 
   }
 });
 
-test('sections: Flying owns the logbook, currency, milestones and weather; More owns stats, aircraft, data and share', () => {
-  for (const u of ['/logbook', '/logbook/5', '/logbook/quick', '/currency', '/currency/new', '/milestones', '/weather', '/weather/settings', '/flying']) assert.equal(sectionOf(u), 'flying', u);
+test('sections: Flying owns the logbook, currency and milestones; More owns stats, aircraft, data and share', () => {
+  for (const u of ['/logbook', '/logbook/5', '/logbook/quick', '/currency', '/currency/new', '/milestones', '/flying']) assert.equal(sectionOf(u), 'flying', u);
   for (const u of ['/stats', '/aircraft', '/aircraft/15', '/logbook/data', '/logbook/share', '/logbook/print', '/settings', '/more', '/airports/KSUS']) assert.equal(sectionOf(u), 'more', u);
   assert.equal(sectionOf('/travel'), 'travel'); assert.equal(sectionOf('/travel/181'), 'travel');
   assert.equal(sectionOf('/map'), 'map'); assert.equal(sectionOf('/'), 'home');
@@ -33,12 +33,12 @@ test('tab roots have no back button, detail pages do', () => {
 });
 
 test('the Add button hides on forms and leaf settings pages only', () => {
-  for (const u of ['/', '/logbook', '/travel', '/map', '/stats', '/aircraft', '/currency', '/milestones', '/weather', '/logbook/5', '/travel/181']) assert.equal(showAdd(u), true, u);
-  for (const u of ['/more', '/logbook/new', '/logbook/quick', '/logbook/5/edit', '/logbook/ground/new', '/aircraft/new', '/aircraft/15', '/currency/new', '/weather/settings', '/logbook/print', '/settings']) assert.equal(showAdd(u), false, u);
+  for (const u of ['/', '/logbook', '/travel', '/map', '/stats', '/aircraft', '/currency', '/milestones', '/logbook/5', '/travel/181']) assert.equal(showAdd(u), true, u);
+  for (const u of ['/more', '/logbook/new', '/logbook/quick', '/logbook/5/edit', '/logbook/ground/new', '/aircraft/new', '/aircraft/15', '/currency/new', '/logbook/print', '/settings']) assert.equal(showAdd(u), false, u);
 });
 
 test('forms are focused screens (no tab bar); lists, details and tab roots are not', () => {
-  for (const u of ['/logbook/new', '/logbook/quick', '/logbook/5/edit', '/logbook/ground/new', '/logbook/ground/1/edit', '/currency/new', '/currency/1', '/weather/settings', '/aircraft/new']) assert.equal(isFocusedForm(u), true, u);
+  for (const u of ['/logbook/new', '/logbook/quick', '/logbook/5/edit', '/logbook/ground/new', '/logbook/ground/1/edit', '/currency/new', '/currency/1', '/aircraft/new']) assert.equal(isFocusedForm(u), true, u);
   for (const u of ['/', '/logbook', '/logbook/5', '/logbook/ground/1', '/travel', '/travel/181', '/aircraft', '/aircraft/15', '/currency', '/map', '/stats', '/logbook/data']) assert.equal(isFocusedForm(u), false, u);
 });
 

@@ -327,81 +327,6 @@ export function parseExpiration(body) {
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }
 
-const parseCertificate = (b, v, errors) => {
-  const certificate = String(b.certificate ?? '').trim();
-  if (!certificate) errors.certificate = 'Choose a training phase';
-  else v.certificate = certificate;
-};
-
-/** Validates a simple {certificate, effective_date, hourly_rate} rate row (instructor, ground, or simulator rate) — belongs to one training phase's own rate history. */
-export function parseHourlyRate(body) {
-  const b = body && typeof body === 'object' ? body : {};
-  const errors = {};
-  const v = {};
-
-  parseCertificate(b, v, errors);
-
-  if (!isIsoDate(b.effective_date)) errors.effective_date = 'Date must be YYYY-MM-DD';
-  else v.effective_date = b.effective_date;
-
-  const rate = Number(b.hourly_rate);
-  if (!Number.isFinite(rate) || rate < 0 || rate > 99999) errors.hourly_rate = 'Must be a number, 0 or more';
-  else v.hourly_rate = round2(rate);
-
-  return { value: v, errors: Object.keys(errors).length ? errors : null };
-}
-
-/** Validates a per-aircraft rate row: {certificate, aircraft_id, effective_date, rental_rate_per_hr, fuel_surcharge_per_hr} — belongs to one training phase's own rate history. */
-export function parseAircraftRate(body) {
-  const b = body && typeof body === 'object' ? body : {};
-  const errors = {};
-  const v = {};
-
-  parseCertificate(b, v, errors);
-
-  const aircraftId = Number(b.aircraft_id);
-  if (!Number.isInteger(aircraftId) || aircraftId <= 0) errors.aircraft_id = 'Choose an aircraft';
-  else v.aircraft_id = aircraftId;
-
-  if (!isIsoDate(b.effective_date)) errors.effective_date = 'Date must be YYYY-MM-DD';
-  else v.effective_date = b.effective_date;
-
-  const rental = Number(b.rental_rate_per_hr);
-  if (!Number.isFinite(rental) || rental < 0 || rental > 99999) errors.rental_rate_per_hr = 'Must be a number, 0 or more';
-  else v.rental_rate_per_hr = round2(rental);
-
-  const fuel = isBlank(b.fuel_surcharge_per_hr) ? 0 : Number(b.fuel_surcharge_per_hr);
-  if (!Number.isFinite(fuel) || fuel < 0 || fuel > 99999) errors.fuel_surcharge_per_hr = 'Must be a number, 0 or more';
-  else v.fuel_surcharge_per_hr = round2(fuel);
-
-  return { value: v, errors: Object.keys(errors).length ? errors : null };
-}
-
-export const EXPENSE_CATEGORIES = ['books', 'headset', 'medical', 'written_test', 'checkride_fee', 'other'];
-
-/** Validates a one-off training expense: {category, date, amount, note, invoice_ref}. */
-export function parseExpense(body) {
-  const b = body && typeof body === 'object' ? body : {};
-  const errors = {};
-  const v = {};
-
-  v.category = EXPENSE_CATEGORIES.includes(b.category) ? b.category : 'other';
-
-  if (!isIsoDate(b.date)) errors.date = 'Date must be YYYY-MM-DD';
-  else v.date = b.date;
-
-  const amount = Number(b.amount);
-  if (!Number.isFinite(amount) || amount < 0 || amount > 999999) errors.amount = 'Must be a number, 0 or more';
-  else v.amount = round2(amount);
-
-  const note = String(b.note ?? '').trim();
-  v.note = note || null;
-  const invoiceRef = String(b.invoice_ref ?? '').trim();
-  v.invoice_ref = invoiceRef || null;
-
-  return { value: v, errors: Object.keys(errors).length ? errors : null };
-}
-
 /** Validates a ground-only training session (no flight logged): {date, hours, instructor, topics, notes, cost_override, invoice_ref}. */
 export function parseGroundSession(body) {
   const b = body && typeof body === 'object' ? body : {};
@@ -431,46 +356,6 @@ export function parseGroundSession(body) {
     if (!Number.isFinite(override) || override < 0 || override > 999999) errors.cost_override = 'Must be a number, 0 or more';
     else v.cost_override = round2(override);
   }
-
-  return { value: v, errors: Object.keys(errors).length ? errors : null };
-}
-
-/** Validates a certificate's training-phase date range: {certificate, start_date, end_date, track_costs}. */
-export function parseTrainingPhase(body) {
-  const b = body && typeof body === 'object' ? body : {};
-  const errors = {};
-  const v = {};
-
-  parseCertificate(b, v, errors);
-
-  if (!isIsoDate(b.start_date)) errors.start_date = 'Date must be YYYY-MM-DD';
-  else v.start_date = b.start_date;
-
-  if (b.end_date && !isIsoDate(b.end_date)) errors.end_date = 'Date must be YYYY-MM-DD';
-  else v.end_date = b.end_date || null;
-
-  if (v.start_date && v.end_date && v.end_date < v.start_date) errors.end_date = 'Cannot be before the start date';
-
-  v.track_costs = b.track_costs === false ? 0 : 1;
-
-  return { value: v, errors: Object.keys(errors).length ? errors : null };
-}
-
-/** Validates a one-time planned cost still ahead for a certificate: {certificate, label, amount}. */
-export function parsePlannedCost(body) {
-  const b = body && typeof body === 'object' ? body : {};
-  const errors = {};
-  const v = {};
-
-  parseCertificate(b, v, errors);
-
-  const label = String(b.label ?? '').trim();
-  if (!label) errors.label = 'Enter a label';
-  else v.label = label;
-
-  const amount = Number(b.amount);
-  if (!Number.isFinite(amount) || amount < 0 || amount > 999999) errors.amount = 'Must be a number, 0 or more';
-  else v.amount = round2(amount);
 
   return { value: v, errors: Object.keys(errors).length ? errors : null };
 }

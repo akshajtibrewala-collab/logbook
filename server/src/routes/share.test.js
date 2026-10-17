@@ -27,17 +27,12 @@ async function makeFlight(extra = {}) {
   return res.json();
 }
 
-test('photos: validate, attach, count, delete with the flight', async () => {
+test('photos are gone from the API: no route stores, lists or serves them, and a flight still deletes cleanly', async () => {
   const f = await makeFlight();
-  let res = await call('POST', `/photos/flight/${f.id}`, { data_url: 'not an image' });
-  assert.equal(res.status, 400);
-  res = await call('POST', `/photos/flight/${f.id}`, { data_url: PIXEL, width: 1, height: 1 });
-  assert.equal(res.status, 201);
-  assert.deepEqual(await (await call('GET', '/photos/counts')).json(), { [f.id]: 1 });
-  assert.equal((await (await call('GET', `/photos/flight/${f.id}`)).json()).length, 1);
-  assert.equal((await call('POST', '/photos/flight/99999', { data_url: PIXEL })).status, 404);
-  await call('DELETE', `/flights/${f.id}`);
-  assert.deepEqual(await (await call('GET', '/photos/counts')).json(), {});
+  assert.equal((await call('POST', `/photos/flight/${f.id}`, { data_url: PIXEL, width: 1, height: 1 })).status, 404);
+  assert.equal((await call('GET', '/photos/counts')).status, 404);
+  assert.equal((await call('GET', `/photos/flight/${f.id}`)).status, 404);
+  assert.equal((await call('DELETE', `/flights/${f.id}`)).status, 204);
 });
 
 test('hours target is saved with the pilot settings and validated', async () => {
@@ -54,7 +49,6 @@ test('share link: private by default, token gates access, revoke and regenerate 
   assert.equal((await call('GET', '/public/whatever', undefined, {})).status, 404);
 
   const f = await makeFlight({ date: '2026-04-01' });
-  await call('POST', `/photos/flight/${f.id}`, { data_url: PIXEL });
 
   const on = await (await call('POST', '/share')).json();
   assert.equal(on.enabled, true);
@@ -68,16 +62,13 @@ test('share link: private by default, token gates access, revoke and regenerate 
   const text = JSON.stringify(body);
   assert.ok(!text.includes('private note'));
   assert.ok(!text.includes('Jane'));
-  assert.equal((await open(on.token, `/photos/1`)).status, 404); // photos off by default
+  assert.notEqual((await open(on.token, `/photos/1`)).status, 200); // no public photo route exists
 
-  await call('PUT', '/share', { show_notes: true, show_photos: true });
+  await call('PUT', '/share', { show_notes: true, show_photos: true }); // a stale client may still send it: it must change nothing
   body = await (await open(on.token)).json();
   const listed = body.recent.find((r) => r.id === f.id);
   assert.equal(listed.note, 'private note');
-  assert.equal(listed.photo_ids.length, 1);
-  res = await open(on.token, `/photos/${listed.photo_ids[0]}`);
-  assert.equal(res.status, 200);
-  assert.equal(res.headers.get('content-type'), 'image/jpeg');
+  assert.ok(!('photo_ids' in listed) && !('show_photos' in body.options));
 
   // The public surface is read-only: no write verbs are routed at all.
   assert.notEqual((await call('DELETE', `/public/${on.token}`, undefined, {})).status, 204);

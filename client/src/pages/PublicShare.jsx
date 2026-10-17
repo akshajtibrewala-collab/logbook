@@ -56,7 +56,7 @@ export default function PublicShare() {
       )}
       {state === 'error' && <div role="alert" className="sd-state"><p>Couldn’t load this summary right now.</p><p className="mut">Try again in a moment.</p></div>}
       {state === 'ok' && (
-        <SummaryDocument summary={summary} photoSrc={(id) => `/api/public/${encodeURIComponent(token)}/photos/${id}`} />
+        <SummaryDocument summary={summary} />
       )}
     </div>
   );

@@ -8,7 +8,7 @@ export const RECENT_LIMIT = 10;
 
 const newestFirst = (a, b) => b.date.localeCompare(a.date) || b.id - a.id;
 
-/** The flights the public page lists — also the only flights whose photos may be served publicly. */
+/** The flights the public page lists. */
 export function recentFlights(flights, limit = RECENT_LIMIT) {
   return [...flights].sort(newestFirst).slice(0, limit);
 }
@@ -17,9 +17,8 @@ export function recentFlights(flights, limit = RECENT_LIMIT) {
  * @param flights   all flight rows
  * @param share     the share_settings row (flags are 0/1)
  * @param settings  the pilot_settings row (for the hours target), may be undefined
- * @param photoIdsByFlight  flightId -> [photo ids], only used when share.show_photos
  */
-export function buildShareSummary({ flights, share, settings, photoIdsByFlight = {}, now = new Date(), recentLimit = RECENT_LIMIT }) {
+export function buildShareSummary({ flights, share, settings, now = new Date(), recentLimit = RECENT_LIMIT }) {
   const yearAgo = new Date(now.getTime() - 365 * 86400_000).toISOString().slice(0, 10);
   const last12 = flights.filter((f) => f.date >= yearAgo);
   const total = sum(flights, 'total_time');
@@ -48,7 +47,6 @@ export function buildShareSummary({ flights, share, settings, photoIdsByFlight =
       show_recent_flights: Boolean(share.show_recent_flights),
       show_aircraft: Boolean(share.show_aircraft),
       show_notes: Boolean(share.show_notes),
-      show_photos: Boolean(share.show_photos),
     },
     recent: [],
   };
@@ -60,7 +58,6 @@ export function buildShareSummary({ flights, share, settings, photoIdsByFlight =
       };
       if (share.show_aircraft) { row.aircraft_type = f.aircraft_type; row.tail_number = f.tail_number; }
       if (share.show_notes && f.remarks) row.note = f.remarks;
-      if (share.show_photos) row.photo_ids = photoIdsByFlight[f.id] ?? [];
       return row;
     });
   }

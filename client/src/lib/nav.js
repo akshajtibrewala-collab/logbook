@@ -22,7 +22,7 @@ export function sectionOf(pathname) {
   if (p === '/more' || p === '/stats' || p === '/settings' || p === '/aircraft' || p.startsWith('/aircraft/')
     || p === '/logbook/data' || p === '/logbook/share' || p === '/logbook/print' || p === '/airports' || p.startsWith('/airports/')) return 'more';
   if (p === '/logbook' || p.startsWith('/logbook/') || p === '/flying' || p === '/currency' || p.startsWith('/currency/')
-    || p === '/milestones' || p === '/weather' || p.startsWith('/weather/')) return 'flying';
+    || p === '/milestones') return 'flying';
   return 'home';
 }
 
@@ -97,5 +97,5 @@ export function addItemsFor(pathname) {
 export const LEGACY_ROUTES = [
   '/', '/logbook', '/logbook/5', '/logbook/ground/1', '/travel', '/travel/181', '/logbook/data', '/aircraft', '/aircraft/new', '/aircraft/15',
   '/logbook/new', '/logbook/quick', '/logbook/share', '/logbook/print', '/logbook/5/edit', '/logbook/ground/new', '/logbook/ground/1/edit',
-  '/milestones', '/currency', '/currency/new', '/currency/1', '/weather', '/weather/settings', '/map', '/stats',
+  '/milestones', '/currency', '/currency/new', '/currency/1', '/map', '/stats',
 ];
