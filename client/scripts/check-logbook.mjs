@@ -100,13 +100,13 @@ for (const w of [320, 390, 430]) for (const scale of [100, 200]) {
   await sw.focus(); await p.keyboard.press('ArrowDown'); await p.waitForTimeout(500);
   ok(await sw.getAttribute('aria-expanded') === 'true', 'ArrowDown does not open the switcher');
   const items = (await menu.allTextContents()).map((t) => t.trim());
-  ok(items.length === 5 && ['Logbook', 'Currency', 'Milestones', 'Costs', 'Weather'].every((n) => items.includes(n)), `switcher pages: ${items.join(', ')}`);
+  ok(items.length === 4 && ['Logbook', 'Currency', 'Milestones', 'Weather'].every((n) => items.includes(n)) && !items.includes('Costs'), `switcher pages: ${items.join(', ')}`);
   await menu.first().focus(); await p.keyboard.press('ArrowDown');
   ok(await p.evaluate(() => (document.activeElement && document.activeElement.textContent || '').trim()) === 'Currency', 'ArrowDown does not move to the next page');
   await p.keyboard.press('Escape'); await p.waitForTimeout(500);
   ok(await sw.getAttribute('aria-expanded') === 'false', 'Escape does not close the switcher');
   ok(await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('bc-sw')), 'Escape does not return focus to the switcher');
-  for (const [name, re] of [['Currency', /currency/], ['Milestones', /milestones/], ['Costs', /costs/], ['Weather', /weather/], ['Logbook', /logbook$/]]) {
+  for (const [name, re] of [['Currency', /currency/], ['Milestones', /milestones/], ['Weather', /weather/], ['Logbook', /logbook$/]]) {
     await p.locator('.bc-sw').click(); await p.waitForTimeout(400);
     await menu.filter({ hasText: name }).click(); await p.waitForTimeout(800);
     ok(re.test(new URL(p.url()).pathname), `switcher: "${name}" went to ${new URL(p.url()).pathname}`);

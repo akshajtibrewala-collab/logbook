@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CloudSun, DollarSign, Luggage, Map as MapIcon, Plane, ShieldCheck, Target } from 'lucide-react';
+import { BookOpen, CloudSun, Luggage, Map as MapIcon, Plane, ShieldCheck, Target } from 'lucide-react';
 import { api } from '../../lib/api.js';
-import { moneyWhole } from '../../lib/costDisplay.js';
 import { fmtHours } from '../../lib/hours.js';
-import useCostsData from '../../hooks/useCostsData.js';
 import '../../ds/hub.css';
 
 /**
- * The Home hub: one tile per module that exists (Logbook, Travel, Map, Aircraft, Currency, Milestones, Weather, Costs). Each tile is a real link with a
- * name and one live value; the value is the same number its own page shows (computed by the lib/ functions behind useHomeData and useCostsData).
+ * The Home hub: one tile per module that exists (Logbook, Travel, Map, Aircraft, Currency, Milestones, Weather). Each tile is a real link with a
+ * name and one live value; the value is the same number its own page shows (computed by the lib/ functions behind useHomeData).
  * Sky dot = pilot, violet = passenger, the status dot is ok/warn. No tile exists for a module that has no page.
  */
 function Tile({ to, icon: Icon, name, value, sub, dot, label }) {
@@ -41,12 +39,6 @@ function WeatherTile() {
   return <Tile to="/weather" icon={CloudSun} name="Weather" value={value} />;
 }
 
-function CostsTile() {
-  const { computed, error } = useCostsData('private');
-  const value = computed ? moneyWhole(computed.total) : error ? 'Open' : ' ';
-  return <Tile to="/costs" icon={DollarSign} dot="pilot" name="Costs" value={value} label={computed ? `Costs, ${value} spent` : 'Costs'} />;
-}
-
 export default function HubTiles({ pilotCount, passengerCount, passengerHours, airports, aircraftCount, status, milestonePercent }) {
   return (
     <div className="hub-grid">
@@ -57,7 +49,6 @@ export default function HubTiles({ pilotCount, passengerCount, passengerHours, a
       <Tile to="/currency" icon={ShieldCheck} dot={status.count === 0 ? 'ok' : 'warn'} name="Currency" value={status.count === 0 ? 'All clear' : `${status.count} due`} />
       <Tile to="/milestones" icon={Target} dot="pilot" name="Milestones" value={milestonePercent == null ? 'Open' : `${milestonePercent}%`} label={milestonePercent == null ? 'Milestones' : `Milestones, ${milestonePercent} percent toward the next certificate`} />
       <WeatherTile />
-      <CostsTile />
     </div>
   );
 }

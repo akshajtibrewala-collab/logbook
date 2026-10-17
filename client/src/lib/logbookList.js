@@ -109,7 +109,7 @@ export function rowLabels(e) {
 
 /**
  * What a calm list row shows: three pieces of information and no more. Primary (route or topics), secondary (the date, always, then the
- * tail or aircraft type) and one trailing value (the hours). Cost, instructor, landings and photos live in the detail.
+ * tail or aircraft type) and one trailing value (the hours). Instructor, landings and photos live in the detail.
  */
 export function calmRow(e, fmtDate) {
   const d = e.data || {};

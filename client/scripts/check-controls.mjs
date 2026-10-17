@@ -31,7 +31,7 @@ async function ids() {
 const { pilot, pax } = await ids();
 const ROUTES = ['', 'logbook', `logbook/${pilot}`, 'logbook/ground/1', 'travel', `travel/${pax}`, 'logbook/data', 'aircraft', 'aircraft/new', 'aircraft/15',
   'logbook/new', 'logbook/new?role=passenger', 'logbook/quick', 'logbook/share', `logbook/${pilot}/edit`, 'logbook/ground/new', 'logbook/ground/1/edit',
-  'milestones', 'currency', 'currency/new', 'currency/1', 'weather', 'weather/settings', 'costs', 'costs/settings', 'costs/spending', 'costs/phases', 'costs/expenses', 'costs/projection', 'map', 'stats', 'more', 'settings', 'flying'];
+  'milestones', 'currency', 'currency/new', 'currency/1', 'weather', 'weather/settings', 'map', 'stats', 'more', 'settings', 'flying'];
 
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXE });
 const ctx = await browser.newContext({ viewport: { width: WIDTH, height: 800 }, reducedMotion: 'reduce' });

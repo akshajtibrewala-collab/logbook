@@ -22,10 +22,10 @@ let pilot = 5, pax = 181;
 try { const f = await (await fetch(`${API}/api/flights`)).json(); pilot = f.find((x) => x.role === 'pilot')?.id ?? pilot; pax = f.find((x) => x.role === 'passenger')?.id ?? pax; } catch { /* defaults */ }
 const ROUTES = ['', 'logbook', `logbook/${pilot}`, 'logbook/ground/1', 'travel', `travel/${pax}`, 'logbook/data', 'aircraft', 'aircraft/new', 'aircraft/15',
   'logbook/new', 'logbook/new?role=passenger', 'logbook/quick', 'logbook/share', `logbook/${pilot}/edit`, 'logbook/ground/new', 'logbook/ground/1/edit',
-  'milestones', 'currency', 'currency/new', 'currency/1', 'weather', 'weather/settings', 'costs', 'costs/settings', 'costs/spending', 'costs/phases', 'costs/expenses', 'costs/projection', 'map', 'stats', 'more', 'settings', 'flying'];
+  'milestones', 'currency', 'currency/new', 'currency/1', 'weather', 'weather/settings', 'map', 'stats', 'more', 'settings', 'flying'];
 
-const FORM = /^(logbook\/(new|quick|ground\/new|\d+\/edit|ground\/\d+\/edit|share)|aircraft\/(new|\d+)|currency\/(new|\d+)|weather\/settings|costs\/settings|settings)/;
-const FLYING = /^(logbook$|logbook\/\d+$|logbook\/ground\/\d+$|currency$|milestones$|costs$|weather$|flying$)/;
+const FORM = /^(logbook\/(new|quick|ground\/new|\d+\/edit|ground\/\d+\/edit|share)|aircraft\/(new|\d+)|currency\/(new|\d+)|weather\/settings|settings)/;
+const FLYING = /^(logbook$|logbook\/\d+$|logbook\/ground\/\d+$|currency$|milestones$|weather$|flying$)/;
 const measure = () => {
   const rect = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height }; };
   const bar = document.querySelector('header.ds-topbar'), nav = document.querySelector('nav[aria-label="Primary"]');
@@ -106,7 +106,7 @@ for (const w of WIDTHS) {
       if (f.maxR > m.bar.r + 1) fails.push(`/${route} @${w}: content runs ${(f.maxR - m.bar.r).toFixed(0)}px past the bar's right edge (${f.maxR.toFixed(0)} vs ${m.bar.r.toFixed(0)})`);
       if (!form && w >= 768 && Math.abs(f.firstL - m.bar.l) > 1.5) fails.push(`/${route} @${w}: first content element at ${f.firstL.toFixed(0)}, the bar's left edge is ${m.bar.l.toFixed(0)}`);
       if (f.gap > 48) fails.push(`/${route} @${w}: ${f.gap}px of empty space at y=${f.gapAt}`);
-      if (/^(logbook|currency|milestones|costs|weather|flying)$/.test(route)) { // a Flying root: the title is the switcher (the five tabs became its menu)
+      if (/^(logbook|currency|milestones|weather|flying)$/.test(route)) { // a Flying root: the title is the switcher (the Flying pages became its menu)
         tabsSeen.push(route);
         if (!f.switcher) fails.push(`/${route} @${w}: no Flying switcher (a menu button with aria-expanded and an accessible name) in the top bar`);
       }

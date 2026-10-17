@@ -2,7 +2,7 @@
 //   1. every key/value row, disclosure row and opened block equals the card's inner width (within 1px);
 //   2. every key/value label and every disclosure label in one card starts at the same x, and every value and disclosure value/chevron ends at
 //      the same x (a disclosure used to be inset 8px further in and, on a phone, a further Add-button clearance on its right, so "All times",
-//      "Landings and approaches", "Cost" and "Local times" looked narrower than the card they sit in).
+//      "Landings and approaches" and "Local times" looked narrower than the card they sit in).
 // Run across the device matrix (client/scripts/lib/devices.mjs) and text scales. Opens every disclosure so opened blocks are measured too.
 //
 //   PLAYWRIGHT_CORE=<playwright-core folder> BROWSER_EXE=<chrome.exe for the Android profiles> \
@@ -37,7 +37,7 @@ await probeCtx.close();
 
 const ROUTES = [
   `/logbook/${ids.pilotRich}`, `/logbook/${ids.pilotBare}`, `/travel/${ids.paxRich}`, `/travel/${ids.paxBare}`, `/logbook/ground/${ids.ground}`, `/aircraft/${ids.aircraft}`,
-  '/', '/logbook', '/travel', '/milestones', '/currency', '/weather', '/costs', '/costs/spending', '/costs/phases', '/costs/expenses', '/costs/projection', '/stats', '/more', '/settings', '/aircraft', '/logbook/data',
+  '/', '/logbook', '/travel', '/milestones', '/currency', '/weather', '/stats', '/more', '/settings', '/aircraft', '/logbook/data',
 ];
 
 const measure = () => {

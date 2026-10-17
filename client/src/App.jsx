@@ -6,7 +6,7 @@ import Skeleton from './components/Skeleton.jsx';
 import ChunkBoundary from './components/ChunkBoundary.jsx';
 
 // Home is the only page in the first load. Everything else loads on demand behind the skeleton below: the Logbook and its Ledger, the log-a-flight form, flight and
-// ground-session detail, Map, Stats, Costs, the CSV and Aircraft screens, and (in main.jsx) the hidden /design lab.
+// ground-session detail, Map, Stats, the CSV and Aircraft screens, and (in main.jsx) the hidden /design lab.
 const Logbook = lazy(() => import('./pages/Logbook.jsx'));
 const FlightForm = lazy(() => import('./pages/FlightForm.jsx'));
 const FlightDetail = lazy(() => import('./pages/FlightDetail.jsx'));
@@ -21,12 +21,6 @@ const Currency = lazy(() => import('./pages/Currency.jsx'));
 const ExpirationForm = lazy(() => import('./pages/ExpirationForm.jsx'));
 const Weather = lazy(() => import('./pages/Weather.jsx'));
 const WeatherSettings = lazy(() => import('./pages/WeatherSettings.jsx'));
-const Costs = lazy(() => import('./pages/Costs.jsx'));
-const CostSettings = lazy(() => import('./pages/CostSettings.jsx'));
-const CostsSpending = lazy(() => import('./pages/CostsSpending.jsx'));
-const CostsPhases = lazy(() => import('./pages/CostsPhases.jsx'));
-const CostsExpenses = lazy(() => import('./pages/CostsExpenses.jsx'));
-const CostsProjection = lazy(() => import('./pages/CostsProjection.jsx'));
 const GroundSessionForm = lazy(() => import('./pages/GroundSessionForm.jsx'));
 const QuickFlight = lazy(() => import('./pages/QuickFlight.jsx'));
 const ShareSettings = lazy(() => import('./pages/ShareSettings.jsx'));
@@ -80,12 +74,6 @@ export default function App() {
           <Route path="/currency/:id" element={<ExpirationForm />} />
           <Route path="/weather" element={<Weather />} />
           <Route path="/weather/settings" element={<WeatherSettings />} />
-          <Route path="/costs" element={<Costs />} />
-          <Route path="/costs/settings" element={<CostSettings />} />
-          <Route path="/costs/spending" element={<CostsSpending />} />
-          <Route path="/costs/phases" element={<CostsPhases />} />
-          <Route path="/costs/expenses" element={<CostsExpenses />} />
-          <Route path="/costs/projection" element={<CostsProjection />} />
           <Route path="/map" element={<Suspense fallback={<div className="ds-map-boot" aria-busy="true" />}><MapPage /></Suspense>} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/more" element={<More />} />

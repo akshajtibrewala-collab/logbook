@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Copy, Luggage } from 'lucide-react';
-import { api, fetchAllRates } from '../lib/api.js';
+import { api } from '../lib/api.js';
 import { fmtHours, parseHours } from '../lib/hours.js';
-import { computeFlightCost, fmtMoney, isPastCostCutoff } from '../lib/cost.js';
 import { formatDate } from '../lib/calendar.js';
 import HoursInput from '../components/HoursInput.jsx';
 import CountInput from '../components/CountInput.jsx';
@@ -49,7 +48,7 @@ const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in loc
 const blank = (role) => ({
   date: today(), role: role === 'passenger' ? 'passenger' : 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
   airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
-  instructor: '', invoice_ref: '', // carried through unchanged on edit: the server replaces the whole row, so leaving them out would erase them
+  instructor: '', invoice_ref: '', // carried through unchanged on edit (cost_override and invoice_ref have no inputs any more): the server replaces the whole row, so leaving them out would erase them
   dep_time: '', arr_time: '', arr_day_offset: '',
   ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
   ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
@@ -91,8 +90,6 @@ export default function FlightForm() {
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [rates, setRates] = useState(null);
-  const [phases, setPhases] = useState(null);
   const [defaultGroundTime, setDefaultGroundTime] = useState(null);
   const [groundTouched, setGroundTouched] = useState(false);
   const [params] = useSearchParams();
@@ -186,8 +183,6 @@ export default function FlightForm() {
     const timer = setTimeout(() => saveDraft(DRAFT_NAME, form), 400);
     return () => clearTimeout(timer);
   }, [form, id]);
-  useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
-  useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
   useEffect(() => { api.getSettings().then((s) => setDefaultGroundTime(s.default_ground_time)).catch(() => {}); }, []);
 
   // Auto-fills the default ground briefing time once dual is logged on a *new* flight, only while the
@@ -218,13 +213,6 @@ export default function FlightForm() {
     }
     set('role')(role);
   }
-
-  const previewCost = rates && phases ? computeFlightCost({
-    date: form.date, aircraft_id: form.aircraft_id,
-    total_time: parseHours(form.total_time) || 0, simulator_time: parseHours(form.simulator_time) || 0,
-    dual_received: parseHours(form.dual_received) || 0, ground_time: parseHours(form.ground_time) || 0,
-    cost_override: form.cost_override.trim() === '' ? null : form.cost_override,
-  }, rates, phases) : null;
 
   const showErrors = (errs) => {
     setErrors(errs);
@@ -299,7 +287,6 @@ export default function FlightForm() {
     }
   }
 
-  const costOff = Boolean(rates) && isPastCostCutoff(form.date, rates.cost_cutoff_date);
   const pilot = form.role === 'pilot';
 
   if (loading) return <p className="ds-sub" role="status">Loading…</p>;
@@ -406,22 +393,6 @@ export default function FlightForm() {
                   {form.airline.trim() && <div style={{ marginTop: 8 }}><AirlineBadge airline={form.airline} /></div>}
                 </div>
                 <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
-              </MoreBlock>
-              <MoreBlock title="Invoice">
-                <TextField label="Invoice reference (optional)" value={form.invoice_ref} onChange={set('invoice_ref')} error={errors.invoice_ref} placeholder="00-000000" />
-              </MoreBlock>
-              <MoreBlock title="Cost">
-                {costOff ? (
-                  <p className="cl-note">Costs aren’t counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your “Commercial certificate date” in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
-                ) : (
-                  <>
-                    <div className="cl-dl"><div><span className="k">Calculated cost</span><span className="v">{!previewCost ? '—' : previewCost.total !== null ? fmtMoney(previewCost.total) : 'Not tracked'}</span></div></div>
-                    {previewCost?.total === null && <p className="cl-note">This date isn’t inside a cost-tracked training phase, so no cost is calculated — set an override below if you want to record one anyway.</p>}
-                    {previewCost?.missingRate && <p className="cl-note">A rate isn’t set for part of this flight yet — set it on the Costs screen.</p>}
-                    <TextField label="Manual override (optional, e.g. to match an invoice)" type="number" value={form.cost_override} onChange={set('cost_override')} error={errors.cost_override} placeholder="Use calculated cost" />
-                    {previewCost?.override && previewCost.computedTotal !== null && <p className="cl-note">Calculated cost would be {fmtMoney(previewCost.computedTotal)}.</p>}
-                  </>
-                )}
               </MoreBlock>
               <MoreBlock title="Notes">
                 <label className="block"><span className="mb-1 block text-xs text-slate-400">Remarks</span>

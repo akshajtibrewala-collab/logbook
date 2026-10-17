@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
-import { api, fetchAllRates } from '../lib/api.js';
+import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
-import { computeGroundSessionCost, fmtMoney } from '../lib/cost.js';
 import ErrorNote from '../components/ErrorNote.jsx';
 import Button from '../components/Button.jsx';
 import { MnFold, MnKv, MnSkeleton } from '../components/mn/Mn.jsx';
 import { formatDate as fmtDate } from '../lib/calendar.js';
 import '../ds/logbook.css';
 
-/** A ground session in the minimalist detail layout: its hours (never part of flight hours), topics, instructor, notes and cost. */
+/** A ground session in the minimalist detail layout: its hours (never part of flight hours), topics, instructor and notes. */
 export default function GroundSessionDetail() {
   const { id } = useParams();
   const [session, setSession] = useState(null);
   const [error, setError] = useState('');
-  const [rates, setRates] = useState(null);
-  const [phases, setPhases] = useState(null);
   const [open, setOpen] = useState({});
   const fold = (k) => ({ open: Boolean(open[k]), onToggle: () => setOpen((o) => ({ ...o, [k]: !o[k] })) });
 
@@ -26,10 +23,7 @@ export default function GroundSessionDetail() {
     api.getGroundSession(id).then(setSession).catch((e) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
-  useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
-  useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
 
-  const cost = session && rates && phases ? computeGroundSessionCost(session, rates, phases) : null;
 
   if (error) return <div className="cl mn"><ErrorNote message={error} onRetry={load} /></div>;
   if (!session) return <div className="cl mn"><MnSkeleton rows={2} /></div>;
@@ -47,15 +41,6 @@ export default function GroundSessionDetail() {
           <MnKv k="Instructor" v={session.instructor} />
           <MnKv k="Counts toward" v="Ground time only" />
           {session.notes && <MnFold label="Notes" value="" {...fold('notes')}><p>{session.notes}</p></MnFold>}
-          {cost && (cost.total > 0 || cost.override) && (
-            <MnFold label="Cost" value={fmtMoney(cost.total)} {...fold('cost')}>
-              <div>
-                <MnKv k="Cost" v={fmtMoney(cost.total)} />
-                {cost.override && <p className="mn-note">Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}</p>}
-                {cost.missingRate && <p className="mn-note" style={{ color: 'var(--ds-bad)' }}>The ground rate wasn't set for this date. See Costs settings.</p>}
-              </div>
-            </MnFold>
-          )}
         </div>
 
         <div className="mn-actions">

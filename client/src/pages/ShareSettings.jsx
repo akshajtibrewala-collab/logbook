@@ -62,7 +62,7 @@ export default function ShareSettings() {
       {share && (
         <section className="card card-elevated p-4">
           <h2 className="stat-title text-sm text-accent-strong">Public link</h2>
-          <p className="mt-1 text-sm text-slate-400">Anyone with the link can view a read-only summary — never edit anything, and never costs, instructors or debriefs. No sign-in needed.</p>
+          <p className="mt-1 text-sm text-slate-400">Anyone with the link can view a read-only summary — never edit anything, and never instructors or debriefs. No sign-in needed.</p>
 
           {!share.enabled ? (
             <Button className="mt-3" size="md" disabled={busy} onClick={enable}>Create public link</Button>

@@ -14,7 +14,6 @@ export const BUDGETS = {
   '': 45,            // Home
   logbook: 40,
   travel: 40,
-  costs: 45,
   currency: 45,
   milestones: 50,
   weather: 45,

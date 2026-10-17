@@ -20,7 +20,7 @@ export default function More() {
           <BcMenuRow to="/logbook/print" icon={Printer} title="Print summary" note="Hours as a PDF" />
         </BcGroup>
         <BcGroup label="App">
-          <BcMenuRow to="/settings" icon={SettingsIcon} title="Settings" note="Glass, weather, costs" />
+          <BcMenuRow to="/settings" icon={SettingsIcon} title="Settings" note="Glass, weather" />
         </BcGroup>
       </div>
     </div>

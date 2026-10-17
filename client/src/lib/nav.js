@@ -22,7 +22,7 @@ export function sectionOf(pathname) {
   if (p === '/more' || p === '/stats' || p === '/settings' || p === '/aircraft' || p.startsWith('/aircraft/')
     || p === '/logbook/data' || p === '/logbook/share' || p === '/logbook/print' || p === '/airports' || p.startsWith('/airports/')) return 'more';
   if (p === '/logbook' || p.startsWith('/logbook/') || p === '/flying' || p === '/currency' || p.startsWith('/currency/')
-    || p === '/milestones' || p === '/weather' || p.startsWith('/weather/') || p === '/costs' || p.startsWith('/costs/')) return 'flying';
+    || p === '/milestones' || p === '/weather' || p.startsWith('/weather/')) return 'flying';
   return 'home';
 }
 
@@ -51,12 +51,6 @@ const TITLES = [
   [/^\/milestones$/, 'Milestones'],
   [/^\/weather\/settings$/, 'Weather settings'],
   [/^\/weather$/, 'Weather'],
-  [/^\/costs\/settings$/, 'Cost settings'],
-  [/^\/costs\/spending$/, 'Spending'],
-  [/^\/costs\/phases$/, 'Training phases'],
-  [/^\/costs\/expenses$/, 'Expenses'],
-  [/^\/costs\/projection$/, 'Projection'],
-  [/^\/costs$/, 'Costs'],
   [/^\/map$/, 'Map'],
   [/^\/stats$/, 'Stats'],
   [/^\/more$/, 'More'],
@@ -74,12 +68,12 @@ export const isRoot = (pathname) => {
   return ['/', '/logbook', '/travel', '/map', '/more', '/flying'].includes(p);
 };
 
-/** Forms, the print view and Settings-style leaf pages don't show the Add button (it would sit over the Save bar). Expenses too: every row ends in a Delete icon the floating button would rest over at large text sizes (the page has its own Add expense button). */
-const NO_ADD = [/^\/logbook\/(new|quick|print|data|share)$/, /^\/logbook\/\d+\/edit$/, /^\/logbook\/ground\/(new|\d+\/edit)$/, /^\/aircraft\/(new|\d+)$/, /^\/currency\/(new|\d+)$/, /^\/(weather|costs)\/settings$/, /^\/costs\/expenses$/, /^\/settings$/, /^\/more$/];
+/** Forms, the print view and Settings-style leaf pages don't show the Add button (it would sit over the Save bar). */
+const NO_ADD = [/^\/logbook\/(new|quick|print|data|share)$/, /^\/logbook\/\d+\/edit$/, /^\/logbook\/ground\/(new|\d+\/edit)$/, /^\/aircraft\/(new|\d+)$/, /^\/currency\/(new|\d+)$/, /^\/weather\/settings$/, /^\/settings$/, /^\/more$/];
 export const showAdd = (pathname) => !NO_ADD.some((re) => re.test(clean(pathname)));
 
 /** Focused screens: forms (and the settings forms) hide the floating tab bar so nothing sits over the Save bar or the keyboard. */
-const FOCUSED = [/^\/logbook\/(new|quick)$/, /^\/logbook\/\d+\/edit$/, /^\/logbook\/ground\/(new|\d+\/edit)$/, /^\/aircraft\/new$/, /^\/currency\/(new|\d+)$/, /^\/(weather|costs)\/settings$/];
+const FOCUSED = [/^\/logbook\/(new|quick)$/, /^\/logbook\/\d+\/edit$/, /^\/logbook\/ground\/(new|\d+\/edit)$/, /^\/aircraft\/new$/, /^\/currency\/(new|\d+)$/, /^\/weather\/settings$/];
 export const isFocusedForm = (pathname) => FOCUSED.some((re) => re.test(clean(pathname)));
 
 /**
@@ -103,5 +97,5 @@ export function addItemsFor(pathname) {
 export const LEGACY_ROUTES = [
   '/', '/logbook', '/logbook/5', '/logbook/ground/1', '/travel', '/travel/181', '/logbook/data', '/aircraft', '/aircraft/new', '/aircraft/15',
   '/logbook/new', '/logbook/quick', '/logbook/share', '/logbook/print', '/logbook/5/edit', '/logbook/ground/new', '/logbook/ground/1/edit',
-  '/milestones', '/currency', '/currency/new', '/currency/1', '/weather', '/weather/settings', '/costs', '/costs/settings', '/costs/spending', '/costs/phases', '/costs/expenses', '/costs/projection', '/map', '/stats',
+  '/milestones', '/currency', '/currency/new', '/currency/1', '/weather', '/weather/settings', '/map', '/stats',
 ];

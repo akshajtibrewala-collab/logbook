@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { api, fetchAllRates } from '../lib/api.js';
+import { api } from '../lib/api.js';
 import { fmtHours, parseHours } from '../lib/hours.js';
-import { computeGroundSessionCost, fmtMoney, isPastCostCutoff } from '../lib/cost.js';
 import { formatDate } from '../lib/calendar.js';
 import HoursInput from '../components/HoursInput.jsx';
 import TextField from '../components/TextField.jsx';
@@ -16,7 +15,7 @@ import useInstructorNames from '../hooks/useInstructorNames.js';
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
-const blank = () => ({ date: today(), hours: fmtHours(1), instructor: '', topics: '', notes: '', cost_override: '' });
+const blank = () => ({ date: today(), hours: fmtHours(1), instructor: '', topics: '', notes: '', cost_override: '' }); // cost_override has no input any more but is carried through unchanged on edit
 
 function fromSession(s) {
   return {
@@ -45,22 +44,13 @@ export default function GroundSessionForm() {
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [rates, setRates] = useState(null);
-  const [phases, setPhases] = useState(null);
 
   useEffect(() => {
     if (!id) return;
     api.getGroundSession(id).then((s) => setForm(fromSession(s))).catch((e) => setMessage(e.message)).finally(() => setLoading(false));
   }, [id]);
-  useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
-  useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
-
-  const previewCost = rates && phases ? computeGroundSessionCost({
-    date: form.date, hours: parseHours(form.hours) || 0,
-    cost_override: form.cost_override.trim() === '' ? null : form.cost_override,
-  }, rates, phases) : null;
 
   async function submit(e) {
     e.preventDefault();
@@ -95,8 +85,6 @@ export default function GroundSessionForm() {
     }
   }
 
-  const costOff = Boolean(rates) && isPastCostCutoff(form.date, rates.cost_cutoff_date);
-
   if (loading) return <p className="text-slate-400">Loading…</p>;
 
   return (
@@ -115,40 +103,6 @@ export default function GroundSessionForm() {
             className="gl-field w-full p-3 text-base" />
         </div>
       </Section>
-
-      {costOff ? (
-        <section className="card card-elevated p-4">
-          <h2 className="stat-title text-sm text-accent-strong">Cost</h2>
-          <p className="mt-1 text-xs text-slate-500">Costs aren't counted for dates on or after {formatDate(rates.cost_cutoff_date)} (your "Commercial certificate date" in Cost settings), so the cost fields are hidden here. Anything already saved on this entry is kept.</p>
-        </section>
-      ) : (
-      <>
-      <section className="card card-elevated p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="stat-title text-sm text-accent-strong">Cost</h2>
-          <span className="stat-value text-xl">
-            {!previewCost ? '—'
-              : previewCost.total !== null ? fmtMoney(previewCost.total)
-              : <span className="text-sm font-normal text-slate-500">Not tracked</span>}
-          </span>
-        </div>
-        {previewCost?.total === null && (
-          <p className="mt-1 text-xs text-slate-500">This date isn't inside a cost-tracked training phase, so no cost is calculated — set an override below if you want to record one anyway.</p>
-        )}
-        {previewCost?.missingRate && <p className="mt-1 text-xs text-slate-500">The ground rate isn't set yet — set it on the Costs screen.</p>}
-      </section>
-
-      <Disclosure title="Manual cost override" defaultOpen={Boolean(form.cost_override.trim())}>
-        <div className="col-span-2">
-          <TextField label="Override (optional, e.g. to match an invoice)" type="number" value={form.cost_override}
-            onChange={set('cost_override')} error={errors.cost_override} placeholder="Use calculated cost" />
-          {previewCost?.override && previewCost.computedTotal !== null && (
-            <p className="mt-1 text-xs text-slate-500">Calculated cost would be {fmtMoney(previewCost.computedTotal)}.</p>
-          )}
-        </div>
-      </Disclosure>
-      </>
-      )}
 
       {message && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{message}</p>}
 

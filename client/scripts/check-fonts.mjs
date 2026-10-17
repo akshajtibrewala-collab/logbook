@@ -17,7 +17,7 @@ const pw = await import(pathToFileURL(path.join(process.env.PLAYWRIGHT_CORE, 'in
 const get = async (p) => (await fetch(`${API}/api${p}`)).json();
 const aircraftList = await get('/aircraft').catch(() => []);
 const flights = await get('/flights'); const pilot = flights.find((f) => f.role === 'pilot')?.id, pax = flights.find((f) => f.role === 'passenger')?.id;
-const ROUTES = ['/', '/logbook', `/logbook/${pilot}`, '/travel', `/travel/${pax}`, '/aircraft', `/aircraft/${aircraftList.find((a) => a.tail_number)?.id ?? 1}`, '/logbook/new', '/milestones', '/currency', '/weather', '/costs', '/costs/expenses', '/map', '/stats', '/more', '/settings', '/design'];
+const ROUTES = ['/', '/logbook', `/logbook/${pilot}`, '/travel', `/travel/${pax}`, '/aircraft', `/aircraft/${aircraftList.find((a) => a.tail_number)?.id ?? 1}`, '/logbook/new', '/milestones', '/currency', '/weather', '/map', '/stats', '/more', '/settings', '/design'];
 const origin = new URL(BASE).origin;
 const photoHosts = new Set(PHOTO_ALLOWED_HOSTS);
 const PHOTO_RE = new RegExp(`^https://(${PHOTO_ALLOWED_HOSTS.map((h) => h.replace(/\./g, '\\.')).join('|')})/`);

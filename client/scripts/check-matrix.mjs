@@ -24,7 +24,7 @@ const browsers = await launchBrowsers(pw, { chromiumExe: process.env.BROWSER_EXE
 
 const CATEGORIES = {
   home: ['/'], list: ['/logbook', '/travel'], detail: ['/logbook/:pilot', '/travel/:pax', '/logbook/ground/:ground', '/aircraft/:aircraft'],
-  form: ['/logbook/new', '/logbook/quick', '/aircraft/new'], flying: ['/milestones', '/currency', '/weather', '/costs', '/costs/spending', '/costs/expenses', '/costs/projection'],
+  form: ['/logbook/new', '/logbook/quick', '/aircraft/new'], flying: ['/milestones', '/currency', '/weather'],
   explore: ['/stats', '/map'], settings: ['/more', '/settings', '/logbook/data', '/aircraft'],
 };
 

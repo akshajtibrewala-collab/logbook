@@ -1,7 +1,6 @@
 // PRODUCTION-SHAPED CHECK (read-only). Run against a scratch COPY built from a production backup (never against production itself). It reads the production
-// expectations from the private local config (client/scripts/.local-expected.json, "production": totals, total spent, cost per pilot hour, and the blank-instructor
+// expectations from the private local config (client/scripts/.local-expected.json, "production": totals and the blank-instructor
 // "cases"), then proves on the screens:
-//   - the Costs page: total spent and cost per pilot hour
 //   - the Logbook rows: the cases (a flight with no instructor says "Solo" only when it has solo time), the usual instructor shows nothing on a row, any other
 //     instructor shows as first initial and surname, and the accessible names still carry the full name
 //
@@ -25,10 +24,7 @@ const initial = (n) => { const p = n.trim().split(/\s+/); return `${p[0][0].toUp
 
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXE });
 const page = await (await browser.newContext({ viewport: { width: 1100, height: 900 }, reducedMotion: 'reduce' })).newPage();
-await page.goto(`${BASE}/costs`, { waitUntil: 'networkidle' }); await page.waitForTimeout(1200);
-const ct = (await page.locator('#main').innerText()).replace(/\s+/g, ' ');
-rec('Costs: total spent', money(ct.match(/Total spent \$([\d,.]+)/)?.[1]), exp.totalSpent, Math.abs(money(ct.match(/Total spent \$([\d,.]+)/)?.[1]) - exp.totalSpent) < 0.005);
-rec('Costs: per pilot hour', money(ct.match(/Per pilot hour \$([\d,.]+)/)?.[1]), exp.perPilotHour, Math.abs(money(ct.match(/Per pilot hour \$([\d,.]+)/)?.[1]) - exp.perPilotHour) < 0.005);
+await page.goto(`${BASE}/logbook`, { waitUntil: 'networkidle' }); // (the Costs page was removed from the UI 2026-10-16: its total-spent and cost-per-hour checks went with it)
 rec('pilot flights in the data', pilot.length, exp.pilotFlights, pilot.length === exp.pilotFlights);
 
 await page.goto(`${BASE}/logbook`, { waitUntil: 'networkidle' });

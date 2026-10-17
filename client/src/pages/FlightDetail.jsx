@@ -4,9 +4,8 @@ import { Pencil } from 'lucide-react';
 import { Sheet } from '../ds/Overlays.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { registrationMarker } from '../lib/regSource.js';
-import { api, fetchAllRates } from '../lib/api.js';
+import { api } from '../lib/api.js';
 import { fmtHours } from '../lib/hours.js';
-import { computeFlightCost, fmtMoney } from '../lib/cost.js';
 import Button from '../components/Button.jsx';
 import ErrorNote from '../components/ErrorNote.jsx';
 import PhotoGallery from '../components/PhotoGallery.jsx';
@@ -42,8 +41,6 @@ export default function FlightDetail() {
   const base = useLocation().pathname.startsWith('/travel') ? '/travel' : '/logbook';
   const [flight, setFlight] = useState(null);
   const [error, setError] = useState('');
-  const [rates, setRates] = useState(null);
-  const [phases, setPhases] = useState(null);
   const [tz, setTz] = useState({});
   const [open, setOpen] = useState({});
   const [showCode, setShowCode] = useState(false);
@@ -60,8 +57,6 @@ export default function FlightDetail() {
     api.getFlight(id).then(setFlight).catch((e) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
-  useEffect(() => { fetchAllRates().then(setRates).catch(() => {}); }, []);
-  useEffect(() => { api.listTrainingPhases().then(setPhases).catch(() => {}); }, []);
   // Local departure/arrival times are stored in wall-clock form (dep_time/arr_time); the airports' zones
   // are only looked up here to also show the UTC instant, same as the flight form's live preview.
   useEffect(() => {
@@ -73,7 +68,6 @@ export default function FlightDetail() {
     }).catch(() => {});
   }, [flight?.dep_time, flight?.arr_time, flight?.departure_airport, flight?.arrival_airport]);
 
-  const cost = flight && rates && phases ? computeFlightCost(flight, rates, phases) : null;
 
   const route = flight ? [flight.departure_airport, ...flight.stops.map((s) => s.airport_code), flight.arrival_airport].filter(Boolean) : [];
   const pilot = !flight || isPilotFlight(flight);
@@ -195,15 +189,6 @@ export default function FlightDetail() {
             </MnFold>
           )}
           {photoCount > 0 && <MnFold label="Photos" value={photoCount} {...fold('photos')}><PhotoGallery flightId={flight.id} /></MnFold>}
-          {pilot && cost && (cost.total > 0 || cost.override) && (
-            <MnFold label="Cost" value={fmtMoney(cost.total)} {...fold('cost')}>
-              <div>
-                <MnKv k="Cost" v={fmtMoney(cost.total)} />
-                {cost.override && <p className="mn-note">Manual override{cost.computedTotal !== null ? ` · calculated was ${fmtMoney(cost.computedTotal)}` : ' · outside a cost-tracked phase'}</p>}
-                {cost.missingRate && <p className="mn-note" style={{ color: 'var(--ds-bad)' }}>A rate wasn't set for part of this flight. See Costs settings.</p>}
-              </div>
-            </MnFold>
-          )}
         </div>
 
         {marker && (

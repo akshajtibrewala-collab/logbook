@@ -126,7 +126,7 @@ for (const d of profiles) for (const TEXT of TEXTS) {
     if (hidden.length) say(`covered: ${tag} ${route} (${view}): ${hidden.join(', ')} sit under the Add button or the tab bar at the end of the page`);
   }
   // flat: older form pages span the column
-  if (d.kind === 'phone') for (const route of ['/aircraft/new', '/currency/new', '/logbook/ground/new', '/logbook/quick', '/costs/settings', '/weather/settings', '/logbook/share', '/settings']) {
+  if (d.kind === 'phone') for (const route of ['/aircraft/new', '/currency/new', '/logbook/ground/new', '/logbook/quick', '/weather/settings', '/logbook/share', '/settings']) {
     await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' }).catch(() => {});
     await page.waitForTimeout(350);
     const m = await page.evaluate(() => {
