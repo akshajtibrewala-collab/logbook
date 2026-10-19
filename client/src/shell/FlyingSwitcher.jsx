@@ -30,7 +30,7 @@ export default function FlyingSwitcher() {
     <>
       <button ref={anchor} type="button" className="bc-sw" aria-haspopup="menu" aria-expanded={open} aria-label={`Flying pages, now ${cur.label}`} onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === 'ArrowDown' && !open) { e.preventDefault(); setOpen(true); } }}>
-        {cur.label}<ChevronDown aria-hidden="true" />
+        <span className="lbl">{cur.label}</span><ChevronDown aria-hidden="true" />
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={anchor} width={224}>
         <div ref={menu} onKeyDown={onKey}>

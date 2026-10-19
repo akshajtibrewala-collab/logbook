@@ -111,7 +111,7 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 .ds-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-3); margin-bottom: var(--ds-s-3); flex: none; }
 .ds-sheet-body { overflow-y: auto; flex: 1; padding-bottom: calc(var(--ds-bottom) + 6rem); overscroll-behavior: contain; touch-action: pan-y; }
 @media (max-width: 480px) { .ds-sheet { left: max(4px, var(--ds-side)); right: max(4px, var(--ds-side)); } }
-@media (min-width: 768px) { .ds-sheet { left: 50%; right: auto; width: 34rem; margin-left: -17rem; } }
+@media (min-width: 768px) { .ds-sheet { left: 50%; right: auto; width: min(34rem, calc(100vw - 16px)); margin-left: calc(min(34rem, 100vw - 16px) / -2); } } /* at 200% text 34rem is wider than an iPad or a landscape phone: the sheet never exceeds the screen */
 
 /* ---------- app shell layout (only inside .ds-app; the /design device frames keep the phone layout at any width) ---------- */
 .ds-app { min-height: 100svh; --bottom-nav-h: calc(var(--ds-tabbar-h) + 12px + var(--ds-bottom)); } /* keeps the old pages' sticky save bars above the floating tab bar */
@@ -246,7 +246,7 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
 @media (max-width: 719px) {
   .ds-app[data-flat] main section.card, .ds-app[data-flat] main div.card.p-4 { background: transparent; border: 0; box-shadow: none; padding: 0; }
   .ds-app[data-flat] main section.card > h2.stat-title { margin-bottom: 6px; } /* a section heading sits close to its fields now that the card around them is gone */
-  .ds-app[data-flat] main form.space-y-4 > * + * { margin-top: 12px; }
+  .ds-app[data-flat] main form.space-y-4 > * + * { margin-top: 1rem; }
 /* radius kept: the aircraft photo's corners are measured against it */
 }
 

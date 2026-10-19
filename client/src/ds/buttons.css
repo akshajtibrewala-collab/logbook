@@ -195,7 +195,8 @@
 @media (prefers-reduced-motion: reduce) { .gl-switch, .gl-switch::after { transition: none; } }
 
 /* Select-like triggers that are buttons (date and aircraft pickers) lay out label + icon in a row. */
-.gl-select.flexbox { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-2); }
+.gl-field.h-12 { height: 3rem; } /* Tailwind's h-12 is 48px: at large text the field must grow with the text like every other field */
+.gl-select.flexbox { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-2); } .gl-select.flexbox > span { min-width: 0; overflow-wrap: anywhere; text-align: left; } /* at large text a long date wraps inside the button, its icon stays in it */
 /* Legacy Tailwind display utilities used together with .gl (the recipe sets display, so restate them with higher specificity). */
 .gl.hidden { display: none; }
 @media (min-width: 768px) { .gl.md\:flex { display: inline-flex; } }

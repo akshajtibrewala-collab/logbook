@@ -77,11 +77,11 @@ for (const w of [320, 390, 430]) for (const scale of [100, 200]) {
     const a = e.querySelector('.a').getBoundingClientRect(); const b = e.querySelector('.b');
     const spans = [...b.children].map((s) => { const r = document.createRange(); r.selectNodeContents(s); const rs = [...r.getClientRects()]; return rs.length ? Math.max(...rs.map((x) => x.top)) - Math.min(...rs.map((x) => x.top)) : 0; });
     const br = b.getBoundingClientRect();
-    return { sideBySide: br.left >= a.right - 1, wrapped: spans.some((d) => d > 2), onScreen: br.right <= innerWidth + 1, texts: [...b.children].map((s) => s.textContent) };
+    return { sideBySide: br.left >= a.right - 1 || br.top >= a.bottom - 1, /* at large text the date and hours may drop below the title (never over it) */ wrapped: spans.some((d) => d > 2), onScreen: br.right <= innerWidth + 1, texts: [...b.children].map((s) => s.textContent) };
   }));
   ok(res.length > 0, `@${w}px ${scale}%: ground sheet has no rows`);
   for (const r of res) {
-    ok(r.sideBySide, `@${w}px ${scale}%: date/hours column is not beside the title (${r.texts.join(' | ')})`);
+    ok(r.sideBySide, `@${w}px ${scale}%: date/hours column is neither beside nor below the title (${r.texts.join(' | ')})`);
     ok(!r.wrapped, `@${w}px ${scale}%: a ground row wraps its date or hours (${r.texts.join(' | ')})`);
     ok(r.onScreen, `@${w}px ${scale}%: a ground row runs off the screen (${r.texts.join(' | ')})`);
   }

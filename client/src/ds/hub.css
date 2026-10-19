@@ -5,7 +5,7 @@
 .hub-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (min-width: 640px) { .hub-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1024px) { .hub-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; } }
-.hub-t { display: grid; align-content: space-between; gap: 6px; min-height: 92px; padding: 14px 16px; border-radius: var(--mn-r); background: var(--ds-surface); color: var(--ds-text); text-decoration: none; min-width: 0; }
+.hub-t { display: grid; grid-template-columns: minmax(0, 1fr); align-content: space-between; gap: 6px; min-height: 92px; padding: 14px 16px; border-radius: var(--mn-r); background: var(--ds-surface); color: var(--ds-text); text-decoration: none; min-width: 0; }
 .hub-t:hover { background: var(--ds-surface-2); }
 .hub-t:focus-visible { outline: 2px solid var(--ds-white); outline-offset: 2px; }
 .hub-t:active { transform: scale(0.98); }
@@ -15,8 +15,6 @@
 .hub-t .nm { font-weight: 600; overflow-wrap: break-word; }
 .hub-t .v .sub { display: block; }
 .hub-t .v { color: var(--ds-text-2); font-size: var(--fs-s); overflow-wrap: break-word; font-variant-numeric: tabular-nums; }
-/* the right-hand tile's value keeps clear of the Add button (its width and edge gap, less the gutter and the tile's own padding), at any text size */
-@media (max-width: 639px) { .hub-t:nth-child(even) .v { padding-right: calc(3.5rem + max(18px, var(--ds-side)) + 2px - var(--ds-gutter) - 16px); } }
 @media (prefers-reduced-motion: reduce) { .hub-t:active { transform: none; } }
 /* small screens: tighter rhythm so the Travel tile (passenger hours and flights) sits above the tab bar on a 667px-tall phone too */
 @media (max-width: 639px) { .hub-home { gap: 16px; } .hub-band .bc-map { height: 7.5rem; } .hub-t { padding-block: 10px; gap: 4px; } }

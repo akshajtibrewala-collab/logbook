@@ -12,6 +12,7 @@
 
 /* the Flying switcher: the title is the way to the other Flying pages */
 .bc-sw { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 22px; cursor: pointer; font-weight: 700; color: var(--ds-g-text, var(--ds-text)); }
+.bc-sw { max-width: 100%; min-width: 44px; } .bc-sw .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bc-sw svg { flex: none; } /* at 200% text the title shrinks with an ellipsis instead of being cut off by the bar */
 .bc-sw:hover { background: var(--ds-g-lite); } .bc-sw:focus-visible { outline: 2px solid var(--ds-white); outline-offset: 2px; }
 .bc-sw svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--ds-dur-2) var(--ds-ease-out); }
 .bc-sw[aria-expanded="true"] svg { transform: rotate(180deg); }
@@ -79,9 +80,10 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .bc-pickrow:hover, .bc-pickrow[aria-current="true"] { background: var(--ds-surface-2); } .bc-pickrow:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
 .bc-pickrow .r { color: var(--ds-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* ground sheet rows: two fixed columns, the title (instructor muted) left; the date and hours right, never wrapped */
-.bc-grow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--mn-rr); color: var(--ds-text); }
+.bc-grow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--mn-rr); color: var(--ds-text); }
 .bc-grow:hover { background: var(--ds-surface-2); } .bc-grow:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
 .bc-grow .a { display: grid; gap: 2px; min-width: 0; overflow-wrap: break-word; } .bc-grow .a .mut { font-size: var(--fs-s); }
+.bc-grow > .a { flex: 1 1 8rem; } .bc-grow > .b { margin-left: auto; } /* at large text the date and hours drop below the topic instead of drawing over it */
 .bc-grow .b { display: grid; gap: 2px; justify-items: end; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; } .bc-grow .b .mut { font-size: var(--fs-s); }
 .bc-field { display: grid; gap: 8px; } .bc-field > .l { font-size: var(--fs-s); font-weight: 600; color: var(--ds-text-2); }
 .bc-chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -117,12 +119,10 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .ds-fab[data-hidden="true"]:focus-visible { opacity: 1; transform: none; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .ds-fab { transition: none; } }
 
-/* The Add button floats at the bottom right. Status rows and list items keep their trailing value clear of it (--fab-clear), but the Log's List and Ledger run the full
-   width of the page (owner report 2026-10-15: they stopped 60-72px short of the right edge): the button hides while the page scrolls and returns when it is idle, and the
-   last rows end above it (bottom padding), so it never needs a permanent strip of the page. */
-:root { --fab-clear: calc(3.5rem + max(18px, var(--ds-side)) + 2px - var(--ds-gutter)); } /* the Add button's width and edge gap, less the page gutter: 60px at 100% text, growing with it so a larger text size never puts the button over a trailing number */
+/* The Add button floats at the bottom right. Every page runs the full width of its column (owner reports 2026-10-15 for the Log and 2026-10-18 for Stats, whose card
+   headers, chevrons and status values stopped 60-77px short of the right edge): no row keeps a permanent strip clear for the button. The button hides while the page scrolls
+   and returns when it is idle, and the last rows end above it (bottom padding). check-page-width.mjs fails if a row stops short of its container again. */
 @media (max-width: 1023px) {
-  .bc-item, .bc-status { padding-right: var(--fab-clear); } /* the trailing numbers end 2px before the button */
   .bc-ground { padding-left: 64px; }
 }
 .bc .mn-led tr.mo td b, .bc .mn-led td.t { color: var(--ds-text); }
@@ -138,9 +138,10 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .bc-sec h2 { margin: 0; font-size: var(--fs-p); font-weight: 600; } .bc-sec .hd .mut { margin: 2px 0 0; }
 .bc-sec .hd svg { width: 18px; height: 18px; flex: none; margin-top: 4px; color: var(--ds-text-2); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--ds-dur-2) var(--ds-ease-out); }
 .bc-sec.open .hd svg { transform: rotate(180deg); }
+.bc-sec .hd { align-items: center; } .bc-sec .hd svg { margin-top: 0; } /* a card header's title and chevron sit centred in the 44px header, open or closed (a one-line title sat at the top with 22px of empty space below) */
 .bc-sec .body { display: none; } .bc-sec.open .body { display: block; }
 @media (min-width: 768px) { .bc-sec .body { display: block; } .bc-sec .hd svg { display: none; } .bc-sec button.hd { cursor: default; } }
-.bc-stack { display: grid; gap: 16px; min-width: 0; }
+.bc-stack { display: grid; gap: 16px; min-width: 0; } .bc-stack > * { min-width: 0; } /* a grid item defaults to min-width:auto: a wide child (Settings' glass card, the print summary) pushed the page sideways at 200% text */
 .bc-sec p { margin: 0; }
 .bc-sec .body { display: block; }
 /* On desktop the rows are a little taller (bigger, not more rows per screen): eight rows fit the first screen, never nine. */
@@ -149,6 +150,13 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 /* Large text and narrow screens: rows and years wrap instead of overflowing (text up to 200% at 320px stays inside the screen). */
 .bc-month { grid-template-columns: minmax(0, 1fr); }
 .bc-row.md .t > b { white-space: normal; }
+/* A full-date row (the filtered Logbook list) needs the date, a title and the hours side by side. When the month is under 17 root font sizes wide (a phone at 150% text or more) the title
+   column shrank to nothing and the tail drew over the hours, so the row stacks: date and hours on the first line, the title across the full width below. */
+.bc-month { container-type: inline-size; }
+@container (max-width: 17rem) {
+  .bc-row.full { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day v" "t t"; row-gap: 4px; padding-block: 12px; }
+  .bc-row.full .day { grid-area: day; } .bc-row.full .t { grid-area: t; } .bc-row.full .v { grid-area: v; }
+}
 .bc-item { flex-wrap: wrap; row-gap: 4px; } .bc-item .l { flex: 1 1 8rem; min-width: 0; flex-wrap: wrap; }
 .bc-item .l .mut { white-space: normal; overflow-wrap: break-word; }
 
@@ -174,9 +182,7 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .bc-mrow .tx { display: grid; gap: 2px; min-width: 0; } .bc-mrow .tx b { font-weight: 600; } .bc-mrow .tx .mut { overflow-wrap: break-word; }
 .bc-mrow > svg { width: 16px; height: 16px; fill: none; stroke: var(--ds-text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* rows with a trailing value or chevron keep clear of the Add button on a phone, like the Logbook rows do */
-@media (max-width: 1023px) { .cl .mn-card > .mn-st { padding-inline-end: calc(var(--fab-clear) - 8px); } .cl .mn-ctl { padding-inline-end: var(--fab-clear); } } /* a status row's trailing value and a section's "Add" chip clear the floating Add button too (an expense row's delete icon does not: the amount and its name need the width) */
-@media (max-width: 1023px) { .cl .mn-prog, .cl button.mn-fold, .cl a.mn-fold, .cl .bc-sec button.hd { padding-inline-end: calc(var(--fab-clear) - 8px); } }
+
 
 /* Large text on the wide layout: the two-column arrangements (list beside summary or detail, Home's map beside its column) need their minimum widths in rem,
    which a media query cannot see. While the layout width is under 64 root-font-size units (useTextScaleLayout sets data-narrow-text), pages stay in one

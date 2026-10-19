@@ -13,7 +13,7 @@
 
 .lb-bar { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); align-items: center; margin: var(--ds-s-2) 0; } /* at large text the Filter button drops to its own row instead of squeezing the field */
 .lb-search { position: relative; flex: 1 1 10rem; min-width: 0; }
-.lb-search svg { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; fill: none; stroke: var(--ds-text-2); stroke-width: 2; pointer-events: none; }
+.lb-search > svg { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; fill: none; stroke: var(--ds-text-2); stroke-width: 2; pointer-events: none; }
 .lb-search input { width: 100%; min-height: 3rem; border-radius: 999px; padding: 0 min(2.75rem, 44px) 0 min(2.6rem, 42px); font: inherit; font-size: max(var(--ds-fs-input), 16px); color: var(--ds-text); }
 .lb-search .clear { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); }
 .lb-chips { display: flex; flex-wrap: wrap; gap: var(--ds-s-2); margin: var(--ds-s-1) 0; }

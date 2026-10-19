@@ -62,7 +62,7 @@
 .cl-more { justify-self: center; }
 .cl-ctl .gl-badge { position: absolute; }
 .cl-search { position: relative; display: block; }
-.cl-search svg { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; fill: none; stroke: var(--ds-text-2); stroke-width: 2; pointer-events: none; }
+.cl-search > svg { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; fill: none; stroke: var(--ds-text-2); stroke-width: 2; pointer-events: none; }
 .cl-search input { width: 100%; min-height: 3rem; border-radius: 999px; padding: 0 2.75rem 0 2.6rem; font: inherit; font-size: max(var(--ds-fs-input), 16px); color: var(--ds-text); }
 .cl-search .clear { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); }
 

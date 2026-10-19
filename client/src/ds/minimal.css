@@ -237,7 +237,7 @@ button.mn-st:hover, a.mn-st:hover { background: var(--ds-surface-2); } button.mn
 .mn-card .mn-open .mn-kv { padding-inline: 0; }
 .mn-open .gl.link { padding-inline: 0; } /* a text action inside an opened block starts at the block's left edge, like the lines around it */
 .mn-kv .v { margin-inline-start: auto; } /* a value that wraps under its label (large text) stays on the right edge, like a disclosure row's value */
-.mn-form .mn-card { padding: 20px; }
+.mn-form .mn-card { padding: 24px; }
 
 /* older form cards inside a minimalist form (Quick log, ground session, weather legs): one surface, no outline, quiet headings */
 .mn-form .card, .mn-form .card-elevated { background: var(--ds-surface); border: 0; border-radius: var(--mn-r); box-shadow: none; padding: 20px; }
