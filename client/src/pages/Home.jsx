@@ -9,7 +9,7 @@ import { MnEmpty, MnSkeleton } from '../components/mn/Mn.jsx';
 import HubTiles from './home/HubTiles.jsx';
 import { calmGreeting } from '../lib/logbookList.js';
 import { PILOT_NAME } from '../lib/greetings.js';
-import { heroText, logbookProgress } from '../lib/logbookProgress.js';
+import { heroPercent, heroText, logbookProgress } from '../lib/logbookProgress.js';
 import { fmtHours } from '../lib/hours.js';
 import '../ds/bcalm.css';
 import '../ds/hub.css';
@@ -18,7 +18,7 @@ import '../ds/hub.css';
 const MapBackdrop = lazy(() => import('../ds/MapBackdrop.jsx'));
 
 /**
- * Home (the hub, direction A "Board", docs/design/home-hub.html): one greeting line, one hero (Private Pilot total time with a thin line toward the goal), one
+ * Home (the hub, direction A "Board", docs/design/home-hub.html): one greeting line, one hero (Total hours, with a thin line toward the 40 h FAA minimum until it is met), one
  * status line, a short band of the map of every flight (real land outline and routes, tap opens the Map), then one tile per module that exists, each with one live value.
  * Every number comes from the same lib/ functions via useHomeData (pilot figures pilot-only; passenger figures match Travel, Stats and Map).
  */
@@ -31,17 +31,17 @@ export default function Home() {
     const id = idle ? requestIdleCallback(run, { timeout: 4000 }) : setTimeout(run, 2000);
     return () => (idle ? cancelIdleCallback(id) : clearTimeout(id));
   }, []);
-  const { flights, data, error, load, status, pilotOnly, passengerOnly, passengerHours, allCounts, closest, map, homeAirport, milestonesConfig, aircraft, milestoneCompletions, goal } = h;
+  const { flights, data, error, load, status, pilotOnly, passengerOnly, passengerHours, allCounts, closest, map, homeAirport, milestonesConfig, aircraft, milestoneCompletions } = h;
   const hasFlights = Boolean(flights && flights.length > 0);
   const greeting = useMemo(() => calmGreeting(new Date(), PILOT_NAME), []);
   const progress = useMemo(
-    () => (flights && milestonesConfig ? logbookProgress({ config: milestonesConfig, flights, aircraft, completions: milestoneCompletions, goal }) : null),
-    [flights, milestonesConfig, aircraft, milestoneCompletions, goal],
+    () => (flights && milestonesConfig ? logbookProgress({ config: milestonesConfig, flights, aircraft, completions: milestoneCompletions }) : null),
+    [flights, milestonesConfig, aircraft, milestoneCompletions],
   );
 
   const heroWords = data ? heroText(progress, data.stats.total, fmtHours) : null;
   const hero = data && (
-    <BcHero to="/logbook" label={progress ? progress.label : 'Pilot'} dot="pilot" number={data.stats.total} of={heroWords.of} percent={progress ? progress.percent : undefined} tick={progress ? progress.tickPercent : undefined}
+    <BcHero to="/logbook" label="Total hours" dot="pilot" number={data.stats.total} of={heroWords.of} percent={heroPercent(progress)}
       barLabel={heroWords.barLabel} ariaLabel={`${heroWords.ariaLabel}. Open the Logbook`} />
   );
   const statusLine = (

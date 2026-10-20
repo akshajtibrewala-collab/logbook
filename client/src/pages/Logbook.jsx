@@ -5,8 +5,7 @@ import { api } from '../lib/api.js';
 import { pilotFlights } from '../lib/flightRoles.js';
 import { SOLO_FILTER, activeChips, calmRowModel, clearChip, countsLine, fleetChips, groupByMonth, instructorCounts, matchesInstructor, matchesQuery, usualInstructor, monthIsOpen, monthLineName, pilotTotals, showsFullDate, summarize } from '../lib/logbookList.js';
 import { ledgerModel } from '../lib/ledger.js';
-import { heroText, logbookProgress } from '../lib/logbookProgress.js';
-import { goalHours } from '../lib/goal.js';
+import { heroPercent, heroText, logbookProgress } from '../lib/logbookProgress.js';
 import { fmtHours } from '../lib/hours.js';
 import ErrorNote from '../components/ErrorNote.jsx';
 import Button from '../components/Button.jsx';
@@ -75,8 +74,8 @@ export default function Logbook() {
       .then(([f, g]) => { setFlights(pilotFlights(f)); setGroundSessions(g); })
       .catch((e) => setError(e.message));
     // Progress is a bonus line: the page works without it.
-    Promise.all([api.listMilestonesConfig(), api.listFlights(), api.listAircraft(true), api.listMilestoneCompletions(), api.getSettings().catch(() => ({}))])
-      .then(([config, all, aircraft, completions, settings]) => setProgress(logbookProgress({ config, flights: all, aircraft, completions, goal: goalHours(settings) })))
+    Promise.all([api.listMilestonesConfig(), api.listFlights(), api.listAircraft(true), api.listMilestoneCompletions()])
+      .then(([config, all, aircraft, completions]) => setProgress(logbookProgress({ config, flights: all, aircraft, completions })))
       .catch(() => setProgress(null));
   }, []);
   useEffect(load, [load]);
@@ -160,7 +159,7 @@ export default function Logbook() {
 
   const heroWords = totals ? heroText(progress, totals.total, fmtHours) : null;
   const hero = totals ? (
-    <BcHero label={progress ? progress.label : 'Pilot'} dot="pilot" number={totals.total} of={heroWords.of} percent={progress ? progress.percent : undefined} tick={progress ? progress.tickPercent : undefined}
+    <BcHero label="Total hours" dot="pilot" number={totals.total} of={heroWords.of} percent={heroPercent(progress)}
       barLabel={heroWords.barLabel} ariaLabel={`${heroWords.ariaLabel}. Open details`}
       onClick={() => setHeroSheet(true)} />
   ) : !error && <MnSkeleton rows={1} />;
@@ -209,11 +208,10 @@ export default function Logbook() {
         {listCol}
       </div>
 
-      <Sheet open={heroSheet} onClose={() => setHeroSheet(false)} title={progress ? progress.label : 'Pilot'} detent="medium">
+      <Sheet open={heroSheet} onClose={() => setHeroSheet(false)} title="Total hours" detent="medium">
         {totals && (
           <div className="cl mn mn-sheet">
             <MnKv k="Total time" v={`${fmtHours(totals.total)} h`} />
-            {progress && <MnKv k={`${progress.goal} h goal`} v={progress.goalMet ? 'Reached' : `${fmtHours(progress.toGoal)} h to go`} />}
             {progress && <MnKv k={`${progress.min} h FAA minimum`} v={progress.met ? 'Reached' : `${fmtHours(progress.remaining)} h to go`} />}
             {progress && <MnKv k="Requirements met" v={`${progress.requirementsMet} of ${progress.requirementsTotal}`} />}
             <MnKv k="PIC" v={`${fmtHours(totals.pic)} h`} />

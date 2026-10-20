@@ -14,7 +14,6 @@ import { hoursByAirline } from '../lib/stats.js';
 import { recentActivity } from '../lib/recentActivity.js';
 import { homeHighlights } from '../lib/homeHighlights.js';
 import { homeStatusAlerts } from '../lib/homeAlerts.js';
-import { DEFAULT_GOAL_HOURS, goalHours } from '../lib/goal.js';
 
 // Everything Home shows, computed by the existing lib/ functions exactly as the pre-redesign Home did (this is that code,
 // moved out of the page so the redesigned Home is presentation only). Pilot numbers are pilot-only; passenger numbers are
@@ -47,7 +46,6 @@ export default function useHomeData() {
   const [aircraft, setAircraft] = useState([]);
   const [backupStatus, setBackupStatus] = useState(null);
   const [homeAirportIdent, setHomeAirportIdent] = useState(null);
-  const [goal, setGoal] = useState(DEFAULT_GOAL_HOURS); // the pilot's hour goal (the existing hours_target setting, default 50)
   const [homeAirport, setHomeAirport] = useState(null); // { lat, lon, label } for the Home map's anchor
   const [error, setError] = useState('');
   const now = today();
@@ -73,7 +71,6 @@ export default function useHomeData() {
       setFlights(f); setReviews(r); setExpirations(e); setMilestonesConfig(m); setAircraft(a);
       setMilestoneCompletions(c); setBackupStatus(b); setAirports(resolved);
       setHomeAirportIdent(settings.home_airport_ident || null);
-      setGoal(goalHours(settings));
       const hc = settings.home_airport_ident;
       if (hc) { // a separate read-only lookup, so the flight-derived airport map above is untouched
         api.resolveAirports([hc]).then((r) => {
@@ -179,7 +176,7 @@ export default function useHomeData() {
   }, [flights, airports, pilotOnly, passengerOnly]);
 
   return {
-    flights, airports, error, load, now, headline, data, subline, status, homeAirportIdent, homeAirport, goal,
+    flights, airports, error, load, now, headline, data, subline, status, homeAirportIdent, homeAirport,
     pilotOnly, passengerOnly, passengerCounts, allCounts, closest, passengerHours, topAirline, last12moHours,
     recentItems, topHighlight, pilotNote, map,
     milestonesConfig, aircraft, milestoneCompletions,

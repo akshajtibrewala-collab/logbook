@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { goalHours, goalIsCustom, DEFAULT_GOAL_HOURS } from './goal.js';
-import { totalTimeProgress, heroText } from './logbookProgress.js';
+import { totalTimeProgress, heroText, heroPercent } from './logbookProgress.js';
 
 test('the hour goal is the saved target, else 50; the FAA minimum is never touched', () => {
   assert.equal(DEFAULT_GOAL_HOURS, 50);
@@ -11,20 +11,25 @@ test('the hour goal is the saved target, else 50; the FAA minimum is never touch
 });
 
 const req = (current) => [{ requirement_key: 'total_time', manual: 0, current, min_value: 40 }];
-test('the hero line is out of the goal; the minimum is a tick on the same line; remaining hours are to each', () => {
-  const p = totalTimeProgress(req(30), 'private', 50);
-  assert.equal(p.min, 40, 'the FAA minimum comes from the requirement, not from the goal'); assert.equal(p.goal, 50);
-  assert.equal(p.percent, 60); assert.equal(p.tickPercent, 80); assert.equal(p.toGoal, 20); assert.equal(p.remaining, 10); assert.equal(p.met, false); assert.equal(p.goalMet, false);
-  const q = totalTimeProgress(req(45), 'private', 50); assert.equal(q.met, true); assert.equal(q.goalMet, false); assert.equal(q.percent, 90);
-  const r = totalTimeProgress(req(55), 'private', 50); assert.equal(r.goalMet, true); assert.equal(r.percent, 100);
-  assert.equal(totalTimeProgress(req(30), 'private', 40).tickPercent, null, 'a goal at or below the minimum has no separate tick');
-  assert.equal(totalTimeProgress(req(30)).goal, 50, 'the default goal is 50');
+test('the hero line runs toward the FAA minimum (not the hour goal) and has no goal fields', () => {
+  const p = totalTimeProgress(req(30));
+  assert.equal(p.min, 40, 'the FAA minimum comes from the requirement'); assert.equal(p.percent, 75); assert.equal(p.remaining, 10); assert.equal(p.met, false);
+  for (const k of ['goal', 'goalMet', 'toGoal', 'tickPercent']) assert.equal(k in p, false, k);
+  assert.equal(heroPercent(p), 75);
 });
-test('the words around the hero say "of 50 h", name the goal and the FAA minimum', () => {
+test('once the minimum is met the line is gone: no percent, no "of 40 h"', () => {
   const f = (n) => n.toFixed(2);
-  const w = heroText(totalTimeProgress(req(30), 'private', 50), 30, f);
-  assert.equal(w.of, 'of 50 h');
-  assert.match(w.barLabel, /50 hour goal/); assert.match(w.barLabel, /40 hour .* FAA total-time minimum is marked/);
-  assert.match(w.ariaLabel, /20\.00 hours to the 50 hour goal/); assert.match(w.ariaLabel, /10\.00 hours to the 40 hour FAA minimum/);
-  assert.equal(heroText(null, 12, f).of, undefined);
+  for (const cur of [40, 45, 55]) {
+    const p = totalTimeProgress(req(cur)); assert.equal(p.met, true);
+    assert.equal(heroPercent(p), undefined); const w = heroText(p, cur, f);
+    assert.equal(w.of, undefined); assert.equal(w.barLabel, undefined); assert.equal(w.ariaLabel, `Total hours: ${f(cur)}`);
+  }
+  assert.notEqual(heroPercent(totalTimeProgress(req(39.99))), undefined, 'just under the minimum still shows the line');
+});
+test('the words around an unmet hero say "of 40 h" and the hours to the FAA minimum', () => {
+  const f = (n) => n.toFixed(2);
+  const w = heroText(totalTimeProgress(req(30)), 30, f);
+  assert.equal(w.of, 'of 40 h'); assert.match(w.barLabel, /40 hour .* FAA total-time minimum/); assert.doesNotMatch(w.barLabel + w.ariaLabel, /goal/i);
+  assert.match(w.ariaLabel, /^Total hours: 30.00, 10.00 hours to the 40 hour FAA/);
+  assert.equal(heroText(null, 12, f).of, undefined); assert.equal(heroText(null, 12, f).ariaLabel, 'Total hours: 12.00');
 });

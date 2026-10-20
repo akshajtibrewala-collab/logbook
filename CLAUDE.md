@@ -198,7 +198,8 @@ All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details i
   `client/scripts/lib/playwright-photo-stub` so they never call the real service. See `docs/design/DESIGN_LANGUAGE.md`.
 - **Logging:** Quick log (`/logbook/quick`), copy last flight, airport autocomplete with remembered airports, draft
   autosave, and an offline retry queue (`lib/outbox.js`) so a failed save never loses an entry.
-- **Stats:** hours by month / aircraft type or tail / category, and the Pilot tab total; the goal (`pilot_settings.hours_target`, default 50) still sets the PPL progress line on Home and the Logbook.
+- **Stats:** hours by month / aircraft type or tail / category, and the Pilot tab total; `pilot_settings.hours_target` is kept in the database but no longer drives anything on Home or the Logbook.
+- **Hero:** Home and the Logbook hero show the pilot-only total as "Total hours"; a thin line toward the FAA 40 h total-time minimum (from the milestone engine) shows only until that minimum is met, then it and "of 40 h" are gone. No certificate name on the hero.
 - **Map:** one theme-aware route colour (the by-year/aircraft colour modes were removed); routes draw in then flow
   along the flight direction, with an "Animate routes" toggle (remembered; off by default under reduced motion)
   and a replay button; a compact "airports · states" chip that expands to fuller stats; pin popups with visits,
