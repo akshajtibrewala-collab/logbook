@@ -143,6 +143,8 @@ export default function useHomeData() {
   // Every role together (the Map's own airport count), for the Map tile; milestone progress for the Milestones tile.
   const allCounts = useMemo(() => visitedCounts(buildMapData(flights ?? [], airports).stops), [flights, airports]);
   const passengerHours = useMemo(() => passengerOnly.reduce((s, f) => s + (Number(f.total_time) || 0), 0), [passengerOnly]);
+  // Pilot + passenger flight time; the Stats Pilot and Travel totals added together.
+  const allHours = useMemo(() => Math.round((pilotOnly.reduce((s, f) => s + (Number(f.total_time) || 0), 0) + passengerHours) * 100) / 100, [pilotOnly, passengerHours]);
   const topAirline = useMemo(() => hoursByAirline(passengerOnly)[0] ?? null, [passengerOnly]);
 
   const last12moHours = useMemo(() => {
@@ -177,7 +179,7 @@ export default function useHomeData() {
 
   return {
     flights, airports, error, load, now, headline, data, subline, status, homeAirportIdent, homeAirport,
-    pilotOnly, passengerOnly, passengerCounts, allCounts, closest, passengerHours, topAirline, last12moHours,
+    pilotOnly, passengerOnly, passengerCounts, allCounts, closest, passengerHours, allHours, topAirline, last12moHours,
     recentItems, topHighlight, pilotNote, map,
     milestonesConfig, aircraft, milestoneCompletions,
   };

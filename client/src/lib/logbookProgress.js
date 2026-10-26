@@ -1,5 +1,5 @@
-// The one progress line on the Home and Logbook heroes: how far the pilot's total time is toward the Private Pilot total-time minimum, read from the milestone engine's
-// own output (computeMilestones), never recomputed here. Pilot flights only; passenger time can never move it. Once the minimum is met the line is gone.
+// Progress toward the Private Pilot total-time minimum for the Logbook totals sheet (no hero shows it any more), read from the milestone engine's own output
+// (computeMilestones), never recomputed here. Pilot flights only; passenger time can never move it.
 import { computeMilestones, completionsByKey, certificateSummary, certificateLabel } from './milestones.js';
 import { pilotFlights } from './flightRoles.js';
 
@@ -26,19 +26,3 @@ export function logbookProgress({ config, flights, aircraft, completions }, cert
   return totalTimeProgress(reqs, certificate);
 }
 
-/**
- * The words around the hero for a progress (or none). While the minimum is not met: "of 40 h", the bar description and an accessible name that says how far
- * to go. Once met (or with no progress) there is no "of" and no bar. total is the pilot total in hours; fmt formats hours.
- */
-export function heroText(progress, total, fmt) {
-  const base = `Total hours: ${fmt(total)}`;
-  if (!progress || progress.met) return { of: undefined, barLabel: undefined, ariaLabel: base };
-  return {
-    of: `of ${progress.min} h`,
-    barLabel: `Total time ${fmt(progress.current)} of the ${progress.min} hour ${progress.label} FAA total-time minimum.`,
-    ariaLabel: `${base}, ${fmt(progress.remaining)} hours to the ${progress.min} hour FAA ${progress.label} minimum`,
-  };
-}
-
-/** The bar percent for the hero, or undefined (no line) when there is no progress or the minimum is met. */
-export const heroPercent = (progress) => (progress && !progress.met ? progress.percent : undefined);

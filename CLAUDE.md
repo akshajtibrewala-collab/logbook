@@ -93,7 +93,7 @@ The database holds real flight records, not sample data. This overrides convenie
 
 ```bash
 npm run dev     # both workspaces; server on :3001, client on :5173 (proxies /api)
-npm test         # server tests, then client tests (currently 216 server + 391 client, all passing)
+npm test         # server tests, then client tests (currently 168 server + 366 client, all passing)
 ```
 
 There is no DOM/component testing: put logic in pure `client/src/lib/*.js` functions and test those. UI changes
@@ -199,7 +199,7 @@ All merged to `main` and deployed. Phases 1, 2, 2b and 3 are complete; details i
 - **Logging:** Quick log (`/logbook/quick`), copy last flight, airport autocomplete with remembered airports, draft
   autosave, and an offline retry queue (`lib/outbox.js`) so a failed save never loses an entry.
 - **Stats:** hours by month / aircraft type or tail / category, and the Pilot tab total; `pilot_settings.hours_target` is kept in the database but no longer drives anything on Home or the Logbook.
-- **Hero:** Home and the Logbook hero show the pilot-only total as "Total hours"; a thin line toward the FAA 40 h total-time minimum (from the milestone engine) shows only until that minimum is met, then it and "of 40 h" are gone. No certificate name on the hero.
+- **Hero:** Home's hero is "Total flight hours" (pilot + passenger, no scope dot); the Logbook hero is "Total hours" (pilot only, sky dot). Both are label and number only: no "of 40 h", no progress line (the milestone engine is untouched; the Logbook totals sheet still lists the FAA minimum). No certificate name on the hero.
 - **Map:** one theme-aware route colour (the by-year/aircraft colour modes were removed); routes draw in then flow
   along the flight direction, with an "Animate routes" toggle (remembered; off by default under reduced motion)
   and a replay button; a compact "airports · states" chip that expands to fuller stats; pin popups with visits,
@@ -258,3 +258,5 @@ document vault (with auth hardening) are next.
 **Known flakes:** `client/scripts/check-scroll.mjs` on `/logbook/quick`, WebKit, 390px showed 2.33% of pixels changed after the
 round trip in one full run (limit 0.3%). Not reproduced: 191 of 192 runs were clean and 5 isolated re-runs were clean. The route was
 not touched by the diff under test. Accepted as a flake on 2026-10-12. **Recurred 2026-10-13** on the same route (WebKit, 360px, 2.30%) in one of 192 runs of a full run; 5 isolated re-runs were clean again. It is now a pattern (two in roughly 400 runs, one route, WebKit only), not a one-off: investigate (likely the quick-log form's autofocus or a draft-restore settling after the scroll), do not just re-run.
+
+**`/map` wrap flake:** the wrap check on `/map` at 390px with 1.1-1.2x text intermittently flags the offscreen airport badges (map markers outside the viewport) as wrapping text. Seen across several runs, not reproduced in isolation, and no wrapping defect in the page chrome. Treat it as a known flake, but look at the badge markup before dismissing a new `/map` wrap failure.

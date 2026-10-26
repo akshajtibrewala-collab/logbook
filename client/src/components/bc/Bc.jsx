@@ -10,18 +10,16 @@ import '../../ds/bcalm.css';
 // Building blocks of the B-calm system (docs/design/logbook-bcalm.html). Solid content only; every number arrives already computed.
 
 /**
- * The hero: the label (one word of scope, with a role dot), one big white numeral, a muted "of 40 h" beside it, and a thin line that stands for total time
- * toward that minimum. A button (opens the details sheet) or, with `to`, a link. `of` is the minimum text, e.g. "of 40 h".
+ * The hero: the label (one word of scope, with a role dot unless it covers every role) and one big white numeral. No progress line, no "of" text.
+ * A button (opens the details sheet) or, with `to`, a link.
  */
-export function BcHero({ label, dot, number, of, percent, tick, barLabel, ariaLabel, onClick, to, unit = 'h' }) {
+export function BcHero({ label, dot, number, ariaLabel, onClick, to, unit = 'h' }) {
   const body = (
     <>
       <span className="lab">{dot && <span className={`bc-dot ${dot}`} aria-hidden="true" />}{label}</span>
       <span className="nrow">
         <span className="n"><CountUp value={number} />{unit && <small>{unit}</small>}</span>
-        {of && <span className="of">{of}</span>}
       </span>
-      {percent != null && <span className="bc-line" role="img" aria-label={barLabel}><i style={{ width: `${percent}%` }} />{tick != null && <b className="tick" style={{ left: `${tick}%` }} aria-hidden="true" />}</span>}
     </>
   );
   return to

@@ -5,7 +5,7 @@ import { api } from '../lib/api.js';
 import { pilotFlights } from '../lib/flightRoles.js';
 import { SOLO_FILTER, activeChips, calmRowModel, clearChip, countsLine, fleetChips, groupByMonth, instructorCounts, matchesInstructor, matchesQuery, usualInstructor, monthIsOpen, monthLineName, pilotTotals, showsFullDate, summarize } from '../lib/logbookList.js';
 import { ledgerModel } from '../lib/ledger.js';
-import { heroPercent, heroText, logbookProgress } from '../lib/logbookProgress.js';
+import { logbookProgress } from '../lib/logbookProgress.js';
 import { fmtHours } from '../lib/hours.js';
 import ErrorNote from '../components/ErrorNote.jsx';
 import Button from '../components/Button.jsx';
@@ -157,10 +157,8 @@ export default function Logbook() {
   );
   const monthRows = (g) => g.entries.filter((e) => (filters.kind === 'ground' ? e.kind === 'ground' : e.kind === 'flight'));
 
-  const heroWords = totals ? heroText(progress, totals.total, fmtHours) : null;
   const hero = totals ? (
-    <BcHero label="Total hours" dot="pilot" number={totals.total} of={heroWords.of} percent={heroPercent(progress)}
-      barLabel={heroWords.barLabel} ariaLabel={`${heroWords.ariaLabel}. Open details`}
+    <BcHero label="Total hours" dot="pilot" number={totals.total} ariaLabel={`Total hours: ${fmtHours(totals.total)}. Open details`}
       onClick={() => setHeroSheet(true)} />
   ) : !error && <MnSkeleton rows={1} />;
 

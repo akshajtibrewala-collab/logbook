@@ -9,7 +9,7 @@
 // places they touch;  nm = the distance of ALL flights (Home's own total, pilot and passenger routes together). The passenger-only distance is a separate figure.
 //
 // Two layers:  (1) a MODEL built in Node from the API with the app's own lib functions (the same ones useHomeData uses), compared to the expected figures;
-//              (2) the SCREENS: Home (greeting with the name, the pilot hero, the Logbook / Travel / Map tiles, the status line), Travel (hero, totals sheet, year headers sum),
+//              (2) the SCREENS: Home (greeting with the name, the all-roles Total flight hours hero, the Logbook / Travel / Map tiles, the status line), Travel (hero, totals sheet, year headers sum),
 //                  Stats > Travel and Map (All and Passenger), each compared to the model and to each other.
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -67,17 +67,9 @@ await load('/');
 const greeting = (await p.locator('.bc-greet').first().innerText()).trim();
 truthy('Home greeting names the pilot', new RegExp(`^Good (morning|afternoon|evening), ${NAME}$`).test(greeting), greeting);
 const homeHero = num(await p.locator('.bc-hero .n [data-final]').first().getAttribute('data-final'));
-compare('Home pilot hero (h)', homeHero, model.pilot);
-truthy('Home hero label is "Total hours" (no hardcoded certificate name)', (await p.locator('.bc-hero .lab').first().innerText()).trim() === 'Total hours');
-// the progress line runs toward the 40 h FAA total-time minimum and exists only while the pilot total is below it
-const lineCount = await p.locator('.bc-hero .bc-line').count();
-const belowMin = model.pilot < 40;
-truthy(`Home hero progress line ${belowMin ? 'shown' : 'hidden'} (pilot ${model.pilot} h ${belowMin ? '<' : '>='} 40 h)`, lineCount === (belowMin ? 1 : 0), `lines ${lineCount}`);
-if (belowMin) {
-  const w = await p.locator('.bc-hero .bc-line i').first().evaluate((el) => el.style.width);
-  compare('Home hero progress line width (% of the 40 h minimum)', num(w), Math.min(100, (model.pilot / 40) * 100), 0.05);
-  truthy('Home hero says "of 40 h" (not the old goal)', /of 40 h/.test(await p.locator('.bc-hero').first().innerText()));
-} else truthy('Home hero has no "of ... h" caption once the minimum is met', !/\bof \d+ h\b/.test(await p.locator('.bc-hero').first().innerText()));
+compare('Home hero = pilot + passenger flight hours, all roles (h)', homeHero, r2(model.pilot + model.passenger));
+truthy('Home hero label is "Total flight hours"', (await p.locator('.bc-hero .lab').first().innerText()).trim() === 'Total flight hours');
+truthy('Home hero has no progress line and no "of 40 h" text', (await p.locator('.bc-hero .bc-line').count()) === 0 && !/\bof \d+\s*h\b/.test(await p.locator('.bc-hero').first().innerText()));
 // the hub tiles (each is a link with a name and one live value; the figure is the same one its own page shows)
 const tile = async (name) => (await p.locator('.hub-t', { hasText: name }).first().innerText()).replace(name, '').trim();
 compare('Home Logbook tile (pilot flights)', num(await tile('Logbook')), pilot.length);
@@ -103,21 +95,29 @@ const yearHours = (await p.locator('.bc-mh .r').allTextContents()).map(num);
 compare(`Travel year headers (${yearHours.length}) sum to the total (h)`, r2(yearHours.reduce((a, b) => a + b, 0)), model.passenger, 0.011);
 truthy('Travel is passenger-only: one-word scope "Passenger"', (await p.locator('.bc-hero .lab').first().innerText()).trim() === 'Passenger');
 
-// Stats > Pilot: the Home hero number is the Stats pilot total
+// Stats > Pilot: the pilot total (the Logbook hero's number)
 await load('/stats');
 const pilotStrip = (await p.locator('#main').innerText()).replace(/\s+/g, ' ');
-const pm = pilotStrip.match(/Pilot\D{0,4}([\d,.]+)\s*h/);
+const pm = pilotStrip.match(/Pilot\s*([\d,.]+)\s*h/);
 truthy('Stats > Pilot total found', Boolean(pm), pm ? '' : pilotStrip.slice(0, 80));
-if (pm) compare('Home hero equals the Stats pilot total (h)', homeHero, num(pm[1]));
+const statsPilot = pm ? num(pm[1]) : NaN;
 
 // Stats > Travel
 await p.getByRole('tab', { name: /^Travel/ }).click(); await p.waitForTimeout(900);
 const st = (await p.locator('#main').innerText()).replace(/\s+/g, ' ');
 const sm = st.match(/Passenger ([\d.]+) ?h .*?Flights (\d+) · Airports (\d+) · Countries (\d+)/i);
 truthy('Stats > Travel totals found', Boolean(sm), sm ? '' : st.slice(0, 80));
-if (sm) { compare('Stats hours', num(sm[1]), model.passenger); compare('Stats flights', num(sm[2]), model.flights); compare('Stats airports', num(sm[3]), model.airports); compare('Stats countries', num(sm[4]), model.countries); }
+if (sm) { compare('Home hero equals the Stats pilot total + Stats passenger total (h)', homeHero, r2(statsPilot + num(sm[1]))); compare('Stats hours', num(sm[1]), model.passenger); compare('Stats flights', num(sm[2]), model.flights); compare('Stats airports', num(sm[3]), model.airports); compare('Stats countries', num(sm[4]), model.countries); }
 const sd = st.match(/([\d,]+) nm flown in total/i);
 compare('Stats distance (nm, passenger flights)', sd ? num(sd[1]) : NaN, model.paxNm, 0.5);
+
+// Logbook: the hero is the pilot-only total, number only
+await load('/logbook');
+const logbookHero = num(await p.locator('.bc-hero .n [data-final]').first().getAttribute('data-final'));
+compare('Logbook hero = pilot total (h)', logbookHero, model.pilot);
+compare('Logbook hero equals the Stats pilot total (h)', logbookHero, statsPilot);
+truthy('Logbook hero label is "Total hours" (pilot only)', (await p.locator('.bc-hero .lab').first().innerText()).trim() === 'Total hours');
+truthy('Logbook hero has no progress line and no "of 40 h" text', (await p.locator('.bc-hero .bc-line').count()) === 0 && !/\bof \d+\s*h\b/.test(await p.locator('.bc-hero').first().innerText()));
 
 // Map: All, then Passenger
 await load('/map'); await p.waitForTimeout(800);

@@ -248,11 +248,11 @@ function PinSummary({ stop }) {
 }
 
 const Stat = ({ label, value, unit }) => (
-  <div className="flex min-w-0 flex-col items-center text-center">
+  <div className="flex min-w-0 flex-col items-start text-left">
     <div className="break-words text-base font-semibold leading-tight">
       {value}{unit && <span className="ml-0.5 text-[10px] font-medium text-slate-400">{unit}</span>}
     </div>
-    <div className="mt-0.5 min-h-[1.5rem] text-[11px] leading-tight text-slate-400">{label}</div>
+    <div className="mt-0.5 text-[11px] leading-tight text-slate-400">{label}</div>
   </div>
 );
 
@@ -455,11 +455,18 @@ export default function MapPage() {
             </button>
           </div>
 
+          {hasPassengerRoutes && (
+            <div className="mt-2 flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/95 px-3.5 py-2 text-[11px] text-slate-300 shadow-[var(--shadow-card)]">
+              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Pilot</span>
+              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Passenger</span>
+            </div>
+          )}
+
           <section id="map-stats" aria-label="Map details and options" aria-hidden={!open} inert={open ? undefined : ''}
-            className={`grid w-64 max-w-full overflow-hidden rounded-[1.25rem] border border-edge-strong bg-navy-900/95 text-sm shadow-[var(--shadow-card)] transition-[grid-template-rows,opacity,margin-top] duration-200 ease-out ${open ? 'mt-2 opacity-100' : 'mt-0 pointer-events-none opacity-0'}`}
+            className={`grid w-72 max-w-full overflow-hidden rounded-[1.25rem] border border-edge-strong bg-navy-900/95 text-sm shadow-[var(--shadow-card)] transition-[grid-template-rows,opacity,margin-top] duration-200 ease-out ${open ? 'mt-2 opacity-100' : 'mt-0 pointer-events-none opacity-0'}`}
             style={{ gridTemplateRows: open ? '1fr' : '0fr' }}>
             <div className="min-h-0 overflow-hidden p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Map details</h2>
+              <h2 className="text-xs font-medium text-slate-400">Map details</h2>
 
               <div className="gl-seg mt-3" role="group" aria-label="Filter by role">
                 {ROLE_FILTERS.map(([k, l, activeClass]) => (
@@ -468,7 +475,7 @@ export default function MapPage() {
                 ))}
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-x-2 gap-y-3">
+              <div className="mt-3 grid grid-cols-3 gap-x-2 gap-y-3 border-t border-edge pt-3">
                 <Stat label={counts.airports === 1 ? 'airport' : 'airports'} value={counts.airports} />
                 {counts.regionsKnown && <Stat label={counts.states === 1 ? 'state' : 'states'} value={counts.states} />}
                 {counts.countries > 1 && <Stat label="countries" value={counts.countries} />}
@@ -485,13 +492,6 @@ export default function MapPage() {
               </div>
             </div>
           </section>
-
-          {hasPassengerRoutes && (
-            <div className="mt-2 flex items-center gap-3 rounded-full border border-edge-strong bg-navy-900/95 px-3.5 py-2 text-[11px] text-slate-300 shadow-[var(--shadow-card)]">
-              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={routeColor} strokeWidth="2" /></svg>Pilot</span>
-              <span className="flex items-center gap-1.5"><svg width="16" height="2" aria-hidden="true"><line x1="0" y1="1" x2="16" y2="1" stroke={passengerRouteColor} strokeWidth="2" strokeDasharray={PASSENGER_ROUTE_DASH} /></svg>Passenger</span>
-            </div>
-          )}
         </div>
       )}
 
