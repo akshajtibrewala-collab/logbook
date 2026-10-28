@@ -73,12 +73,17 @@ select.ds-input { padding-right: 2.25rem; background-image: linear-gradient(45de
 .ds-input[aria-invalid="true"] { border-color: var(--ds-bad); } .ds-input:disabled { opacity: 0.45; }
 
 /* ---------- navigation (glass) ---------- */
-.ds-topbar { position: fixed; z-index: 30; top: calc(var(--ds-top) + 8px); left: 12px; right: 12px; min-height: var(--ds-bar-h); --ds-g-r: var(--ds-r-bar); }
-.ds-topbar > .g-in { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-s-2); padding: 0 6px; min-height: var(--ds-bar-h); }
-.ds-topbar .ttl { flex: 1; text-align: center; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: var(--p, 0); transition: opacity 120ms linear; }
-.ds-topbar .side { display: flex; align-items: center; min-width: var(--ds-tap); }
+.ds-topbar { position: fixed; z-index: 30; top: calc(var(--ds-top) + 8px); left: 12px; right: 12px; min-height: var(--ds-bar-h); --ds-g-r: var(--ds-r-bar); --ds-slot: calc(var(--ds-tap) + 4px); }
+/* Three columns: two equal slots and the title between them, so the title is centred on the BAR whatever the slots hold. Both slot minimums are the same (--ds-slot, room for one control);
+   the title takes what it needs of the rest (never below the slots), and a longer title ellipsises. The wordmark lives in a slot and gives way first: it drops out below its own width. */
+.ds-topbar > .g-in { display: grid; grid-template-columns: minmax(var(--ds-slot), 1fr) minmax(0, auto) minmax(var(--ds-slot), 1fr); align-items: center; column-gap: var(--ds-s-2); padding: 0 6px; min-height: var(--ds-bar-h); }
+.ds-topbar .ttl { grid-column: 2; grid-row: 1; text-align: center; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: var(--p, 0); transition: opacity 120ms linear; }
+.ds-topbar .side { grid-row: 1; display: flex; align-items: center; min-width: 0; container: tbside / inline-size; }
+.ds-topbar .side:first-child { grid-column: 1; } .ds-topbar .side:last-child { grid-column: 3; justify-content: flex-end; }
+.ds-topbar .side > * { flex: none; }
 /* The wordmark stands in for the empty bar at scroll-top on tab roots (no back button), and hands over to the page title as the large title collapses. */
-.ds-topbar .mark { padding-left: 0.875rem; font-size: 0.9375rem; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-text); white-space: nowrap; opacity: calc(1 - var(--p, 0)); transition: opacity 120ms linear; }
+.ds-topbar .mark { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-left: 0.875rem; font-size: 0.9375rem; font-weight: 800; letter-spacing: -0.01em; color: var(--ds-text); white-space: nowrap; opacity: calc(1 - var(--p, 0)); transition: opacity 120ms linear; }
+@container tbside (max-width: 5rem) { .ds-topbar .mark { display: none; } } /* the wordmark is about 4.9rem wide: a narrower slot drops it, so the title keeps the room */
 .ds-topbar .grp { border-radius: 999px; padding: 0 2px; }
 .ds-tabbar { position: fixed; z-index: 30; left: max(14px, var(--ds-side)); right: max(14px, var(--ds-side)); bottom: calc(var(--ds-bottom) + 12px); --ds-g-r: var(--ds-r-tabbar); transform-origin: 50% 100%; transition: transform var(--ds-dur-3) var(--ds-ease-spring); }
 .ds-tabbar.is-collapsed { transform: translateY(8px) scale(0.86, 0.82); }
@@ -162,7 +167,9 @@ html.ds-vt .ds-menu, html.ds-vt .ds-fab { transition: none !important; }
   .ds-app { --ds-col-l: max(7.5rem, calc(50% + 1rem - 33.5rem)); --ds-col-r: max(5.5rem, calc(50% - 1rem - 33.5rem)); --ds-bar-l: var(--ds-col-l); --ds-bar-r: var(--ds-col-r); --ds-ov-bottom: 12px; }
   .ds-map-ov-br { right: var(--ds-bar-r); }
   .ds-map-ov-bl { right: calc(var(--ds-bar-r) + var(--ds-tap) + 8px); }
-  .ds-app > .ds-topbar.has-add .side:last-child { padding-right: 3.5rem; } /* room for the Add button, which sits inside the bar's right end */
+  /* room for the Add button, which sits inside the bar's right end: reserved in BOTH slots, so the title is not pushed off the bar's centre */
+  .ds-app > .ds-topbar.has-add { --ds-slot: calc(var(--ds-tap) + 4px + 3.5rem); }
+  .ds-app > .ds-topbar.has-add .side:last-child { padding-right: 3.5rem; }
   .ds-app .ds-main { padding-left: 7.5rem; padding-right: 5.5rem; max-width: 80rem; }
   .ds-app .ds-main.wide { max-width: 80rem; }
   .ds-app .ds-hero { height: 24rem; }

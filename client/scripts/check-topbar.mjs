@@ -7,6 +7,10 @@
 // every non-form route the first content element starts exactly at the bar's left edge; on
 // every Flying root the top bar's title is the Flying switcher (it replaced the tab strip); and no unexplained vertical gap over 48px (empty space between content) exists. Forms may use a narrower inner column.
 //
+// The title is centred on the BAR (added 2026-10-27, feat/topbar-center): the top bar is a three-column grid (slot | title | slot) with equal slot minimums, so the title's centre must equal the
+// bar's centre on every route at every width, and at 390/430 portrait and 844 landscape, at 100% and 200% text, also the viewport's centre, within 0.5px. No control in a slot may touch the
+// title, and a title keeps at least half the bar (or all of what it needs when that is less).
+//
 // Drives a real browser against a RUNNING production build; it only ever reads (GET /api/flights for ids). Include it in every verification.
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -83,7 +87,17 @@ const measure = () => {
       frame = { minL, maxR, firstL: first.l, gap: Math.round(gap), gapAt: Math.round(gapAt), switcher: Boolean(sw) && sw.getAttribute('aria-haspopup') === 'menu' && sw.getAttribute('aria-expanded') === 'false' && Boolean(sw.getAttribute('aria-label')) };
     }
   }
-  return { bar: B, overlaps, frame };
+  // ---- the title: where it sits in the bar, and whether a slot control runs into it ----
+  const ttl = bar.querySelector('.ttl'), T = rect(ttl), clash = [];
+  bar.querySelectorAll(':scope > .g-in > .side').forEach((side, k) => {
+    for (const c of side.children) {
+      if (getComputedStyle(c).display === 'none') continue;
+      const r = rect(c); if (r.w < 1) continue;
+      if (k === 0 ? r.r > T.l + 0.5 : r.l < T.r - 0.5) clash.push(`${k === 0 ? 'left' : 'right'} slot "${(c.getAttribute('aria-label') || c.textContent || c.className).trim().slice(0, 20)}" touches the title`);
+    }
+  });
+  const title = { l: T.l, r: T.r, w: T.w, natural: ttl.scrollWidth, vw: document.documentElement.clientWidth, clash };
+  return { bar: B, overlaps, frame, title };
 };
 
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXE });
@@ -99,6 +113,7 @@ for (const w of WIDTHS) {
     checks++;
     if (m.missing) { fails.push(`/${route} @${w}: no top bar`); continue; }
     for (const k of ['l', 'r', 'h', 't']) if (Math.abs(m.bar[k] - home.bar[k]) > 0.6) fails.push(`/${route} @${w}: bar ${k} ${m.bar[k].toFixed(1)} vs Home ${home.bar[k].toFixed(1)}`);
+    { const off = (m.title.l + m.title.r) / 2 - (m.bar.l + m.bar.r) / 2; if (Math.abs(off) > 0.5) fails.push(`/${route} @${w}: title centre is ${off.toFixed(1)}px off the bar centre`); }
     for (const o of m.overlaps) fails.push(`/${route} @${w}: ${o}`);
     if (m.frame) {
       const f = m.frame, form = FORM.test(route.split('?')[0]);
@@ -115,6 +130,28 @@ for (const w of WIDTHS) {
   console.log(`${w}px: Home bar ${home.bar.l.toFixed(0)}..${home.bar.r.toFixed(0)} (${home.bar.w.toFixed(0)} wide, ${home.bar.h.toFixed(0)} high, top ${home.bar.t.toFixed(0)})`);
   await ctx.close();
 }
+// ---- title centring on phones and in landscape, at normal and large text ----
+const VIEWS = [['390x844 portrait', 390, 844], ['430x932 portrait', 430, 932], ['844x390 landscape', 844, 390]];
+let worst = 0;
+for (const [vname, w, h] of VIEWS) for (const text of [100, 200]) {
+  const ctx = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: 'reduce' });
+  const p = await ctx.newPage();
+  for (const route of ROUTES) {
+    await p.goto(`${BASE}/${route}`, { waitUntil: 'networkidle' });
+    await p.addStyleTag({ content: `html{font-size:${text}% !important}` });
+    await p.waitForTimeout(350);
+    const m = await p.evaluate(measure); checks++;
+    const tag = `/${route} @${vname} ${text}% text`;
+    if (m.missing) { fails.push(`${tag}: no top bar`); continue; }
+    const off = (m.title.l + m.title.r) / 2 - m.title.vw / 2; worst = Math.max(worst, Math.abs(off));
+    if (Math.abs(off) > 0.5) fails.push(`${tag}: title centre is ${off.toFixed(1)}px off the viewport centre`);
+    for (const c of m.title.clash) fails.push(`${tag}: ${c}`);
+    const want = Math.min(m.title.natural, m.bar.w * 0.5);
+    if (m.title.w < want - 1) fails.push(`${tag}: title is ${m.title.w.toFixed(0)}px wide, needs ${want.toFixed(0)}px (it needs ${m.title.natural}px, half the bar is ${(m.bar.w / 2).toFixed(0)}px)`);
+  }
+  await ctx.close();
+}
+console.log(`title centring: ${VIEWS.length * 2 * ROUTES.length} route/view/text checks, worst offset from the viewport centre ${worst.toFixed(2)}px`);
 await browser.close();
 for (const f of fails) console.log('FAIL', f);
 console.log(`${checks} route/width checks (Flying switcher present on ${new Set(tabsSeen).size} Flying roots), ${fails.length} failures.`);
