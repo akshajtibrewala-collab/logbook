@@ -42,6 +42,8 @@ ok(gs.length === g0 + 1 && gs.some((g) => g.topics === 'Write test topic' && g.i
 const f0 = (await api('/flights')).length;
 await go('/logbook/quick');
 await p.getByRole('button', { name: /^N\d/ }).first().click().catch(() => {});
+// On a real-shaped list no recent-aircraft chip comes first and that click opens the chooser sheet instead: pick the first aircraft in it so the Save button is reachable.
+if (await p.getByRole('dialog').count()) { await p.getByRole('dialog').getByRole('button', { name: /^N\d/ }).first().click(); await p.waitForTimeout(300); }
 await press('Save flight');
 await p.waitForTimeout(800);
 ok((await api('/flights')).length === f0 + 1, 'Quick log saved one flight');
@@ -105,17 +107,20 @@ if (pax) {
 const post = async (path, body) => (await fetch(`${BASE}/api${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json();
 const tmpl = (await api('/flights')).find((f) => f.role === 'pilot');
 const { id: _i, created_at: _c, updated_at: _u, ...base } = tmpl;
-const kept = await post('/flights', { ...base, remarks: 'keep test', cost_override: 123.45, invoice_ref: 'KEEP-1', instructor: 'Pat Keep', debrief_went_well: 'kept well', debrief_work_on: 'kept work', dual_given: 0.4, simulator_time: 0.3 });
+const kept = await post('/flights', { ...base, remarks: 'keep test', cost_override: 123.45, invoice_ref: 'KEEP-1', instructor: 'Pat Keep', debrief_went_well: 'kept well', debrief_work_on: 'kept work', dual_given: 0.4, simulator_time: 0.3, airline: 'Keep Air', flight_number: 'KA9', sic_time: 0.1, ground_time: 0.6 });
 ok(Boolean(kept.id) && Number(kept.cost_override) === 123.45, 'a scratch flight with a stored cost override and invoice reference was created through the API');
 await go(`/logbook/${kept.id}`);
 ok(!(await p.getByText(/\bcost\b/i).count()) && !(await p.getByText(/invoice/i).count()), 'the flight detail shows no cost or invoice');
 await go(`/logbook/${kept.id}/edit`);
 if (!(await p.getByLabel('Remarks').isVisible())) { await p.getByRole('button', { name: /More details/ }).click(); await p.waitForTimeout(300); }
 ok(!(await p.getByText(/invoice|manual override|calculated cost/i).count()), 'the flight edit form has no cost or invoice inputs');
+ok(!(await p.getByLabel('Airline').count()) && !(await p.getByLabel('Flight number').count()) && !(await p.locator('#airline-names').count()) && !(await p.locator('label > span', { hasText: /^(SIC|Ground instruction)$/ }).count()), 'the pilot edit form has no airline, flight number, SIC or ground instruction input');
+ok(await p.locator('label > span', { hasText: /^(PIC|Instrument \(simulated\))$/ }).count() === 2, 'PIC and Instrument (simulated) are still on the pilot form (so the hidden-input check above can see a label)');
 ok(!(await p.getByLabel('Instructor').count()) && !(await p.getByText('What went well').count()) && !(await p.getByText('Dual given').count()) && !(await p.getByLabel('Simulator').count()) && !(await p.getByText('Photos').count()), 'the flight edit form has no instructor, debrief, dual-given, simulator or photo inputs');
 await p.getByLabel('Remarks').fill('keep test, edited'); await press('Save changes'); await p.waitForTimeout(900);
 const after = (await api('/flights')).find((f) => f.id === kept.id);
 ok(after && after.instructor === 'Pat Keep' && after.debrief_went_well === 'kept well' && after.debrief_work_on === 'kept work' && Number(after.dual_given) === 0.4 && Number(after.simulator_time) === 0.3, `editing the flight kept its instructor, debrief notes, dual given and simulator time (${after?.instructor ?? '-'})`);
+ok(after && after.airline === 'Keep Air' && after.flight_number === 'KA9' && Number(after.sic_time) === 0.1 && Number(after.ground_time) === 0.6, `editing the flight kept its airline, flight number, SIC and ground instruction (${after?.airline ?? '-'}, ${after?.flight_number ?? '-'}, ${after?.sic_time ?? '-'}, ${after?.ground_time ?? '-'})`);
 ok(after && after.remarks === 'keep test, edited' && Number(after.cost_override) === 123.45 && after.invoice_ref === 'KEEP-1', `editing the flight kept its cost override and invoice reference (${after?.cost_override ?? '-'}, ${after?.invoice_ref ?? '-'})`);
 const gk = await post('/costs/ground-sessions', { date: '2026-01-05', hours: 1, instructor: 'Pat Keep', topics: 'keep ground', notes: '', cost_override: 77.7 });
 await go(`/logbook/ground/${gk.id}/edit`);
@@ -125,6 +130,40 @@ const gafter = (await api('/costs/ground-sessions')).find((g) => g.id === gk.id)
 ok(gafter && gafter.topics === 'keep ground, edited' && Number(gafter.cost_override) === 77.7, `editing the ground session kept its cost override (${gafter?.cost_override ?? '-'})`);
 await go(`/logbook/ground/${gk.id}`);
 ok(!(await p.getByText(/\bcost\b/i).count()), 'the ground session detail shows no cost');
+// ---- the pilot form's aircraft picker: flown-as-pilot and never-flown aircraft first, passenger-only ones behind "Show all aircraft"; the passenger picker is unchanged
+const paxOnly = await post('/aircraft', { tail_number: 'N9PAX', model: 'Boeing 737-800 (B738)' });
+const fresh = await post('/aircraft', { tail_number: 'N9NEW', model: 'C172' });
+const zero = { pic_time: 0, sic_time: 0, dual_received: 0, solo_time: 0, night_time: 0, cross_country_time: 0, instrument_actual: 0, instrument_simulated: 0, day_landings: 0, day_landings_full_stop: 0, night_landings: 0, night_landings_full_stop: 0, approaches: 0, holds: 0, stops: [], approach_types: [] };
+const paxFlight = await post('/flights', { ...base, ...zero, role: 'passenger', aircraft_id: paxOnly.id, airline: 'Write Test Air', flight_number: 'WT9' });
+ok(Boolean(paxOnly.id) && Boolean(fresh.id) && Boolean(paxFlight.id), 'a passenger-only aircraft, a never-flown aircraft and a passenger flight on the first were created through the API');
+await go('/logbook/new'); 
+await p.locator('button.gl-select.nochev', { hasNotText: /\d{2}\/\d{2}\/\d{4}/ }).first().click(); await p.waitForTimeout(500);
+const dlg = p.getByRole('dialog');
+ok(await dlg.getByText('N9NEW').count() === 1, 'the pilot picker lists an aircraft with no flights yet');
+ok(await dlg.getByText('N9PAX').count() === 0, 'the pilot picker leaves out an aircraft that only has passenger flights');
+ok(await dlg.getByRole('button', { name: 'Show all aircraft' }).count() === 1, 'the pilot picker ends with a "Show all aircraft" row');
+const rows = await dlg.locator('button').evaluateAll((els) => els.map((e) => e.textContent.trim()).filter(Boolean));
+ok(rows.indexOf('Show all aircraft') === rows.findIndex((t) => /Add new aircraft/.test(t)) - 1, 'the "Show all aircraft" row is the last aircraft row, just above Add new aircraft');
+await dlg.getByRole('button', { name: 'Show all aircraft' }).click(); await p.waitForTimeout(300);
+ok(await dlg.getByText('N9PAX').count() === 1 && await dlg.getByRole('button', { name: 'Show all aircraft' }).count() === 0, 'Show all reveals the full list and the row goes away');
+await go('/logbook/new?role=passenger'); await p.getByRole('button', { name: /More details/ }).click(); await p.waitForTimeout(300);
+await p.locator('button.gl-select.nochev', { hasNotText: /\d{2}\/\d{2}\/\d{4}/ }).first().click(); await p.waitForTimeout(500);
+ok(await p.getByRole('dialog').getByText('N9PAX').count() === 1 && await p.getByRole('dialog').getByRole('button', { name: 'Show all aircraft' }).count() === 0, 'the passenger form picker still lists every aircraft, with no Show all row');
+// Quick log uses the same filter: its chips, its default and its picker leave out the passenger-only aircraft until "Show all aircraft"
+await go('/logbook/quick'); await p.evaluate((id) => localStorage.setItem('aerotrail-recent:aircraft', JSON.stringify([id])), paxOnly.id); await p.evaluate(() => localStorage.removeItem('aerotrail-draft:flight-quick')); await go('/logbook/quick');
+ok(await p.locator('main button', { hasText: 'N9PAX' }).count() === 0, 'Quick log offers no passenger-only aircraft as a recent chip or default, even when it was used last');
+await p.locator('button.gl-select.nochev', { hasNotText: /\d{2}\/\d{2}\/\d{4}/ }).first().click(); await p.waitForTimeout(500);
+const qd = p.getByRole('dialog');
+ok(await qd.getByText('N9NEW').count() === 1 && await qd.getByText('N9PAX').count() === 0, 'the Quick log picker lists a never-flown aircraft and leaves out a passenger-only one');
+const qrows = await qd.locator('button').evaluateAll((els) => els.map((e) => e.textContent.trim()).filter(Boolean));
+ok(qrows.indexOf('Show all aircraft') > -1 && qrows.indexOf('Show all aircraft') === qrows.findIndex((t) => /Add new aircraft/.test(t)) - 1, 'the Quick log picker ends with a "Show all aircraft" row');
+await qd.getByRole('button', { name: 'Show all aircraft' }).click(); await p.waitForTimeout(300);
+ok(await qd.getByText('N9PAX').count() === 1, 'Quick log: Show all reveals the passenger-only aircraft');
+await p.evaluate(() => { localStorage.removeItem('aerotrail-recent:aircraft'); localStorage.removeItem('aerotrail-draft:flight-quick'); });
+const odd = await post('/flights', { ...base, remarks: 'odd aircraft', aircraft_id: paxOnly.id, aircraft_type: 'B738', tail_number: 'N9PAX' });
+await go(`/logbook/${odd.id}/edit`);
+ok(await p.locator('button.gl-select.nochev', { hasText: 'N9PAX' }).count() === 1, 'editing a pilot flight on an aircraft outside the filter still shows it selected');
+for (const [path, id] of [['/flights', odd.id], ['/flights', paxFlight.id], ['/aircraft', paxOnly.id], ['/aircraft', fresh.id]]) await fetch(`${BASE}/api${path}/${id}`, { method: 'DELETE' });
 // tidy the scratch rows this section made (scratch only; the test refuses to run anywhere else)
 await fetch(`${BASE}/api/flights/${kept.id}`, { method: 'DELETE' }); await fetch(`${BASE}/api/costs/ground-sessions/${gk.id}`, { method: 'DELETE' });
 

@@ -8,10 +8,12 @@ const TIME_KEYS = [
 const COUNT_KEYS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
 
 // Copied from the last flight: where/what you flew. Deliberately NOT copied: remarks, debrief notes,
-// invoice reference and manual cost override — those belong to one specific flight.
+// invoice reference and manual cost override — those belong to one specific flight. Airline, flight number, SIC and ground instruction have no
+// input on the pilot form any more (nor do dual given and simulator), so a NEW flight never inherits them invisibly (an edit keeps whatever the flight already stores).
+const NOT_COPIED = new Set(['sic_time', 'ground_time', 'dual_given', 'simulator_time']);
 const COPIED = [
-  'departure_airport', 'arrival_airport', 'route', 'aircraft_id', 'aircraft_type', 'tail_number', 'airline', 'flight_number',
-  'instructor', ...TIME_KEYS, ...COUNT_KEYS,
+  'departure_airport', 'arrival_airport', 'route', 'aircraft_id', 'aircraft_type', 'tail_number',
+  'instructor', ...TIME_KEYS.filter((k) => !NOT_COPIED.has(k)), ...COUNT_KEYS,
 ];
 
 /** A new-flight draft (API-shaped) based on `last`, dated `today`. Returns null when there is no last flight. */
@@ -49,6 +51,11 @@ export function followTotal(form, nextTotal, parse) {
   return patch;
 }
 
+/** Total approaches from the typed rows: a row with no type is ignored (it is dropped on save, so it must not count on screen either). */
+export function approachTotal(rows) {
+  return (rows ?? []).reduce((sum, a) => (a && a.approach_type ? sum + (Number(a.count) || 0) : sum), 0);
+}
+
 /** The most recent flight by date, then id — the "last entry" for Copy last. */
 export function mostRecentFlight(flights) {
   if (!flights?.length) return null;
@@ -64,9 +71,11 @@ const isRealDate = (s) => {
 /**
  * Validates an API-shaped flight payload (numbers already parsed). Returns { field: message } — empty
  * when fine. Rules match server/src/validate.js: real date, non-negative hours up to 99, none exceeding
- * total time, whole non-negative landings, 3-4 character airport codes.
+ * total time, whole non-negative landings, 3-4 character airport codes. `skip` lists fields that are not checked (the pilot form's hidden inputs:
+ * a stored value nobody can see or fix must never block a save).
  */
-export function validateFlightPayload(p, { today } = {}) {
+export function validateFlightPayload(p, { today, skip = [] } = {}) {
+  const skipped = new Set(skip);
   const errors = {};
   if (!isRealDate(p.date)) errors.date = 'Enter a real date';
   else if (today && p.date > today) errors.date = 'That date is in the future';
@@ -75,6 +84,7 @@ export function validateFlightPayload(p, { today } = {}) {
     if (s && !/^[A-Za-z0-9]{3,4}$/.test(s)) errors[k] = 'Use a 3-4 character airport code';
   }
   for (const k of TIME_KEYS) {
+    if (skipped.has(k)) continue;
     const n = Number(p[k] ?? 0);
     if (!Number.isFinite(n) || n < 0) errors[k] = 'Hours can’t be negative';
     else if (n > 99) errors[k] = 'Must be 99 or less';
@@ -82,7 +92,7 @@ export function validateFlightPayload(p, { today } = {}) {
   const total = Number(p.total_time ?? 0);
   if (!errors.total_time) {
     for (const k of TIME_KEYS) {
-      if (k === 'total_time' || k === 'ground_time' || errors[k]) continue;
+      if (k === 'total_time' || k === 'ground_time' || errors[k] || skipped.has(k)) continue;
       if (Number(p[k] ?? 0) > total) errors[k] = 'Can’t exceed total time';
     }
   }

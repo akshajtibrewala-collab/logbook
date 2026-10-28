@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload, validateQuickFlight, quickFlightPayload, stepHours } from './flightDraft.js';
+import { approachTotal, followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload, validateQuickFlight, quickFlightPayload, stepHours } from './flightDraft.js';
 import { pilotFlights } from './flightRoles.js';
 
 const last = {
@@ -83,7 +83,7 @@ test('prefillPassengerFrom carries only the airline and seat class of the last p
 });
 
 test('the flight form carries instructor and invoice_ref through an edit (the server replaces the whole row, so omitting them erases them)', () => {
-  const src = fs.readFileSync(new URL('../pages/FlightForm.jsx', import.meta.url), 'utf8');
+  const src = fs.readFileSync(new URL('./flightFormState.js', import.meta.url), 'utf8');
   assert.match(src, /instructor: '', invoice_ref: ''/);
 });
 test('followTotal: PIC, dual and solo that equalled the old total follow the new total; others are left alone', async () => {
@@ -95,4 +95,30 @@ test('followTotal: PIC, dual and solo that equalled the old total follow the new
   assert.deepEqual(followTotal(form, '1.', parseHours), { dual_received: '1.' }, 'a partly typed number still follows');
   assert.deepEqual(followTotal(form, 'abc', parseHours), {}, 'an unparseable total changes nothing');
   assert.deepEqual(followTotal({ ...form, total_time: '0.00', dual_received: '0.00' }, '1.5', parseHours), {}, 'a zero total has nothing to follow');
+});
+test('copy last never carries the airline, flight number, SIC or ground instruction (the pilot form has no inputs for them)', () => {
+  const d = prefillFromFlight({ ...last, airline: 'Delta', flight_number: 'DL1', sic_time: 0.5, ground_time: 0.7, pic_time: 1.4 }, '2026-09-23');
+  for (const k of ['airline', 'flight_number', 'sic_time', 'ground_time']) assert.ok(!(k in d), k);
+  assert.equal(d.pic_time, 1.4);
+});
+
+test('approachTotal sums only the rows that have a type', () => {
+  assert.equal(approachTotal([]), 0);
+  assert.equal(approachTotal(undefined), 0);
+  assert.equal(approachTotal([{ approach_type: '', count: '1' }]), 0, 'a freshly added row with no type counts nothing');
+  assert.equal(approachTotal([{ approach_type: 'ILS', count: '2' }, { approach_type: '', count: '5' }, { approach_type: 'VOR', count: 1 }]), 3);
+  assert.equal(approachTotal([{ approach_type: 'ILS', count: 'x' }]), 0);
+});
+
+test('validateFlightPayload skips the fields it is told to skip (the pilot form hides them), and still checks the rest', () => {
+  const p = { date: '2026-03-01', total_time: 1.5, pic_time: 1.5, sic_time: 3, dual_given: -1, simulator_time: 100 };
+  assert.ok(validateFlightPayload(p).sic_time && validateFlightPayload(p).dual_given && validateFlightPayload(p).simulator_time);
+  const skip = ['sic_time', 'dual_given', 'simulator_time'];
+  assert.deepEqual(validateFlightPayload(p, { skip }), {});
+  assert.ok(validateFlightPayload({ ...p, pic_time: 3 }, { skip }).pic_time, 'a shown field still fails');
+});
+
+test('copy last also leaves out dual given and simulator time', () => {
+  const d = prefillFromFlight({ ...last, dual_given: 0.3, simulator_time: 0.2 }, '2026-09-23');
+  assert.ok(!('dual_given' in d) && !('simulator_time' in d));
 });

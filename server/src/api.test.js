@@ -575,3 +575,38 @@ test('PUT on a ground session keeps the instructor and invoice reference it was 
   assert.equal((await call('PUT', `/costs/ground-sessions/${created.id}`, { hours: 0 })).status, 400);
   assert.equal((await call('PUT', '/costs/ground-sessions/999999', { hours: 1 })).status, 404);
 });
+
+test('editing a flight whose stored SIC is above its total saves and keeps the SIC; a changed or other bad value is still rejected', async () => {
+  let res = await call('POST', '/flights', { ...flight, sic_time: 0.4 });
+  const created = await res.json();
+  await run('UPDATE flights SET sic_time = 3, airline = ? WHERE id = ?', ['Keep Air', created.id]); // stored before the form hid SIC (a stale total, say)
+  const stored = await (await call('GET', `/flights/${created.id}`)).json();
+  assert.equal(stored.sic_time, 3);
+  res = await call('PUT', `/flights/${created.id}`, { ...stored, remarks: 'edited', sic_time: 3 });
+  assert.equal(res.status, 200);
+  const after = await res.json();
+  assert.equal(after.sic_time, 3, 'SIC is kept as stored');
+  assert.equal(after.airline, 'Keep Air');
+  assert.equal(after.remarks, 'edited');
+  res = await call('PUT', `/flights/${created.id}`, { ...stored, sic_time: 4 });
+  assert.equal(res.status, 400, 'changing the hidden value to another bad one is rejected');
+  res = await call('PUT', `/flights/${created.id}`, { ...stored, pic_time: 9 });
+  assert.equal(res.status, 400, 'an input the form shows is still validated');
+  res = await call('POST', '/flights', { ...flight, sic_time: 3 });
+  assert.equal(res.status, 400, 'a new flight is validated as before');
+});
+
+test('PATCH does not forgive a hidden field: only PUT does, so a stored SIC above the total is still rejected by PATCH', async () => {
+  let res = await call('POST', '/flights', { ...flight, sic_time: 0.4 });
+  const created = await res.json();
+  await run('UPDATE flights SET sic_time = 3 WHERE id = ?', [created.id]);
+  res = await call('PATCH', `/flights/${created.id}`, { remarks: 'patched' });
+  assert.equal(res.status, 400, 'PATCH validates the merged row as before');
+  assert.ok((await res.json()).errors.sic_time);
+  res = await call('PUT', `/flights/${created.id}`, { ...flight, sic_time: 3, remarks: 'put' });
+  assert.equal(res.status, 200, 'the same unchanged SIC is forgiven on PUT');
+  assert.equal((await res.json()).sic_time, 3);
+  res = await call('PUT', `/flights/${created.id}`, { ...flight, sic_time: '', remarks: 'put again' });
+  assert.equal(res.status, 200, 'clearing the SIC (empty) is a change, not a forgiveness, and passes validation');
+  assert.equal((await res.json()).sic_time, 0);
+});

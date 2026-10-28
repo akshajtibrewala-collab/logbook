@@ -7,6 +7,7 @@ import { fmtHours } from '../lib/hours.js';
 import { getRecents, recordRecent, sortByRecency } from '../lib/recents.js';
 import { mostRecentFlight, quickFlightPayload, stepHours, validateQuickFlight } from '../lib/flightDraft.js';
 import { pilotFlights } from '../lib/flightRoles.js';
+import { pilotPickerAircraft } from '../lib/aircraftList.js';
 import { clearDraft, enqueue, isNetworkError, loadDraft, saveDraft } from '../lib/outbox.js';
 import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
 import AirportSearchField from '../components/AirportSearchField.jsx';
@@ -31,6 +32,7 @@ const bigBtn = 'gl lg';
 export default function QuickFlight() {
   const navigate = useNavigate();
   const [aircraftList, setAircraftList] = useState([]);
+  const [allFlights, setAllFlights] = useState(null); // for the aircraft filter: null while loading, false if it could not be loaded (then every aircraft shows)
   const [form, setForm] = useState({ date: today(), departure_airport: '', arrival_airport: '', aircraft: null, total_time: '1.00', dual: false });
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState('');
@@ -43,9 +45,11 @@ export default function QuickFlight() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [flights, aircraft] = await Promise.all([api.listFlights().catch(() => []), api.listAircraft().catch(() => [])]);
+      const [loaded, aircraft] = await Promise.all([api.listFlights().catch(() => null), api.listAircraft().catch(() => [])]);
       if (cancelled) return;
+      const flights = loaded || [];
       setAircraftList(aircraft);
+      setAllFlights(loaded || false);
       const draft = loadDraft(DRAFT)?.value;
       if (draft) {
         setForm((f) => ({ ...f, ...draft }));
@@ -54,7 +58,7 @@ export default function QuickFlight() {
         // Quick log always creates a pilot flight, so its defaults come from the most recent PILOT
         // flight — never a passenger one, whose airports/aircraft don't belong here.
         const last = mostRecentFlight(pilotFlights(flights));
-        const ordered = sortByRecency(aircraft, getRecents('aircraft'));
+        const ordered = sortByRecency(loaded ? pilotPickerAircraft(aircraft, flights) : aircraft, getRecents('aircraft'));
         const byLast = last?.aircraft_id ? aircraft.find((a) => a.id === last.aircraft_id) : null;
         setForm((f) => ({
           ...f,
@@ -75,7 +79,7 @@ export default function QuickFlight() {
   }, [form, saved]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-  const recentAircraft = useMemo(() => sortByRecency(aircraftList, getRecents('aircraft')).slice(0, 3), [aircraftList]);
+  const recentAircraft = useMemo(() => sortByRecency(Array.isArray(allFlights) ? pilotPickerAircraft(aircraftList, allFlights, form.aircraft?.id ?? null) : aircraftList, getRecents('aircraft')).slice(0, 3), [aircraftList, allFlights, form.aircraft?.id]);
 
   async function submit(e) {
     e.preventDefault();
@@ -156,7 +160,7 @@ export default function QuickFlight() {
             </div>
           </div>
         )}
-        <AircraftPicker label={recentAircraft.length ? 'Another aircraft' : 'Aircraft'} value={form.aircraft?.id ?? null} onSelect={(a) => set({ aircraft: a })} />
+        <AircraftPicker label={recentAircraft.length ? 'Another aircraft' : 'Aircraft'} value={form.aircraft?.id ?? null} pilotFlights={allFlights} onSelect={(a) => set({ aircraft: a })} />
       </section>
 
       <section className="card card-elevated space-y-3 p-4">

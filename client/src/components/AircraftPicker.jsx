@@ -2,14 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Plane, Search } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { getRecents, recordRecent, sortByRecency } from '../lib/recents.js';
+import { pilotPickerAircraft } from '../lib/aircraftList.js';
 import Modal from './Modal.jsx';
 import TextField from './TextField.jsx';
 import Button from './Button.jsx';
 
 const aircraftLabel = (a) => (a.is_simulator ? (a.model || 'Simulator') : [a.tail_number, a.model].filter(Boolean).join(' · ') || 'Aircraft');
 
-/** Pick an existing aircraft, or quickly add a new one without leaving the flight form. */
-export default function AircraftPicker({ label = 'Aircraft', value, onSelect, error }) {
+/**
+ * Pick an existing aircraft, or quickly add a new one without leaving the flight form. With `pilotFlights` (the pilot form: every flight, `null` while loading,
+ * `false` if they could not be loaded) it lists only aircraft flown as pilot, ones with no flights yet and the selected one, then a last "Show all aircraft" row.
+ */
+export default function AircraftPicker({ label = 'Aircraft', value, onSelect, error, pilotFlights }) {
   const [open, setOpen] = useState(false);
   const [list, setList] = useState(null);
   const [q, setQ] = useState('');
@@ -18,6 +22,7 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
   const [newModel, setNewModel] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [showAll, setShowAll] = useState(false);
   const [fallback, setFallback] = useState(null); // an already-selected aircraft not in the pickable (active) list, e.g. archived
 
   // Fetched on mount, not just when the modal opens: the button itself needs the list to resolve
@@ -36,13 +41,17 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
     }
   }, [value, list]);
   // Aircraft you've used most recently come first, so tonight's tail number is one tap away.
+  const trimmed = Array.isArray(pilotFlights) && Boolean(list) && !showAll; // the pilot-form filter is on
+  const base = useMemo(() => (trimmed ? pilotPickerAircraft(list, pilotFlights, typeof value === 'number' ? value : value?.id ?? null) : list), [trimmed, list, pilotFlights, value]);
   const filtered = useMemo(() => {
-    if (!list) return [];
-    const ordered = sortByRecency(list, getRecents('aircraft'));
+    if (!base) return [];
+    const ordered = sortByRecency(base, getRecents('aircraft'));
     const s = q.trim().toLowerCase();
     if (!s) return ordered;
     return ordered.filter((a) => [a.tail_number, a.make, a.model, a.type_designator].filter(Boolean).join(' ').toLowerCase().includes(s));
-  }, [list, q, open]);
+  }, [base, q, open]);
+  const waiting = !list || pilotFlights === null; // the pilot filter needs the flights too, so the full list never flashes first
+  const hiddenCount = trimmed ? list.length - base.length : 0;
 
   function pick(a) {
     recordRecent('aircraft', a.id);
@@ -72,7 +81,7 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
   return (
     <div>
       <span className="mb-1 block text-xs text-slate-400">{label}</span>
-      <button type="button" onClick={() => setOpen(true)}
+      <button type="button" onClick={() => { setShowAll(false); setOpen(true); }}
         className={`gl-select nochev flexbox ${error ? 'is-bad' : ''}`}>
         <span className={selected ? '' : 'text-[var(--ds-text-2)]'}>{selected ? aircraftLabel(selected) : 'Choose aircraft'}</span>
         <ChevronDown size={18} className="shrink-0 text-slate-400" />
@@ -88,15 +97,21 @@ export default function AircraftPicker({ label = 'Aircraft', value, onSelect, er
                 className="gl-field h-11 w-full pl-9 pr-3 text-base" />
             </div>
             <div className="mt-3 max-h-72 space-y-1 overflow-y-auto">
-              {!list && <p className="py-4 text-center text-sm text-slate-400">Loading…</p>}
-              {list && filtered.length === 0 && <p className="py-4 text-center text-sm text-slate-400">No matches.</p>}
-              {filtered.map((a) => (
+              {waiting && <p className="py-4 text-center text-sm text-slate-400">Loading…</p>}
+              {!waiting && filtered.length === 0 && <p className="py-4 text-center text-sm text-slate-400">No matches.</p>}
+              {!waiting && filtered.map((a) => (
                 <button key={a.id} type="button" onClick={() => pick(a)}
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left active:bg-navy-800">
                   <Plane size={16} className="shrink-0 text-slate-500" />
                   <span className="min-w-0 flex-1 truncate text-sm">{aircraftLabel(a)}</span>
                 </button>
               ))}
+              {!waiting && hiddenCount > 0 && (
+                <button type="button" onClick={() => setShowAll(true)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--ds-text-2)] active:bg-navy-800">
+                  Show all aircraft
+                </button>
+              )}
             </div>
             {err && <p className="mt-2 text-sm text-bad">{err}</p>}
             <Button type="button" variant="secondary" size="md" className="mt-3" onClick={() => setAdding(true)}>+ Add new aircraft</Button>

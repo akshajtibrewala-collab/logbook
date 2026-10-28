@@ -51,3 +51,16 @@ export function aircraftLabel(r, fmt) {
   if (r.archived) parts.push('archived');
   return parts.filter(Boolean).join(', ');
 }
+
+/**
+ * The aircraft the PILOT flight form offers first: ones flown as pilot at least once, plus ones with no flights yet (just added), plus the one already
+ * selected (an edit of a flight whose aircraft is otherwise out of the filter). Airliners that only appear on passenger flights stay out until "Show all".
+ * Order of `aircraft` is kept; the picker sorts recent-first.
+ */
+export function pilotPickerAircraft(aircraft, flights, selectedId = null) {
+  const usage = usageByAircraft(flights);
+  return (aircraft || []).filter((a) => {
+    const u = usage.get(a.id);
+    return a.id === selectedId || !u || u.pilot > 0;
+  });
+}

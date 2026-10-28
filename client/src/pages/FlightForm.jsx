@@ -3,14 +3,14 @@ import SaveBar from '../components/SaveBar.jsx';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Copy, Luggage } from 'lucide-react';
 import { api } from '../lib/api.js';
-import { fmtHours, parseHours } from '../lib/hours.js';
+import { parseHours } from '../lib/hours.js';
 import { formatDate } from '../lib/calendar.js';
 import HoursInput from '../components/HoursInput.jsx';
 import CountInput from '../components/CountInput.jsx';
 import TextField from '../components/TextField.jsx';
 import AirportSearchField from '../components/AirportSearchField.jsx';
 import { OUTBOX_CHANGED } from '../components/OutboxBanner.jsx';
-import { followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload } from '../lib/flightDraft.js';
+import { approachTotal, followTotal, prefillFromFlight, prefillPassengerFrom, mostRecentFlight, validateFlightPayload } from '../lib/flightDraft.js';
 import { saveDraft, loadDraft, clearDraft, enqueue, outboxList, removeFromOutbox, isNetworkError } from '../lib/outbox.js';
 import DatePicker from '../components/DatePicker.jsx';
 import AirlineBadge from '../components/AirlineBadge.jsx';
@@ -26,44 +26,13 @@ import { Segmented } from '../ds/Controls.jsx';
 import { AIRLINE_NAMES } from '../lib/airlines.js';
 import { FLIGHT_ROLES, pilotFlights } from '../lib/flightRoles.js';
 import { SEAT_CLASSES } from '../lib/aviationEnums.js';
+import { TIME_FIELDS, HIDDEN_TIME, HIDDEN_FIELDS, blank, fromFlight, toPayload, todayLocal as today } from '../lib/flightFormState.js';
 import '../ds/logbook.css';
 
-const TIME_FIELDS = [
-  ['total_time', 'Total'], ['pic_time', 'PIC'], ['sic_time', 'SIC'],
-  ['dual_received', 'Dual received'], ['dual_given', 'Dual given'],
-  ['solo_time', 'Solo'], ['simulator_time', 'Simulator'], ['ground_time', 'Ground instruction'],
-  ['night_time', 'Night'], ['cross_country_time', 'Cross-country'],
-  ['instrument_actual', 'Instrument (actual)'], ['instrument_simulated', 'Instrument (simulated)'],
-];
-// Dual given and Simulator have no inputs any more; their stored values ride along unchanged on edit (the server replaces the whole row).
-const HIDDEN_TIME = new Set(['dual_given', 'simulator_time']);
-const COUNT_FIELDS = ['day_landings', 'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds'];
 // Fields under "More details" (an error on any of them opens it, so a problem is never hidden).
-const MORE_PILOT = ['stops', 'pic_time', 'sic_time', 'dual_received', 'solo_time', 'ground_time', 'night_time', 'cross_country_time', 'instrument_actual', 'instrument_simulated',
-  'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds', 'approach_types', 'cost_override', 'airline', 'flight_number', 'remarks'];
+const MORE_PILOT = ['stops', 'pic_time', 'dual_received', 'solo_time', 'night_time', 'cross_country_time', 'instrument_actual', 'instrument_simulated',
+  'day_landings_full_stop', 'night_landings', 'night_landings_full_stop', 'approaches', 'holds', 'approach_types', 'cost_override', 'remarks'];
 const MORE_PAX = ['seat_class', 'confirmation_code', 'aircraft_id', 'remarks', 'stops'];
-
-const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
-
-const blank = (role) => ({
-  date: today(), role: role === 'passenger' ? 'passenger' : 'pilot', departure_airport: '', arrival_airport: '', route: '', stops: [], aircraft_id: null, aircraft_type: '', tail_number: '',
-  airline: '', flight_number: '', seat_class: '', confirmation_code: '', remarks: '', debrief_went_well: '', debrief_work_on: '', approach_types: [], cost_override: '',
-  instructor: '', invoice_ref: '', // carried through unchanged on edit (instructor, the debrief notes, cost_override and invoice_ref have no inputs any more): the server replaces the whole row, so leaving them out would erase them
-  dep_time: '', arr_time: '', arr_day_offset: '',
-  ...Object.fromEntries(TIME_FIELDS.map(([k]) => [k, fmtHours(0)])),
-  ...Object.fromEntries(COUNT_FIELDS.map((k) => [k, '0'])),
-});
-
-function fromFlight(f) {
-  const s = blank();
-  for (const k of Object.keys(s)) {
-    if (k === 'cost_override') { s[k] = f[k] == null ? '' : String(f[k]); continue; }
-    if (f[k] === null || f[k] === undefined) continue;
-    if (k === 'aircraft_id' || k === 'stops' || k === 'approach_types') { s[k] = f[k]; continue; } // not text-input values
-    s[k] = TIME_FIELDS.some(([t]) => t === k) ? fmtHours(f[k]) : String(f[k]);
-  }
-  return s;
-}
 
 const DRAFT_NAME = 'flight-new';
 
@@ -90,8 +59,7 @@ export default function FlightForm() {
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [defaultGroundTime, setDefaultGroundTime] = useState(null);
-  const [groundTouched, setGroundTouched] = useState(false);
+  const [allFlights, setAllFlights] = useState(null); // for the pilot aircraft picker: null while loading, false if it could not be loaded (then it lists everything)
   const [params] = useSearchParams();
   const [notice, setNotice] = useState('');
   const [more, setMore] = useState(Boolean(id)); // editing shows everything; a new flight starts with the short form
@@ -119,7 +87,7 @@ export default function FlightForm() {
     if (!last.pilot) return null;
     const d = prefillFromFlight(last.pilot, today());
     const what = [last.pilot.aircraft_type, last.pilot.tail_number].filter(Boolean).join(' ');
-    return { form: { ...fromFlight(d), role: 'pilot' }, note: `Prefilled from your last flight on ${formatDate(last.pilot.date)}${what ? `: ${what}` : ''}${last.pilot.instructor ? `, ${last.pilot.instructor}` : ''}. Change anything.` };
+    return { form: { ...fromFlight(d), role: 'pilot' }, note: `Prefilled from your last flight on ${formatDate(last.pilot.date)}${what ? `: ${what}` : ''}. Change anything.` };
   };
 
   useEffect(() => {
@@ -181,22 +149,9 @@ export default function FlightForm() {
     const timer = setTimeout(() => saveDraft(DRAFT_NAME, form), 400);
     return () => clearTimeout(timer);
   }, [form, id]);
-  useEffect(() => { api.getSettings().then((s) => setDefaultGroundTime(s.default_ground_time)).catch(() => {}); }, []);
+  useEffect(() => { api.listFlights().then(setAllFlights).catch(() => setAllFlights(false)); }, []);
 
-  // Auto-fills the default ground briefing time once dual is logged on a *new* flight, only while the
-  // pilot hasn't touched ground_time themselves — never overwrites a value they already set or edited.
-  useEffect(() => {
-    if (id || groundTouched || defaultGroundTime == null) return;
-    const dual = parseHours(form.dual_received) || 0;
-    const ground = parseHours(form.ground_time) || 0;
-    if (dual > 0 && ground === 0) setForm((f) => ({ ...f, ground_time: fmtHours(defaultGroundTime) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.dual_received, id, groundTouched, defaultGroundTime]);
-
-  const set = (k) => (v) => {
-    if (k === 'ground_time') setGroundTouched(true);
-    setForm((f) => ({ ...f, [k]: v }));
-  };
+  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
 
   /** Switching role on an untouched, prefilled new flight re-prefills for the new role; otherwise only the role changes. */
   async function chooseRole(role) {
@@ -219,18 +174,9 @@ export default function FlightForm() {
 
   async function submit(e) {
     e.preventDefault();
-    const approachTypes = form.approach_types.filter((a) => a.approach_type);
-    const payload = { ...form, stops: form.stops.filter((s) => s.airport_code.trim()), approach_types: approachTypes };
-    if (approachTypes.length) payload.approaches = String(approachTypes.reduce((s, a) => s + (Number(a.count) || 0), 0));
-    payload.cost_override = form.cost_override.trim() === '' ? null : form.cost_override;
-    const local = {};
-    for (const [k, label] of TIME_FIELDS) {
-      const n = parseHours(form[k]);
-      if (n === null) local[k] = `${label}: use 1.5 or 1:30`;
-      payload[k] = n;
-    }
-    if (Object.keys(local).length) return showErrors(local);
-    const invalid = validateFlightPayload(payload, { today: today() });
+    const { payload, errors: local } = toPayload(form);
+    if (local) return showErrors(local);
+    const invalid = validateFlightPayload(payload, { today: today(), skip: payload.role === 'pilot' ? HIDDEN_FIELDS : [] });
     if (Object.keys(invalid).length) {
       showErrors(invalid);
       setMessage('Please fix the highlighted fields.');
@@ -274,6 +220,7 @@ export default function FlightForm() {
   }
 
   const pilot = form.role === 'pilot';
+  const typedApproaches = form.approach_types.some((a) => a.approach_type);
 
   if (loading) return <p className="ds-sub" role="status">Loading…</p>;
 
@@ -298,7 +245,7 @@ export default function FlightForm() {
             <div className="cl-two">
               <DatePicker label="Date" value={form.date} onChange={set('date')} error={errors.date} />
             </div>
-            <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} onSelect={(a) => setForm((f) => ({
+            <AircraftPicker value={form.aircraft_id} error={errors.aircraft_id} pilotFlights={allFlights} onSelect={(a) => setForm((f) => ({
               ...f,
               aircraft_id: a.id,
               aircraft_type: a.is_simulator ? (a.model || '') : (a.type_designator || a.model || f.aircraft_type),
@@ -358,23 +305,15 @@ export default function FlightForm() {
                 <CountInput label="Day, full stop" value={form.day_landings_full_stop} onChange={set('day_landings_full_stop')} error={errors.day_landings_full_stop} />
                 <CountInput label="Night landings" value={form.night_landings} onChange={set('night_landings')} error={errors.night_landings} />
                 <CountInput label="Night, full stop" value={form.night_landings_full_stop} onChange={set('night_landings_full_stop')} error={errors.night_landings_full_stop} />
-                {form.approach_types.length > 0 ? (
-                  <div className="cl-dl"><div><span className="k">Total approaches</span><span className="v">{form.approach_types.reduce((s, a) => s + (Number(a.count) || 0), 0)}</span></div></div>
+                {typedApproaches ? (
+                  <div className="cl-dl"><div><span className="k">Total approaches</span><span className="v">{approachTotal(form.approach_types)}</span></div></div>
                 ) : (
                   <CountInput label="Total approaches" value={form.approaches} onChange={set('approaches')} error={errors.approaches} />
                 )}
                 <CountInput label="Holds" value={form.holds} onChange={set('holds')} error={errors.holds} />
                 <ApproachesEditor approaches={form.approach_types} onChange={(v) => setForm((f) => ({ ...f, approach_types: v }))} />
-                {form.approach_types.length > 0 && <p className="cl-note">Total approaches above is the sum of these.</p>}
+                {typedApproaches && <p className="cl-note">Total approaches above is the sum of these.</p>}
                 {typeof errors.approach_types === 'object' && <p className="cl-note" style={{ color: 'var(--ds-bad)' }}>Check the approach rows above.</p>}
-              </MoreBlock>
-              <MoreBlock title="Airline or operator (commercial flights)">
-                <div>
-                  <TextField label="Airline" value={form.airline} onChange={set('airline')} error={errors.airline} placeholder="Delta" list="airline-names" />
-                  <datalist id="airline-names">{AIRLINE_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
-                  {form.airline.trim() && <div style={{ marginTop: 8 }}><AirlineBadge airline={form.airline} /></div>}
-                </div>
-                <TextField label="Flight number" upper value={form.flight_number} onChange={set('flight_number')} error={errors.flight_number} placeholder="DL123" />
               </MoreBlock>
               <MoreBlock title="Notes">
                 <label className="block"><span className="mb-1 block text-xs text-slate-400">Remarks</span>
