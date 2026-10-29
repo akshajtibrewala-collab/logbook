@@ -51,15 +51,22 @@ test('homeStatusAlerts: the backup warning alone counts and routes to Import & e
   assert.equal(r.to, '/logbook/data');
 });
 
-test('homeStatusAlerts: a long gap alone counts and routes to the Logbook', () => {
+test('homeStatusAlerts: a long gap alone is not an alert: count 0, links to Currency, gap still reported', () => {
   const lastFlight = '2026-05-01'; // 31 days before "today"
   const r = homeStatusAlerts({ currencyResults: [], lastPilotFlightDate: lastFlight, today: '2026-06-01' });
-  assert.equal(r.count, 1);
-  assert.equal(r.to, '/logbook/new');
+  assert.equal(r.count, 0);
+  assert.equal(r.to, '/currency');
   assert.equal(r.daysSinceLastFlight, 31);
 });
 
-test('homeStatusAlerts: a gap shorter than the threshold does not count', () => {
+test('homeStatusAlerts: a long gap plus a backup warning counts only the backup and links to Import & export', () => {
+  const r = homeStatusAlerts({ currencyResults: [], backupWarn: true, lastPilotFlightDate: '2026-05-01', today: '2026-06-01' });
+  assert.equal(r.count, 1);
+  assert.equal(r.to, '/logbook/data');
+  assert.equal(r.daysSinceLastFlight, 31);
+});
+
+test('homeStatusAlerts: a gap shorter than the threshold is below the subline threshold', () => {
   const lastFlight = '2026-05-27'; // 5 days before "today", under LONG_GAP_DAYS
   const r = homeStatusAlerts({ currencyResults: [], lastPilotFlightDate: lastFlight, today: '2026-06-01' });
   assert.equal(r.count, 0);
@@ -70,7 +77,7 @@ test('homeStatusAlerts: a currency item always wins the tap target over backup/g
   const r = homeStatusAlerts({
     currencyResults: [result(2)], backupWarn: true, lastPilotFlightDate: '2026-01-01', today: '2026-06-01',
   });
-  assert.equal(r.count, 3);
+  assert.equal(r.count, 2); // the currency item and the backup warning; the long gap no longer counts
   assert.equal(r.to, '/currency');
 });
 

@@ -93,6 +93,7 @@ a.bc-hero { color: var(--ds-text); text-decoration: none; }
 .bc-greet { margin: 0; color: var(--ds-text-2); font-size: var(--fs-p); }
 .bc-status { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px; border-radius: var(--mn-rr); cursor: pointer; width: 100%; font-size: var(--fs-p); color: var(--ds-text); }
 .bc-status:hover { background: var(--ds-surface); } .bc-status:focus-visible { outline: 2px solid var(--ds-white); outline-offset: -2px; }
+.bc-gap { margin: 0; padding: 0 8px; color: var(--ds-text-2); font-size: var(--fs-s); overflow-wrap: break-word; }
 .bc-status .r { margin-left: auto; color: var(--ds-text-2); display: inline-flex; }
 .bc-status svg, .bc-item svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .bc-map { display: block; position: relative; height: 12rem; border-radius: var(--mn-r); overflow: hidden; background: var(--ds-map-sea); }

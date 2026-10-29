@@ -10,6 +10,7 @@ import HubTiles from './home/HubTiles.jsx';
 import { calmGreeting } from '../lib/logbookList.js';
 import { PILOT_NAME } from '../lib/greetings.js';
 import { fmtHours } from '../lib/hours.js';
+import { LONG_GAP_DAYS } from '../lib/homeAlerts.js';
 import '../ds/bcalm.css';
 import '../ds/hub.css';
 
@@ -38,11 +39,15 @@ export default function Home() {
   const hero = data && (
     <BcHero to="/logbook" label="Total flight hours" number={allHours} ariaLabel={`Total flight hours: ${fmtHours(allHours)}, pilot and passenger. Open the Logbook`} />
   );
+  const gapDays = status.daysSinceLastFlight;
   const statusLine = (
-    <Link to={status.to} className="bc-status" aria-label={status.count === 0 ? 'All clear. Open Currency' : `${status.count} item${status.count === 1 ? '' : 's'} need attention. Open`}>
-      <span className={`bc-dot ${status.count === 0 ? 'ok' : 'warn'}`} aria-hidden="true" />
-      <span>{status.count === 0 ? 'All clear' : `${status.count} need${status.count === 1 ? 's' : ''} attention`}</span>
-    </Link>
+    <>
+      <Link to={status.to} className="bc-status" aria-label={status.count === 0 ? 'All clear. Open Currency' : `${status.count} item${status.count === 1 ? '' : 's'} need attention. Open`}>
+        <span className={`bc-dot ${status.count === 0 ? 'ok' : 'warn'}`} aria-hidden="true" />
+        <span>{status.count === 0 ? 'All clear' : `${status.count} need${status.count === 1 ? 's' : ''} attention`}</span>
+      </Link>
+      {gapDays !== null && gapDays >= LONG_GAP_DAYS && <p className="bc-gap">{gapDays} days since your last flight</p>}
+    </>
   );
   const mapCard = map && (
     <Link to="/map" className="bc-map" aria-label="Open the map">

@@ -5,7 +5,7 @@ import { customExpirations, daysBetween } from './currency.js';
 
 /** The one threshold for Home's status line: within this many days of lapsing, or already lapsed. */
 export const ALERT_WINDOW_DAYS = 30;
-/** How many days since the last pilot flight counts as a "long gap" worth a status-line mention. */
+/** Days since the last pilot flight at which Home shows its calm "N days since your last flight" subline (not an alert). */
 export const LONG_GAP_DAYS = 7;
 
 /**
@@ -29,8 +29,9 @@ export function isAlertWorthy(result) {
  * calculation of its own.
  *
  * `to` prefers `/currency`, where every currency/review/medical item above lives — the common case.
- * With no currency-category item alert-worthy, it falls back to whichever other page explains the sole
- * alert present (Import & export for a backup warning alone, the Logbook for a flight-logging gap alone).
+ * With no currency-category item alert-worthy, a backup warning alone links to Import & export.
+ * A long gap since the last pilot flight is NOT an alert: it never changes `count` or `to`. It is returned
+ * as `daysSinceLastFlight` so Home can show a plain, calm subline once it reaches `LONG_GAP_DAYS`.
  */
 export function homeStatusAlerts({ currencyResults = [], expirations = [], backupWarn = false, lastPilotFlightDate = null, today }) {
   let currencyCount = 0;
@@ -38,9 +39,8 @@ export function homeStatusAlerts({ currencyResults = [], expirations = [], backu
   for (const r of customExpirations(expirations, today)) if (isAlertWorthy(r)) currencyCount++;
 
   const daysSinceLastFlight = lastPilotFlightDate ? daysBetween(lastPilotFlightDate, today) : null;
-  const longGap = daysSinceLastFlight !== null && daysSinceLastFlight >= LONG_GAP_DAYS;
 
-  const count = currencyCount + (backupWarn ? 1 : 0) + (longGap ? 1 : 0);
-  const to = currencyCount > 0 ? '/currency' : backupWarn ? '/logbook/data' : longGap ? '/logbook/new' : '/currency';
+  const count = currencyCount + (backupWarn ? 1 : 0);
+  const to = currencyCount > 0 ? '/currency' : backupWarn ? '/logbook/data' : '/currency';
   return { count, to, daysSinceLastFlight };
 }
